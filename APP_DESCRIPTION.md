@@ -1,10 +1,11 @@
-# AudibleTrNRec
+# Audible Track and Recommend
 
 ## Application Idea and Product Plan
 
 ## Product Summary
 
-AudibleTrNRec is a personal audiobook tracking and recommendation application.
+Audible Track and Recommend is a personal audiobook tracking and recommendation
+application.
 It connects to a user's Audible account, keeps their listening history and
 progress up to date, lets them rate and comment on books, and recommends what
 they should listen to next.
@@ -15,11 +16,8 @@ The application may use a local large language model (LLM) or a hosted AI
 service. The final deployment platform and AI provider are intentionally still
 to be determined.
 
-The working name can be understood as:
-
-- **Tr**: Tracking
-- **N**: and
-- **Rec**: Recommendations
+The name describes the application's two main purposes: tracking Audible
+listening activity and recommending what to listen to next.
 
 ## Product Vision
 
@@ -139,7 +137,7 @@ Suggested listening states are:
 
 The source system remains authoritative for imported listening progress. Local
 ratings, comments, tags, and recommendation feedback remain authoritative in
-AudibleTrNRec.
+Audible Track and Recommend.
 
 ### 3. Ratings and Personal Comments
 
@@ -471,7 +469,7 @@ entire product.
 
 ### Phase 0: Feasibility and Product Decisions
 
-- Confirm the official meaning and public name of AudibleTrNRec.
+- Confirm the final public name and branding for Audible Track and Recommend.
 - Investigate supported Audible/Amazon authorization and data access.
 - Identify available fields for library history and listening progress.
 - Confirm catalog search and metadata options for books not in the library.
