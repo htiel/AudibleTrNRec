@@ -2,6 +2,16 @@
 
 ## Application Idea and Product Plan
 
+## Current Planned Release
+
+The first locked release baseline is **alpha 0.0.1**, a private, single-user
+technical feasibility release. Its approved themes, epics, features, stories,
+gates, and crew consensus are maintained in
+[the alpha 0.0.1 planning backlog](planning/0.0.1/01-release-charter.md).
+
+Locking the version fixes the planning baseline, not the implementation status.
+Changes to scope, trust rules, or release gates require explicit change control.
+
 ## Product Summary
 
 Audible Track and Recommend is a personal audiobook tracking and recommendation
@@ -72,6 +82,58 @@ social features, and public reviews can be considered later.
 - Protect account credentials, listening history, and private comments.
 - Make AI behavior visible, configurable, and replaceable.
 
+## Non-Negotiable Trust Principles
+
+### No Advertising or Paid Placement
+
+Audible Track and Recommend will not contain advertising. Publishers, authors,
+retailers, platforms, or other parties must never be able to pay, sponsor,
+trade favors, or provide incentives to make a title more likely to appear.
+
+Every recommendation must be based on the user's history, ratings, comments,
+explicit preferences, recommendation feedback, and relevant catalog evidence.
+Commercial terms—including affiliate revenue, promotional payments, retailer
+margin, and provider preference—must not influence candidate eligibility,
+ranking, explanations, or notifications.
+
+If the application ever uses affiliate links or receives revenue when a user
+opens or buys a title, that fact must be disclosed and the revenue must remain
+strictly independent of recommendation selection and rank. The preferred
+policy is to avoid affiliate compensation entirely.
+
+The recommendation engine must retain structured supporting signals and an
+algorithm/model version for every result so that the application can verify
+why a title appeared. A paid or sponsored recommendation must be impossible by
+design, not merely prohibited by policy.
+
+### Minimize Echo Chambers
+
+The application must not blindly reinforce a narrow ideological, political,
+cultural, or topical pattern simply because the user previously listened to
+one perspective. Listening to a liberal, conservative, religious, secular, or
+other viewpoint must not cause the application to recommend only more content
+from that viewpoint.
+
+Recommendations should balance personal relevance with viewpoint and subject
+diversity. When suitable catalog metadata is available, the system should:
+
+- Avoid treating one title as proof of a fixed political or ideological
+  identity.
+- Distinguish curiosity, research, criticism, and enjoyment rather than
+  inferring agreement from listening alone.
+- Include credible, relevant works offering different or broader perspectives.
+- Prevent one inferred viewpoint from dominating an entire recommendation set.
+- Give the user control over how much familiar versus perspective-broadening
+  content appears.
+- Explain when a title is included to broaden perspective rather than falsely
+  claiming it matches a preference.
+- Respect explicit content, safety, language, and accessibility preferences.
+
+Viewpoint diversity is not false balance. The application is not required to
+promote demonstrably deceptive, hateful, unsafe, or low-quality content merely
+to provide an opposing position. Candidate quality, relevance, source
+credibility, and user safety remain required.
+
 ## Non-Goals for the First Release
 
 - Selling or streaming Audible content directly.
@@ -139,9 +201,26 @@ The source system remains authoritative for imported listening progress. Local
 ratings, comments, tags, and recommendation feedback remain authoritative in
 Audible Track and Recommend.
 
-### 3. Ratings and Personal Comments
+The library should support sorting, grouping, and filtering by:
 
-The user should be able to add:
+- Title.
+- Author.
+- Narrator.
+- Series and series order.
+- Genre or category.
+- Overall, story, and narration rating.
+- Listening status and completion percentage.
+- Date acquired, last listened, and completion date.
+- Duration.
+- Personal tags and favorites.
+
+Author, narrator, series, and genre names should be selectable facets. Selecting
+one opens its detail view, shows matching books, and exposes the user's rating
+and feedback for that facet.
+
+### 3. Ratings, Preferences, and Personal Comments
+
+For an individual book, the user should be able to add:
 
 - An overall rating.
 - Optional story/content rating.
@@ -152,34 +231,78 @@ The user should be able to add:
 - An abandoned marker and optional reason.
 - A "listen again" preference.
 
+The user should also be able to rate and provide private feedback for:
+
+- Authors.
+- Narrators.
+- Genres and categories.
+- Series.
+- Themes or other normalized catalog facets when supported.
+
+Examples include:
+
+- Five stars for author J.R.R. Tolkien with the comment "I really like this
+  author's world-building."
+- Five stars for the LitRPG genre.
+- Five stars for narrator Wil Wheaton with the comment "I enjoyed the
+  narration of Ready Player One."
+
+Facet feedback should support:
+
+- A five-star rating with half-star values.
+- A private free-form comment.
+- Like, dislike, and favorite signals where appropriate.
+- Optional personal tags.
+- A source indicator showing whether the preference was explicitly entered or
+  inferred from book-level behavior.
+
 The initial rating scale should be five stars with half-star values. This is
 familiar, expressive enough for recommendations, and easy to change later if
 user testing indicates a better option.
 
-Ratings and comments must autosave or clearly indicate unsaved changes. The
-user's data must not be overwritten by a history synchronization.
+Explicit facet ratings must take precedence over inferred affinities. For
+example, a five-star author rating is stronger and less ambiguous than merely
+finishing one book by that author. Inferred preferences must remain visibly
+distinguishable from ratings the user entered directly.
+
+All ratings and comments must autosave or clearly indicate unsaved changes.
+The user's book-level and facet-level feedback must not be overwritten by a
+history or catalog synchronization. If a catalog merge changes an author,
+narrator, series, or genre identifier, existing feedback must be safely
+reconciled rather than discarded.
 
 ### 4. Recommendations
 
 The application should recommend titles that are relevant and available to the
 user through Audible, while avoiding:
 
+- Any title whose placement or rank is influenced by payment, sponsorship,
+  affiliate compensation, promotion, retailer margin, or another commercial
+  incentive.
 - Titles already completed.
 - Titles the user explicitly dismissed.
 - Duplicate editions of books already completed, unless requested.
 - Later series entries when earlier required entries have not been completed.
 - Titles outside user-defined content or language preferences.
+- Recommendation sets that unnecessarily repeat one inferred political,
+  ideological, cultural, or topical viewpoint.
 
 Recommendation inputs may include:
 
 - Overall, story, and narration ratings.
 - Positive and negative language in comments.
-- Favorite authors, narrators, genres, themes, and series.
+- Explicit ratings and comments for authors, narrators, genres, themes, and
+  series.
+- Inferred author, narrator, genre, theme, and series affinities, clearly
+  weighted below explicit feedback.
 - Completed, abandoned, replayed, and dismissed titles.
 - Listening recency and completion behavior.
 - Preferred duration or complexity.
 - Saved recommendation feedback.
 - Catalog metadata for candidate titles.
+
+Payment, sponsorship, affiliate value, promotional status, and retailer margin
+are prohibited recommendation inputs.
 
 Each result should include:
 
@@ -188,6 +311,8 @@ Each result should include:
 - A brief "Why this was recommended" explanation.
 - Specific supporting signals, such as a highly rated author, narrator, genre,
   theme, or similar book.
+- A clear label when the result is intended to broaden the user's perspective
+  instead of closely matching established preferences.
 - Any uncertainty or missing data that materially affects the suggestion.
 - Actions to save, dismiss, open in Audible, or provide feedback.
 
@@ -199,7 +324,9 @@ Example:
 
 Explanations must be grounded in stored user and catalog data. The application
 must not invent book details, user preferences, or relationships between
-titles.
+titles. When an explicit facet rating materially affected the recommendation,
+the explanation should say so, such as "You gave this author five stars" or
+"You rated LitRPG five stars."
 
 ### 5. Recommendation Feedback
 
@@ -243,7 +370,8 @@ to make an unconstrained guess.
 
 First, retrieve possible titles from trustworthy catalog data. Filter by
 availability, language, series order, prior listening, dismissals, and user
-preferences.
+preferences. Candidate retrieval must not accept sponsored placement, paid
+boosts, affiliate value, promotional priority, or retailer margin as inputs.
 
 ### Deterministic Ranking
 
@@ -251,12 +379,41 @@ Score candidates using observable factors such as:
 
 - Similarity to highly rated titles.
 - Author, narrator, series, genre, and theme affinity.
+- Explicit author, narrator, series, genre, and theme ratings and comments.
 - Negative signals from low ratings, abandonment, and dismissals.
 - Recency and diversity controls.
+- Viewpoint and subject diversity across the recommendation set.
+- A controlled balance between familiar matches and perspective-broadening
+  discovery.
 - Explicit user preferences.
 
 The scoring factors should be inspectable and testable even if an LLM is not
-configured.
+configured. The ranker must not infer ideological agreement from listening
+history alone. Commercial signals must be absent from the scoring interface so
+they cannot influence results accidentally. Explicit user-entered facet
+feedback should outrank weak inferred affinity while still allowing negative
+book-level feedback and diversity guardrails to prevent simplistic scoring.
+
+### Trust and Diversity Guardrails
+
+After ranking, a deterministic policy should evaluate the recommendation set
+as a whole:
+
+- Detect excessive concentration by author, series, genre, topic, and
+  viewpoint where metadata supports it.
+- Reserve configurable space for high-quality adjacent or contrasting
+  perspectives without making every recommendation political.
+- Require baseline relevance and quality for every diversity candidate.
+- Avoid sensitive-trait or political-affiliation profiling from weak signals.
+- Record whether a result is a direct preference match, an exploratory result,
+  or a perspective-broadening result.
+- Never use diversity as a hidden justification; expose it honestly in the
+  explanation.
+- Let users adjust familiar/exploratory balance without offering a mode that
+  deliberately creates an ideological echo chamber.
+
+The system should treat viewpoint labels as uncertain catalog metadata, not
+objective facts. It must support correction and avoid overstating confidence.
 
 ### LLM-Assisted Analysis
 
@@ -380,11 +537,30 @@ entire product.
 
 - Internal identifier
 - External catalog identifiers
-- Title, subtitle, authors, and narrators
-- Series and sequence
+- Title and subtitle
+- Relationships to authors, narrators, series, genres, categories, and themes
 - Description
-- Genres, categories, and themes
 - Duration, language, release date, and cover reference
+- Metadata source and last refresh time
+
+### Catalog Person
+
+- Internal identifier
+- External catalog identifiers
+- Display name and normalized sort name
+- Roles, such as author or narrator
+- Metadata source and last refresh time
+
+One person may have multiple roles and must not be duplicated merely because
+they appear as both an author and a narrator.
+
+### Catalog Facet
+
+- Internal identifier
+- Facet type, such as genre, category, theme, or series
+- Display name and normalized sort name
+- Parent facet where a hierarchy exists
+- Series sequence metadata where applicable
 - Metadata source and last refresh time
 
 ### Library Entry
@@ -406,6 +582,22 @@ entire product.
 - Personal tags
 - Favorite, abandoned, and listen-again indicators
 - Created and updated timestamps
+
+### User Facet Preference
+
+- User identifier
+- Target type: author, narrator, genre, category, series, or theme
+- Target identifier
+- Explicit star rating
+- Private comment
+- Like, dislike, favorite, and personal tags where applicable
+- Explicit or inferred source
+- Confidence and supporting evidence for inferred preferences
+- Created and updated timestamps
+
+Only one active explicit preference should exist for each user, target type,
+and target identifier. Historical changes may be retained for audit or
+recommendation evaluation.
 
 ### Recommendation
 
@@ -488,7 +680,8 @@ with a small prototype, and the initial platform and architecture are selected.
 - Create the application shell.
 - Define normalized book, library, progress, review, and sync models.
 - Load a consented sample or export of Audible history.
-- Build the library, book details, progress, rating, and comments views.
+- Build the library, book details, progress, rating, comments, and
+  author/narrator/genre/series preference views.
 - Add search, sorting, filtering, and local persistence.
 
 **Exit criteria:** A user can browse imported history and safely create,
@@ -546,6 +739,8 @@ export, and deletion workflows pass release checks.
 ### Unit Tests
 
 - Rating and progress validation.
+- Author, narrator, genre, series, and theme preference validation.
+- Catalog facet normalization, deduplication, and sort-name behavior.
 - Listening-state transitions.
 - Candidate eligibility and exclusion rules.
 - Deterministic scoring.
@@ -559,6 +754,7 @@ export, and deletion workflows pass release checks.
 - Full and incremental synchronization.
 - Pagination, rate limiting, retries, and expired tokens.
 - Persistence of ratings and comments across syncs.
+- Persistence and reconciliation of facet ratings across catalog merges.
 - Catalog lookup and candidate retrieval.
 - AI-provider success, timeout, malformed output, and refusal behavior.
 
@@ -566,6 +762,9 @@ export, and deletion workflows pass release checks.
 
 - Connect account to populated library.
 - Update a rating and comment.
+- Rate an author, narrator, genre, and series and view each matching book list.
+- Sort and filter the library by author, narrator, genre, series, rating, and
+  listening progress.
 - Refresh changed listening progress.
 - Generate and explain recommendations.
 - Dismiss a recommendation and verify it does not immediately return.
@@ -573,13 +772,31 @@ export, and deletion workflows pass release checks.
 
 ### Recommendation Quality Tests
 
+- Verify no advertising, sponsorship, affiliate, promotional, margin, or
+  commercial field can affect eligibility, score, rank, or explanation.
+- Verify identical user and catalog evidence produces identical rankings
+  regardless of simulated commercial offers.
 - Never recommend an already completed edition by default.
 - Respect explicit negative feedback.
+- Give explicit author, narrator, genre, and series feedback greater weight
+  than weak inferred affinity.
+- Explain when explicit facet feedback materially influenced a recommendation.
+- Preserve separate signals for a book's story, author, genre, and narrator so
+  disliking one does not incorrectly penalize all the others.
 - Avoid invalid series order.
 - Cite only real user or catalog signals in explanations.
 - Produce useful results when comments are absent.
 - Produce usable deterministic results when no LLM is configured.
 - Avoid collapsing all recommendations into one favorite genre or author.
+- Do not infer political agreement from one or a small number of listened
+  titles.
+- Detect and prevent unjustified viewpoint concentration in a recommendation
+  set when sufficient metadata exists.
+- Include relevant, credible perspective-broadening choices without degrading
+  the entire set into arbitrary opposites.
+- Clearly identify exploratory and perspective-broadening recommendations.
+- Never use hateful, deceptive, unsafe, or low-quality content to satisfy a
+  diversity quota.
 
 ## Key Risks and Mitigations
 
@@ -591,6 +808,9 @@ export, and deletion workflows pass release checks.
 | The LLM invents reasons or book facts | Retrieve authoritative metadata, pass bounded evidence, require structured output, and validate every claim. |
 | Hosted AI creates privacy or cost concerns | Offer clear consent and controls, minimize payloads, cache safe results, and preserve local/deterministic options. |
 | Recommendations become repetitive | Add diversity, recency, negative feedback, and exploration controls to deterministic ranking. |
+| Commercial influence undermines trust | Exclude commercial fields from recommendation interfaces, prohibit paid placement, retain auditable supporting signals, and test rankings against simulated incentives. |
+| Recommendations create an ideological echo chamber | Use set-level viewpoint diversity controls, avoid inferring agreement from listening alone, offer credible perspective-broadening results, and explain exploration honestly. |
+| Diversity produces false balance or unsafe results | Require relevance, quality, credibility, and safety before applying diversity; never fill a quota with harmful or deceptive content. |
 | Sync overwrites personal ratings or comments | Keep imported and local fields separate, use idempotent merges, and test reconciliation. |
 | Deployment choice creates rework | Keep integration, sync, recommendation, AI, and persistence logic behind platform-neutral boundaries. |
 | Product name is confused with Audible branding | Treat it as a working name and complete legal and naming review before public release. |
@@ -623,11 +843,14 @@ The MVP should allow one user to:
 1. Securely connect an approved Audible data source or import their history.
 2. View their audiobook library and listening progress.
 3. Refresh that data without duplicates or loss of local information.
-4. Rate books and save private comments.
-5. Receive a ranked list of eligible next-title recommendations.
-6. Read a short, evidence-based explanation for each recommendation.
-7. Save, dismiss, or respond to recommendations.
-8. Export and permanently delete their application data.
+4. Sort and filter books by author, narrator, genre, series, rating, status,
+   progress, and key dates.
+5. Rate books and save private comments.
+6. Rate and comment on authors, narrators, genres, and series.
+7. Receive a ranked list of eligible next-title recommendations.
+8. Read a short, evidence-based explanation for each recommendation.
+9. Save, dismiss, or respond to recommendations.
+10. Export and permanently delete their application data.
 
 If live Audible synchronization is not feasible, a clearly labeled import-based
 prototype can validate the review and recommendation experience, but it should
@@ -639,9 +862,19 @@ The first release is successful when:
 
 - Listening history and progress synchronize accurately and reliably.
 - User ratings and comments are never lost during synchronization.
+- Users can reliably sort and filter their library by author, narrator, genre,
+  series, ratings, listening state, progress, and dates.
+- Explicit ratings and comments for authors, narrators, genres, and series are
+  preserved and influence recommendations in explainable ways.
 - Recommendations exclude clearly ineligible titles.
+- No advertising, paid placement, sponsorship, affiliate value, promotional
+  status, margin, or commercial incentive affects recommendations.
 - Every AI-generated explanation is supported by known data.
 - Users can understand why a title was recommended.
+- Recommendation sets avoid unjustified ideological concentration and include
+  credible perspective-broadening choices where relevant.
+- The application does not infer that listening to a viewpoint means agreeing
+  with it.
 - Feedback changes future recommendations in expected ways.
 - The application remains useful when the selected LLM is unavailable.
 - Users know where their data is stored and when it is sent to an AI service.
