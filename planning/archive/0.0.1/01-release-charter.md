@@ -43,7 +43,7 @@ Legal, secure, maintainable access to Audible library, history, progress and
 non-owned candidate catalog metadata is unproven. No public API or OAuth flow
 may be assumed. Repository baseline has product/planning documents, not an app,
 test runner, CI, measured velocity or actual access evidence.
-[APP_DESCRIPTION.md](../../APP_DESCRIPTION.md) remains the product authority;
+[APP_DESCRIPTION.md](../../../APP_DESCRIPTION.md) remains the product authority;
 its pre-existing working-tree changes are not modified by this reconciliation.
 
 At the release decision, demonstrate one reproducible password-free approved

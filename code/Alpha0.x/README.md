@@ -196,8 +196,8 @@ allowed it to run.
 ## UI (alpha 0.0.1) — synthetic fixture evidence inspector only
 
 **This UI is intentionally NOT a ratings/recommendation product.** Per the
-locked `planning/0.0.1/01-release-charter.md` scope (item 8) and
-`planning/0.0.1/03-user-stories.md` (ATR-S008, ATR-S009), the alpha 0.0.1 UI
+locked `planning/archive/0.0.1/01-release-charter.md` scope (item 8) and
+`planning/archive/0.0.1/03-user-stories.md` (ATR-S008, ATR-S009), the alpha 0.0.1 UI
 is restricted to:
 
 - A read-only **library evidence table** (`#/library`, `#/book/:id`): sort,

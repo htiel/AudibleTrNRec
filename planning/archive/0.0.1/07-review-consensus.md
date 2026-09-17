@@ -7,8 +7,8 @@
 
 ## Source record and disposition vocabulary
 
-Read the current [product brief](../../APP_DESCRIPTION.md),
-[planning README](../README.md) and all six canonical plan documents, plus all
+Read the current [product brief](../../../APP_DESCRIPTION.md),
+[planning README](../../README.md) and all six canonical plan documents, plus all
 four original reviews. Reviews remain unchanged:
 
 - [Data](reviews/data-review.md): conditional approval with nine required blockers.
@@ -248,7 +248,7 @@ Updated consistently: [charter](01-release-charter.md),
 [requirements/hierarchy](02-requirements-and-hierarchy.md),
 [stories](03-user-stories.md), [sequence](04-sequencing.md),
 [risks/gates](05-risks-and-release-gates.md), [backlog](06-backlog-index.md),
-and [planning README](../README.md). Requirements now include all security/
+and [planning README](../../README.md). Requirements now include all security/
 egress owners and S013; no feature is unrepresented. Deferred UX/security
 promotion constraints do not enter the 51-point alpha backlog.
 
@@ -327,7 +327,7 @@ is authorized before G2, and no private alpha release is authorized before G6.
 
 ### Changed authorities
 
-- [Product brief](../../APP_DESCRIPTION.md): distinguishes provider
+- [Product brief](../../../APP_DESCRIPTION.md): distinguishes provider
   authentication from application authorization and places all password-manager
   access outside the application trust boundary.
 - [Release charter](01-release-charter.md): defines the WebAuthn parties,

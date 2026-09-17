@@ -1,6 +1,6 @@
 # Wesley Crusher — final sign-off, Audible Track and Recommend alpha 0.0.1
 
-**Reviewing:** [07-review-consensus.md](../07-review-consensus.md) reconciliation against my prior [conditional review](wesley-review.md) (`wesley-review.md`), [APP_DESCRIPTION.md](../../../APP_DESCRIPTION.md), and the current canonical baseline ([01-release-charter.md](../01-release-charter.md) through [06-backlog-index.md](../06-backlog-index.md)).
+**Reviewing:** [07-review-consensus.md](../07-review-consensus.md) reconciliation against my prior [conditional review](wesley-review.md) (`wesley-review.md`), [APP_DESCRIPTION.md](../../../../APP_DESCRIPTION.md), and the current canonical baseline ([01-release-charter.md](../01-release-charter.md) through [06-backlog-index.md](../06-backlog-index.md)).
 
 **Reviewer:** Wesley Crusher — Creative Technologist & Innovation Advisor; review gate on ATR-S001, ATR-S003, ATR-S004, ATR-S005, ATR-S007, ATR-S008, ATR-S010, ATR-S011, ATR-S012, ATR-S013, G1, G3, G4, and G5.
 

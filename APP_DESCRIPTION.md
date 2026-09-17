@@ -4,12 +4,19 @@
 
 ## Current Planned Release
 
-The first locked release baseline is **alpha 0.0.1**, a private, single-user
-technical feasibility release. Its approved themes, epics, features, stories,
-gates, and crew consensus are maintained in
-[the alpha 0.0.1 planning backlog](planning/0.0.1/01-release-charter.md).
+The current planned release is **alpha 0.0.2**, a private, single-user increment
+covering release-blocker remediation, LCARS UI optimization, and private
+per-book ratings and feedback collection/storage. Its initial scope, hierarchy,
+stories, dependencies, and gates are maintained in
+[the alpha 0.0.2 plan](planning/0.0.2/README.md).
 
-Locking the version fixes the planning baseline, not the implementation status.
+The Captain approved this planning transition; detailed designs, implementation,
+gate completion, and named-tester clearance remain pending. Alpha 0.0.1 is an
+[archived HOLD/FAIL evidence baseline](planning/archive/README.md), not a passed
+release. Its historical planning approvals do not constitute runtime or release
+clearance. Commercial/public distribution remains **NO-GO**.
+
+Planning a version does not mean it is implemented or approved for release.
 Changes to scope, trust rules, or release gates require explicit change control.
 
 ## Product Summary
@@ -23,8 +30,10 @@ they should listen to next.
 Each recommendation includes a short, understandable explanation based on the
 user's listening history, ratings, comments, preferences, and current progress.
 The application may use a local large language model (LLM) or a hosted AI
-service. The final deployment platform and AI provider are intentionally still
-to be determined.
+service. The intended product destination is a native iPhone app; architecture,
+security/legal feasibility and final implementation remain gated. The current
+web/Python alpha is disposable feasibility evidence, not the selected native
+architecture. The AI provider remains to be determined.
 
 The name describes the application's two main purposes: tracking Audible
 listening activity and recommending what to listen to next.
@@ -468,9 +477,15 @@ application integration.
 
 ## Deployment Direction
 
-The deployment target remains **TBD**. Likely options include:
+The intended product destination is a **native iPhone app**, with Swift as the
+native client target. This direction does not approve an architecture or
+distribution. See [native iPhone direction](planning/0.0.2/07-native-iphone-direction.md)
+for the feasibility gates and future capabilities. The current web/Python
+alpha remains disposable evidence until a reviewed native architecture exists.
+The alternatives below inform feasibility and service-boundary comparisons,
+not equally preferred product destinations.
 
-### Native or Cross-Platform iPhone App
+### Native iPhone App — Intended Destination
 
 Potential benefits:
 
@@ -509,9 +524,9 @@ Questions:
 - Local-first desktop application.
 - Shared core services with web and mobile clients.
 
-The final choice should follow the Audible integration feasibility study,
-privacy requirements, background-sync needs, expected usage, and operating
-cost—not precede them.
+The final implementation and service architecture must follow the Audible
+integration feasibility study, privacy requirements, background-sync needs,
+expected usage, and operating cost—not precede them.
 
 ## Proposed System Boundaries
 
@@ -700,7 +715,8 @@ recommendation evaluation.
 - Confirm catalog search and metadata options for books not in the library.
 - Review applicable API terms, rate limits, privacy rules, and app-store rules.
 - Decide whether a manual data import is an acceptable fallback.
-- Compare iPhone, web, and hybrid deployment options.
+- Evaluate native iPhone feasibility and compare local/service boundaries with
+  web and hybrid evidence; do not assume the current connector is portable.
 - Define local versus hosted data and AI processing requirements.
 - Select the first AI provider while preserving provider abstraction.
 - Define the initial marketplace, language, and user scope.
@@ -851,7 +867,8 @@ export, and deletion workflows pass release checks.
 ## Open Decisions
 
 1. What should the product's final public name be?
-2. Is the first client an iPhone app, responsive website, or another platform?
+2. Which reviewed native iPhone architecture and service boundary can meet the
+   security, legal and Audible-access gates?
 3. Is a backend required for synchronization and recommendations?
 4. What supported Audible authorization or export mechanism is available?
 5. Which Audible marketplace or regions must be supported first?
@@ -918,4 +935,4 @@ The first release is successful when:
 Before selecting a UI framework, hosting service, database, or LLM, build a
 small technical feasibility prototype for approved Audible account access,
 library history, listening progress, and catalog metadata. That result should
-drive the platform and architecture decision for the rest of the application.
+drive the gated native iPhone architecture and final implementation decision.

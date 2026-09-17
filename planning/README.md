@@ -1,69 +1,61 @@
 # Release planning
 
-## Current baseline
+## Current plan
 
-**[Alpha 0.0.1](0.0.1/01-release-charter.md)** — **PRIVATE CONNECTOR IN
-PROGRESS on 2026-09-17**. The locked baseline was approved at G0. S001 found no
-supported vendor route, but a bounded test proved automated technical access
-through the pinned community client. The Captain approved that unofficial route
-for a personal build and no more than ten named testers while mechanically
-blocking commercial/public shipping.
-The revised inventory is **3 themes / 5 epics / 13 features / 13 stories /
-51 points**. The prior 38-point baseline remains historical, not current.
+**[Alpha 0.0.2](0.0.2/README.md)** — initial plan opened on 2026-09-17 by
+Captain-approved transition. **4 themes / 8 epics / 30 features / 30 stories /
+112 estimated points.** Scope direction is approved; detailed designs and
+release gates are not. No story is declared implemented by this transition.
 
-| Document | Purpose |
+| Document | Authority |
 | --- | --- |
-| [Release charter](0.0.1/01-release-charter.md) | Objective, scope lock, non-scope, measurable outcomes |
-| [Requirements and hierarchy](0.0.1/02-requirements-and-hierarchy.md) | Product traceability, themes, epics, feature coverage |
-| [Detailed stories](0.0.1/03-user-stories.md) | Acceptance criteria, dependencies, ownership, definition of done |
-| [Sequence and critical path](0.0.1/04-sequencing.md) | WSJF, dependency graph, conditional execution, capacity |
-| [Risks and gates](0.0.1/05-risks-and-release-gates.md) | FMEA, evidence gates, open decisions, officer review |
-| [Backlog index](0.0.1/06-backlog-index.md) | Canonical hierarchy, release membership, current status |
-| [Review consensus](0.0.1/07-review-consensus.md) | Finding-by-finding reconciliation, decisions, validation, and unanimous sign-off |
-| [Source feasibility dossier](0.0.1/08-source-feasibility-dossier.md) | S001 public-document findings and the conditional manual-export route |
-| [Unofficial-client experiment amendment](0.0.1/09-unofficial-client-experiment.md) | One-time device-registration/reachability authorization and cleanup controls |
-| [Persistent private-alpha connector change control](0.0.1/10-private-alpha-connector-change-control.md) | Permanent device, encrypted local sync, explicit disconnect, tester cap, and commercial shipping block |
-| [Data review](0.0.1/reviews/data-review.md) | Original architecture findings; preserved unchanged |
-| [Geordi review](0.0.1/reviews/geordi-review.md) | Original accessibility findings; preserved unchanged |
-| [Worf review](0.0.1/reviews/worf-review.md) | Original security findings; preserved unchanged |
-| [Wesley review](0.0.1/reviews/wesley-review.md) | Original innovation findings; preserved unchanged |
-| [Data sign-off](0.0.1/reviews/data-signoff.md) | Final architecture and data approval |
-| [Geordi sign-off](0.0.1/reviews/geordi-signoff.md) | Final LCARS UX and accessibility approval |
-| [Worf sign-off](0.0.1/reviews/worf-signoff.md) | Final security and privacy approval |
-| [Wesley sign-off](0.0.1/reviews/wesley-signoff.md) | Final innovation and product-learning approval |
+| [Release charter](0.0.2/01-release-charter.md) | Mission, CTQs, scope approval and private-data boundaries |
+| [Scope and hierarchy](0.0.2/02-scope.md) | Themes, epics, features, product traceability and exclusions |
+| [Backlog and stories](0.0.2/03-backlog.md) | Canonical status, WSJF, owners, dependencies, points and acceptance criteria |
+| [Sequencing](0.0.2/04-sequencing.md) | Dependency graph, capacity, implementation/review order |
+| [Risks and release gates](0.0.2/05-risks-and-release-gates.md) | FMEA, evidence, permissions and release decision |
+| [Archive index](archive/README.md) | Immutable historical releases and their outcomes |
+
+## Archived baseline
+
+**[Alpha 0.0.1 — HOLD/FAIL](archive/0.0.1/feedback-and-bugs/alpha-0.0.1-release-verdict.md)**.
+The archived inventory is 3 themes / 5 epics / 13 features / 13 stories /
+51 points. The earlier 38-point inventory is historical within that baseline.
+G0 planning approval and the narrow G1 private-connector exception did not pass
+G2–G6. Neither owner-only unqualified clearance nor named-tester clearance was
+earned. The [51-finding register](archive/0.0.1/feedback-and-bugs/bug-register.md)
+remains evidence, not a list of fixes completed by archiving.
 
 ## Conventions
 
-- `ATR-Txx`: theme; `ATR-Exx`: epic; `ATR-Fxx`: feature; `ATR-Sxxx`: story.
-  IDs are permanent, never reused or renumbered when scope changes.
-- `ATR-PRxx`: planning traceability reference to
-  [APP_DESCRIPTION.md](../APP_DESCRIPTION.md), not an ID already present in it.
-- Story points use XS=1, S=2, M=3, L=5, XL=8. They are relative scope estimates,
-  not elapsed-time promises.
-- The backlog index is authoritative for status; story documents are authoritative
-  for acceptance criteria. Change both together when a reviewed scope change is approved.
-- Status vocabulary: `PLANNED` (defined, not started), `BLOCKED` (named prerequisite
-  unmet), `READY` (all prerequisites and review gates passed), `IN_PROGRESS`,
-  `IN_REVIEW`, `DONE`, `DEFERRED`, `STOPPED`.
-- G0 is passed and ATR-S001 is `DONE` with a split verdict: no supported vendor
-  route, but a technically proven unofficial route accepted for the private
-  alpha. S002 is in progress for the persistent connector boundary. This does
-  not authorize a public/commercial release.
-- S013 is the sole harness/test-runner and shared security-preflight owner.
-  S009 must demonstrate lifecycle controls before Worf can approve G2.
-  S004/S005 and every real-account, authorization, personal-export, source/catalog
-  request or real-data activity remain prohibited before G2. Only public
-  documentation research and controlled synthetic tests may precede it.
-- No credentials, personal exports, private listening data, or private comments
-  belong in planning artifacts, source control, or review attachments.
-- No screenshots of real captures. Reviewers witness controls, not library content.
-  Signed consent, personal evidence, keys, exports, and stores stay outside the
-  repository in the approved encrypted boundary. Sanitized reports exclude
-  personal fields by construction, including identifiers and user file paths.
-- Locked means the planning baseline is approved. It does not mean requirements
-  are implemented, tests have passed, or later evidence gates are approved.
+- Permanent IDs: `ATR-Txx` theme, `ATR-Exx` epic, `ATR-Fxx` feature,
+  `ATR-Sxxx` story. Never reuse or renumber archived IDs. 0.0.2 begins at
+  T04, E06, F14 and S014. `ATR-A001`–`ATR-A051` are inherited finding IDs,
+  not stories. `ATR-PRxx` are planning aliases into
+  [APP_DESCRIPTION.md](../APP_DESCRIPTION.md), not IDs in the product brief.
+- XS=1, S=2, M=3, L=5, XL=8 are relative estimates, not time promises.
+  WSJF = (BV + TC + RR) / size; each CoD factor is 1–5. Dependencies and
+  blocking security/accessibility gates take precedence over arithmetic.
+- Status vocabulary: `PLANNED`, `BLOCKED`, `READY`, `IN_PROGRESS`,
+  `IN_REVIEW`, `DONE`, `DEFERRED`, `STOPPED`. The current `03-backlog.md` owns
+  status and acceptance criteria. Update scope, totals, sequence and gates
+  together under explicit change control.
+- Planning approval, implementation evidence, and gate approval are distinct.
+  Source evidence is `documented-not-tested`, `proven`, `partial`,
+  `unavailable`, or `unknown`; uncertainty never grants permission.
+- No credentials, personal exports, private listening data, private comments,
+  real-capture screenshots, account/title identifiers, or user file paths in
+  planning, commits, review attachments, or logs. Reviewers witness controls,
+  not library content. Consent records, raw evidence and personal state remain
+  outside the repository/cloud-sync paths in the approved encrypted boundary.
+- Worf must approve the applicable G2 boundary before new real-data activity.
+  Use invented fixtures and isolated disposable roots before that gate.
+  ATR-S013's existing harness remains the shared runner; 0.0.2 extends it.
+- Owner plus at most ten named testers is a ceiling, not permission to convey
+  a copy. Named legal review, Worf and Captain clearance must precede conveyance.
+  Public/cloud/multi-user/commercial shipping remains **NO-GO**.
+- This transition does not operate on the running app, stop/disconnect it,
+  migrate its state, or change its implementation version.
 
-Only `0.0.1` is scoped here. Deferred items are inventory, not future release
-commitments. This plan does not change the eventual MVP definition in the product
-brief. Historical Home Assistant/LCARS Dashboard branches, components, and release
-procedures are not this application's backlog.
+Historical Home Assistant/LCARS Dashboard branches, devices, packaging and
+release procedures are not this application's backlog.

@@ -7,7 +7,7 @@ G0 passed; ATR-S001 is ready and later work remains dependency-gated. See
 ## Product traceability
 
 References below use exact section names in
-[APP_DESCRIPTION.md](../../APP_DESCRIPTION.md). Planning IDs are stable aliases,
+[APP_DESCRIPTION.md](../../../APP_DESCRIPTION.md). Planning IDs are stable aliases,
 not replacements for the source text. “Slice” means the eventual requirement is
 not fully delivered by alpha. Product “first release”/MVP success criteria remain
 future outcomes unless explicitly included here.
