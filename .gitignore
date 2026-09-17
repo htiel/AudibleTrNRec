@@ -1,1 +1,13 @@
 .github/agents/
+
+# Private alpha personal runtime state. Production code stores this outside the
+# repository under %LOCALAPPDATA%, and these patterns are defense in depth.
+.local-data/
+local-data/
+**/.local-data/
+**/local-data/
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+credentials.bin
+identity.bin

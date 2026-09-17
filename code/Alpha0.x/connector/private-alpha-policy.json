@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "appName": "Audible Track and Recommend",
+  "appAbbreviation": "ATnR",
+  "distribution": "private-alpha",
+  "commercialShippingBlocked": true,
+  "maximumNamedTesters": 10,
+  "allowedMarketplaces": ["us"],
+  "providerDeviceDisplayName": "Audible for iPhone",
+  "automaticSyncIntervalMinutes": 15
+}

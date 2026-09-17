@@ -2,11 +2,12 @@
 
 ## Current baseline
 
-**[Alpha 0.0.1](0.0.1/01-release-charter.md)** — **locked and unanimously
-approved planning baseline**. G0 passed on 2026-09-16 through Data, Geordi,
-Worf, Wesley, Riker, and Captain acceptance. This authorizes planning execution
-beginning with ATR-S001; it does not authorize real-data activity or declare an
-alpha release.
+**[Alpha 0.0.1](0.0.1/01-release-charter.md)** — **PRIVATE CONNECTOR IN
+PROGRESS on 2026-09-17**. The locked baseline was approved at G0. S001 found no
+supported vendor route, but a bounded test proved automated technical access
+through the pinned community client. The Captain approved that unofficial route
+for a personal build and no more than ten named testers while mechanically
+blocking commercial/public shipping.
 The revised inventory is **3 themes / 5 epics / 13 features / 13 stories /
 51 points**. The prior 38-point baseline remains historical, not current.
 
@@ -19,6 +20,9 @@ The revised inventory is **3 themes / 5 epics / 13 features / 13 stories /
 | [Risks and gates](0.0.1/05-risks-and-release-gates.md) | FMEA, evidence gates, open decisions, officer review |
 | [Backlog index](0.0.1/06-backlog-index.md) | Canonical hierarchy, release membership, current status |
 | [Review consensus](0.0.1/07-review-consensus.md) | Finding-by-finding reconciliation, decisions, validation, and unanimous sign-off |
+| [Source feasibility dossier](0.0.1/08-source-feasibility-dossier.md) | S001 public-document findings and the conditional manual-export route |
+| [Unofficial-client experiment amendment](0.0.1/09-unofficial-client-experiment.md) | One-time device-registration/reachability authorization and cleanup controls |
+| [Persistent private-alpha connector change control](0.0.1/10-private-alpha-connector-change-control.md) | Permanent device, encrypted local sync, explicit disconnect, tester cap, and commercial shipping block |
 | [Data review](0.0.1/reviews/data-review.md) | Original architecture findings; preserved unchanged |
 | [Geordi review](0.0.1/reviews/geordi-review.md) | Original accessibility findings; preserved unchanged |
 | [Worf review](0.0.1/reviews/worf-review.md) | Original security findings; preserved unchanged |
@@ -41,8 +45,10 @@ The revised inventory is **3 themes / 5 epics / 13 features / 13 stories /
 - Status vocabulary: `PLANNED` (defined, not started), `BLOCKED` (named prerequisite
   unmet), `READY` (all prerequisites and review gates passed), `IN_PROGRESS`,
   `IN_REVIEW`, `DONE`, `DEFERRED`, `STOPPED`.
-- G0 is passed. ATR-S001 is `READY`; all other stories remain `BLOCKED` by
-  their named dependencies and later gates.
+- G0 is passed and ATR-S001 is `DONE` with a split verdict: no supported vendor
+  route, but a technically proven unofficial route accepted for the private
+  alpha. S002 is in progress for the persistent connector boundary. This does
+  not authorize a public/commercial release.
 - S013 is the sole harness/test-runner and shared security-preflight owner.
   S009 must demonstrate lifecycle controls before Worf can approve G2.
   S004/S005 and every real-account, authorization, personal-export, source/catalog

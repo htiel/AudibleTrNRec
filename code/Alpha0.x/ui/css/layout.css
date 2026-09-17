@@ -1,0 +1,194 @@
+/**
+ * LCARS frame layout: elbow header/footer, sidebar, and main content area.
+ * The frame goes thick-to-thin/thin-to-thick across turns (Bracer Jack rule):
+ * the header/footer bars are the thick horizontal member, the elbow curve is
+ * the swept transition, and the sidebar rail is the thin vertical member.
+ */
+
+.lcars-frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.lcars-header,
+.lcars-footer {
+  display: flex;
+  align-items: stretch;
+}
+
+.lcars-elbow {
+  width: var(--lcars-elbow-width);
+  min-width: var(--lcars-elbow-width);
+  height: var(--lcars-elbow-height);
+  flex-shrink: 0;
+}
+
+.lcars-elbow-top {
+  background: var(--lcars-accent-primary);
+  border-radius: var(--lcars-radius-elbow) 0 0 0;
+}
+
+.lcars-elbow-bottom {
+  background: var(--lcars-accent-primary);
+  border-radius: 0 0 0 var(--lcars-radius-elbow);
+}
+
+.lcars-header-bar {
+  flex: 1;
+  min-width: 0;
+  background: var(--lcars-accent-primary);
+  color: var(--lcars-black);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lcars-space-3);
+  padding: var(--lcars-space-3) var(--lcars-space-4);
+  border-radius: 0 0 0 var(--lcars-radius-pill);
+}
+
+.lcars-title {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  font-size: var(--lcars-font-title);
+  overflow-wrap: anywhere;
+}
+
+.lcars-status-pill {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  background: var(--lcars-black);
+  color: var(--lcars-accent-secondary);
+  padding: var(--lcars-space-1) var(--lcars-space-4);
+  border-radius: var(--lcars-radius-pill);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.lcars-footer-bar {
+  flex: 1;
+  min-width: 0;
+  background: var(--lcars-accent-primary);
+  color: var(--lcars-black);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lcars-space-2);
+  padding: var(--lcars-space-2) var(--lcars-space-4);
+  border-radius: 0 var(--lcars-radius-pill) 0 0;
+}
+
+.lcars-footer-bar p {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.lcars-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.lcars-sidebar {
+  width: 12rem;
+  min-width: 9rem;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--lcars-bg);
+  padding: var(--lcars-space-4) var(--lcars-space-2) 0 0;
+}
+
+.lcars-sidebar ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--lcars-space-2);
+}
+
+.lcars-sidebar a {
+  display: flex;
+  align-items: center;
+  min-height: var(--lcars-min-target);
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 var(--lcars-space-4);
+  background: var(--lcars-accent-secondary);
+  color: var(--lcars-black);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  border-radius: 0 var(--lcars-radius-pill) var(--lcars-radius-pill) 0;
+}
+
+.lcars-sidebar a:hover {
+  filter: brightness(1.15);
+}
+
+.lcars-sidebar a[aria-current="page"] {
+  background: var(--lcars-accent-active);
+}
+
+.lcars-sidebar-filler {
+  flex: 1;
+  background: var(--lcars-accent-muted);
+  margin-top: var(--lcars-space-4);
+  border-radius: var(--lcars-radius-pill) 0 0 0;
+  min-height: 2rem;
+}
+
+.lcars-main {
+  flex: 1;
+  min-width: 0;
+  padding: var(--lcars-space-4);
+  overflow-x: auto;
+}
+
+.lcars-main:focus {
+  outline: none; /* the view's own heading receives a visible focus ring instead */
+}
+
+/* Reflow down to a 320px viewport: stack the sidebar above the content and
+   let the header/footer bars wrap instead of clipping. This breakpoint is
+   pinned in px (not rem/em) so it reflects the true CSS viewport width and
+   fires reliably even when the user has increased their preferred text size
+   independently of the viewport (WCAG 1.4.10 Reflow / 1.4.4 Resize Text). */
+@media (max-width: 640px) {
+  .lcars-body {
+    flex-direction: column;
+  }
+  .lcars-sidebar {
+    width: 100%;
+    min-width: 0;
+    padding: var(--lcars-space-2);
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .lcars-sidebar ul {
+    flex-direction: row;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+  .lcars-sidebar-filler {
+    display: none;
+  }
+  .lcars-elbow {
+    width: var(--lcars-elbow-width-compact);
+    min-width: var(--lcars-elbow-width-compact);
+    height: var(--lcars-elbow-height-compact);
+  }
+  .lcars-header-bar,
+  .lcars-footer-bar {
+    border-radius: 0;
+  }
+  .lcars-title {
+    font-size: var(--lcars-font-subheader);
+  }
+}

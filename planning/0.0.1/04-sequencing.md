@@ -1,6 +1,8 @@
 # Dependency order, WSJF, and critical path
 
-**Locked baseline — G0 passed on 2026-09-16; ATR-S001 is READY.**
+**Locked baseline — G0 passed on 2026-09-16; ATR-S001 STOPPED on 2026-09-17.
+Automated access is mandatory, no supported route was found, and manual
+export/import was rejected. All later work is blocked.**
 
 ## Scoring policy
 
@@ -97,8 +99,9 @@ The direct table, not diagram line placement, defines every edge.
 | Wave | Work / single-owner ready order | Exit |
 | --- | --- | --- |
 | 0 | Plan reconciliation and unanimous crew/Captain sign-off | G0 passed |
-| 1 | S001 | Dated public-document dossier; no account/data activity |
-| 2 | S002 then S003 by WSJF; different owners may draft in parallel | G1 approved design |
+| 1 | S001 — STOPPED | Automatic access no-go; manual-export route rejected by Captain |
+| Resume condition | Obtain a documented provider API/partner route or written authorization for automated library/history/progress refresh | All later work remains blocked |
+| 2 | S002 then S003 by WSJF only after resume condition | G1 approved design |
 | 3 | S013 | Sole shared runner/security preflight; fixtures only |
 | 4 | S010 then S009 by WSJF | G2 only after lifecycle evidence and Worf approval |
 | 5 | S005 then S004 by WSJF; independent approved routes can overlap with capacity | Catalog/source proof or stop |

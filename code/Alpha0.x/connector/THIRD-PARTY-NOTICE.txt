@@ -1,0 +1,13 @@
+ATnR PRIVATE ALPHA CONNECTOR - THIRD-PARTY NOTICE
+
+This private alpha installs audible 0.12.0, a community-maintained,
+reverse-engineered client licensed AGPL-3.0-only. It is not an official
+Audible or Amazon SDK.
+
+The complete installed dependency set and versions are recorded in
+requirements-private-alpha.lock. Each dependency retains its own copyright
+and license. Before this software is conveyed to any tester, provide the
+corresponding source code and license notices required by GPL-3.0 and
+AGPL-3.0, and complete a named legal review.
+
+Commercial and public shipping are blocked for this alpha.

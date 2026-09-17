@@ -1,23 +1,24 @@
 # Canonical alpha backlog index
 
 - **Version:** 0.0.1 — locked planning baseline
-- **As of:** 2026-09-16
-- **Status:** G0 passed; ATR-S001 READY; remaining execution dependency-gated
+- **As of:** 2026-09-17
+- **Status:** IN PROGRESS — unofficial private connector exception; commercial/public shipping blocked
 - **Totals:** 3 themes / 5 epics / 13 features / 13 stories / 51 points
-- **Completed implementation:** None
+- **Completed implementation:** Fixture harness plus persistent private connector; complete non-empty encrypted live snapshot verified
 
 ## Hierarchy roll-up
 
 | Theme | Epic | Features | Stories | Points | Status |
 | --- | --- | --- | --- | --- | --- |
-| ATR-T01 | ATR-E01 | F01, F02, F04, F05 | S001, S002, S004, S005 | 16 | ACTIVE — F01 READY |
+| ATR-T01 | ATR-E01 | F01, F02, F04, F05 | S001, S002, S004, S005 | 16 | IN PROGRESS — private connector |
 | ATR-T02 | ATR-E02 | F03, F06, F07 | S003, S006, S007 | 15 | BLOCKED — dependencies |
 | ATR-T03 | ATR-E03 | F08, F09, F13 | S008, S009, S013 | 13 | BLOCKED — dependencies |
 | ATR-T03 | ATR-E04 | F10 | S010 | 2 | BLOCKED — dependencies |
 | ATR-T01 | ATR-E05 | F11, F12 | S011, S012 | 5 | BLOCKED — dependencies |
 
-Theme roll-ups: T01=21, T02=15, T03=15 points. T01 is active through READY
-story S001; all other work is blocked by named dependencies.
+Theme roll-ups: T01=21, T02=15, T03=15 points. S001 is DONE with a split
+supported/unofficial verdict. S002 is IN PROGRESS under the Captain's private
+connector change control. Later work remains dependency and gate controlled.
 Feature status equals its sole story's status. Epics/themes become DONE only
 when all their scoped child stories meet DoD; that still does not imply G6 approval.
 All abbreviated IDs below retain the `ATR-` prefix.
@@ -27,16 +28,16 @@ All abbreviated IDs below retain the `ATR-` prefix.
 | Story | Feature | Epic / theme | Title | Points | Priority | Direct prerequisites | Status | Detail |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | ATR-S010 | F10 | E04 / T03 | Trust contract | 2 | CRITICAL | S003, S013, G1 | BLOCKED — S003, S013, G1 | [Story](03-user-stories.md#atr-s010--lock-executable-recommendation-trust-contracts) |
-| ATR-S001 | F01 | E01 / T01 | Source feasibility dossier | 3 | CRITICAL | G0 | READY | [Story](03-user-stories.md#atr-s001--establish-the-source-feasibility-dossier) |
+| ATR-S001 | F01 | E01 / T01 | Source feasibility dossier | 3 | CRITICAL | G0 | DONE — unofficial automated route proven and classified | [Dossier](08-source-feasibility-dossier.md) |
 | ATR-S011 | F11 | E05 / T01 | Architecture decision | 2 | CRITICAL | G3, S010 | BLOCKED — G3, S010 | [Story](03-user-stories.md#atr-s011--decide-architecture-from-measured-access-evidence) |
 | ATR-S005 | F05 | E01 / T01 | Catalog metadata proof | 3 | CRITICAL | G1, G2 | BLOCKED — G1, G2 | [Story](03-user-stories.md#atr-s005--prove-candidate-catalog-metadata-access) |
 | ATR-S012 | F12 | E05 / T01 | Alpha decision pack | 3 | CRITICAL | S007, S008, S009, S010, S011, S013, G4 | BLOCKED — dependencies | [Story](03-user-stories.md#atr-s012--assemble-a-reproducible-alpha-decision-pack) |
 | ATR-S008 | F08 | E03 / T03 | Accessible inspector | 3 | HIGH | S006, S009, S013 | BLOCKED — S006, S009, S013 | [Story](03-user-stories.md#atr-s008--inspect-evidence-through-an-accessible-prototype) |
-| ATR-S002 | F02 | E01 / T01 | Safe experiment boundary | 5 | CRITICAL | S001 | BLOCKED — S001 | [Story](03-user-stories.md#atr-s002--define-consent-and-a-safe-experiment-boundary) |
+| ATR-S002 | F02 | E01 / T01 | Safe experiment boundary | 5 | CRITICAL | S001 | IN REVIEW — persistent connect/restart/sync verified; broader G2 evidence pending | [Story](03-user-stories.md#atr-s002--define-consent-and-a-safe-experiment-boundary) |
 | ATR-S004 | F04 | E01 / T01 | Approved source proof | 5 | CRITICAL | S009, G2 | BLOCKED — S009, G2 | [Story](03-user-stories.md#atr-s004--prove-one-approved-audible-captureimport-route) |
 | ATR-S009 | F09 | E03 / T03 | Data lifecycle controls | 5 | CRITICAL | S002, S003, S013, G1 | BLOCKED — dependencies | [Story](03-user-stories.md#atr-s009--enforce-prototype-data-lifecycle-controls) |
 | ATR-S013 | F13 | E03 / T03 | Fixture-only secure harness | 5 | CRITICAL | S002, S003, G1 | BLOCKED — S002, S003, G1 | [Story](03-user-stories.md#atr-s013--build-the-fixture-only-secure-harness) |
-| ATR-S003 | F03 | E02 / T02 | Evidence schema | 5 | CRITICAL | S001 | BLOCKED — S001 | [Story](03-user-stories.md#atr-s003--define-source-evidence-and-synthetic-fixtures) |
+| ATR-S003 | F03 | E02 / T02 | Evidence schema | 5 | CRITICAL | S001 | BLOCKED — S001 stopped | [Story](03-user-stories.md#atr-s003--define-source-evidence-and-synthetic-fixtures) |
 | ATR-S006 | F06 | E02 / T02 | Normalized snapshot | 5 | CRITICAL | S003, S004, S013 | BLOCKED — S003, S004, S013 | [Story](03-user-stories.md#atr-s006--normalize-an-inspectable-source-snapshot) |
 | ATR-S007 | F07 | E02 / T02 | Repeat import safety | 5 | CRITICAL | S006, S009 | BLOCKED — S006, S009 | [Story](03-user-stories.md#atr-s007--repeat-imports-without-corrupting-retained-state) |
 
@@ -74,7 +75,15 @@ capture, and ideological profiling are **prohibited**, not deferred.
 | 2026-09-16 | Created initial locked 0.0.1 planning baseline; all work blocked by G0 | Captain requested initial plan; current APP_DESCRIPTION.md and repository inspection |
 | 2026-09-16 | Reconciled 33 named blockers and recommendations; S002/S003/S007/S009 3→5, new F13/S013=5; 38→51 points; S005 independent of S004 but gated G2; S007 added to G3 | Captain requested bounded reconciliation; [finding dispositions](07-review-consensus.md) |
 | 2026-09-16 | Data, Geordi, Worf, and Wesley approved; Riker accepted reconciliation; Captain locked baseline; G0 passed and S001 became READY | [Final consensus and sign-offs](07-review-consensus.md) |
+| 2026-09-16 | Accepted passkey and account-provenance amendment: provider-controlled authentication remains outside ATR; one active account container; participant-attested manifest provenance and mismatch quarantine; no story, estimate, dependency, gate, or status change | Captain requirement accepted; unanimous [amendment concurrence](07-review-consensus.md#passkey-and-account-provenance-amendment) |
+| 2026-09-16 | Completed ATR-S001 public-document research: manual official-export import is conditional GO; automatic Audible synchronization and broad catalog extraction are NO-GO; S002/S003 become READY pending Captain acceptance of import-first scope | [Source feasibility dossier](08-source-feasibility-dossier.md) |
+| 2026-09-17 | Captain rejected export/import and requires automated refresh; S001 and alpha 0.0.1 stopped because no supported automated route exists | [Source feasibility dossier](08-source-feasibility-dossier.md#resume-condition) |
+| 2026-09-17 | Captain authorized one unofficial-client reachability experiment, accepting temporary device registration/deregistration under strict isolation; no release/gate/status change | [Experiment amendment](09-unofficial-client-experiment.md) |
+| 2026-09-17 | One isolated external-browser PKCE/device experiment returned one library record and confirmed required metadata/progress field names; temporary device deregistration and local cleanup succeeded; technical reachability proven but supported/legal/product status unchanged | [Sanitized experiment result](09-unofficial-client-experiment.md#sanitized-result) |
+| 2026-09-17 | Captain approved the pinned community route for a persistent personal build and no more than ten named testers; one device remains registered until explicit Disconnect; credentials/snapshot are DPAPI-protected; commercial/public shipping blocked | [Persistent connector change control](10-private-alpha-connector-change-control.md) |
+| 2026-09-17 | Persistent registration survived restart; automatic sync promoted a complete non-empty encrypted snapshot with matching book/entry counts; 155/156 Node tests passed with one environment skip, all 9 connector tests passed, dependency audit clean, and commercial pack blocked | [Validation evidence](10-private-alpha-connector-change-control.md#validation-evidence--2026-09-17) |
 
-Next action: execute ATR-S001 using public documentation research only. Original
-review files are preserved beside final sign-offs. Real-data activity remains
-prohibited until G2, and private release remains prohibited until G6.
+Next action: obtain a documented provider API/partner route or written
+Audible/Amazon authorization for automated library/history/progress refresh.
+No authenticated-browser, cookie, DOM-scraping, private-endpoint, or personal
+data experiment is authorized. Original review files remain preserved.

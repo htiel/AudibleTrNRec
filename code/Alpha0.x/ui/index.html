@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Audible Track and Recommend — Alpha 0.0.1 evidence inspector (synthetic prototype)</title>
+  <link rel="stylesheet" href="/ui/css/tokens.css">
+  <link rel="stylesheet" href="/ui/css/base.css">
+  <link rel="stylesheet" href="/ui/css/layout.css">
+  <link rel="stylesheet" href="/ui/css/components.css">
+</head>
+<body>
+  <a class="lcars-skip-link" href="#main-content">Skip to main content</a>
+
+  <div class="lcars-frame">
+    <header class="lcars-header" role="banner">
+      <div class="lcars-elbow lcars-elbow-top" aria-hidden="true"></div>
+      <div class="lcars-header-bar">
+        <h1 class="lcars-title">Audible Track and Recommend — Evidence Inspector</h1>
+        <p id="runtime-status" class="lcars-status-pill">Synthetic data · Import-only, manual refresh · No Audible connection · Alpha 0.0.1</p>
+      </div>
+    </header>
+
+    <div class="lcars-body">
+      <nav class="lcars-sidebar" aria-label="Primary">
+        <ul>
+          <li><a href="#/library" data-route="library">Library evidence</a></li>
+          <li><a href="#/feasibility" data-route="feasibility">Feasibility &amp; trace</a></li>
+          <li><a href="#/data" data-route="data">Data &amp; lifecycle</a></li>
+        </ul>
+        <div class="lcars-sidebar-filler" aria-hidden="true"></div>
+      </nav>
+
+      <main id="main-content" class="lcars-main" tabindex="-1">
+        <div id="view-root"></div>
+      </main>
+    </div>
+
+    <footer class="lcars-footer" role="contentinfo">
+      <div class="lcars-footer-bar">
+        <p id="runtime-footer">Alpha 0.0.1 · Evidence inspector only, no ratings/recommendation product surface · Platform-neutral prototype · Loopback transport only, no outbound network access · No persistence beyond this browser tab</p>
+      </div>
+      <div class="lcars-elbow lcars-elbow-bottom" aria-hidden="true"></div>
+    </footer>
+  </div>
+
+  <div id="live-polite" class="lcars-sr-only" role="status" aria-live="polite"></div>
+  <div id="live-assertive" class="lcars-sr-only" role="alert" aria-live="assertive"></div>
+
+  <script type="module" src="/ui/js/app.js"></script>
+</body>
+</html>

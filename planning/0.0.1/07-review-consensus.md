@@ -315,3 +315,93 @@ Riker accepts the reconciled execution plan, and the Captain's request to lock
 alpha 0.0.1 records baseline acceptance. **The crew is unanimous. G0 is passed,
 the 51-point baseline is locked, and ATR-S001 is READY.** No real-data activity
 is authorized before G2, and no private alpha release is authorized before G6.
+
+## Passkey and account-provenance amendment
+
+- **Proposed:** 2026-09-16
+- **Trigger:** Captain clarified that participant-side Audible/Amazon
+  authentication may use a passkey held in 1Password.
+- **Accepted:** 2026-09-16
+- **Disposition:** Unanimously approved clarification; no runtime authorization
+  is granted by this amendment.
+
+### Changed authorities
+
+- [Product brief](../../APP_DESCRIPTION.md): distinguishes provider
+  authentication from application authorization and places all password-manager
+  access outside the application trust boundary.
+- [Release charter](01-release-charter.md): defines the WebAuthn parties,
+  provider-controlled browser boundary, and passkey-neutral credential
+  prohibitions.
+- [Detailed stories](03-user-stories.md): extends S002 criteria 7–9, the S003
+  manifest and field-authority contract, and S009 lifecycle criteria.
+- [Risks and gates](05-risks-and-release-gates.md): adds R18/R19, extends tests
+  3, 11, and 13, and clarifies D01.
+- [Backlog index](06-backlog-index.md): records this append-only amendment.
+
+### Amendment acceptance
+
+1. Audible/Amazon remains the WebAuthn relying party; the OS/browser is the
+   client; a user-selected credential manager may act as authenticator. ATR is
+   none of these, renders no credential field, and never reads or integrates
+   with 1Password or another vault.
+2. Successful provider authentication grants ATR no API, token, route, consent,
+   or authorization. No delegated route is currently approved. If S001 finds a
+   supported delegated route, it still requires G1 design, fixture-tested
+   controls, and explicit G2 authorization.
+3. Zero-request import mode records a non-identifying participant-attested
+   account alias and marketplace in the snapshot manifest. Attestation is
+   non-key-forming and not account proof; source-evidenced marketplace remains
+   authoritative for catalog identity.
+4. An attested/source-evidenced marketplace mismatch quarantines the capture
+   and prevents promotion. At most one account container may exist; changing
+   the declared account or marketplace requires prior closure, key destruction,
+   managed-artifact deletion, receipt, new consent, and new capture.
+5. G2 test 11 uses only synthetic app-visible outcomes. ATR neither probes
+   authenticator/vault state nor controls provider authentication fallback.
+   G3 test 13 records explicit account-provenance and container-isolation
+   evidence.
+6. Deletion disclosures distinguish app-managed crypto-erasure from
+   provider-held, user-held, or vault-synchronized copies outside app custody.
+
+### Scope and baseline invariants
+
+This is a security, provenance, and wording clarification, not a new feature.
+The baseline remains **3 themes / 5 epics / 13 features / 13 stories / 51
+points**. No ID, priority, estimate, dependency, gate, status, WSJF score, or
+release scope changes. G0 remains passed, only ATR-S001 remains READY, G2 still
+does not authorize real-data work by itself, and G6 remains required for release.
+
+### Final concurrence
+
+All amendment reviewers independently approved the corrected authorities:
+
+- [Riker change-control approval](reviews/passkey-riker-approval.md)
+- [Data provenance sign-off](reviews/passkey-data-signoff.md)
+- [Worf security sign-off](reviews/passkey-worf-signoff.md)
+- [Geordi accessibility sign-off](reviews/passkey-geordi-signoff.md)
+
+Data's first pass identified one narrow traceability blocker: replacing
+`provider-held` with `vault-service` could have weakened an existing deletion
+disclosure. The final wording is additive and names provider-held,
+vault-service, and user-held copies in S009 and test 9; Data approved the
+correction. Riker, Worf, and Geordi found no blocking issue.
+
+The Captain introduced and accepted this requirement as a locked-baseline
+clarification. The amendment is accepted without changing story count, points,
+readiness, dependencies, gates, or runtime authorization. G0 remains passed and
+ATR-S001 remains the only READY story.
+
+## Amendment validation record
+
+Validation is of planning consistency, not application behavior. The final
+record verifies Markdown links, whitespace, story count and point arithmetic,
+status/readiness invariants, and absence of dependency/gate drift. No Audible
+account call, authentication attempt, password-manager access, real-data
+operation, commit, or push is part of this amendment.
+
+**Execution/results (2026-09-16):** local Node.js assertions passed for 136
+local Markdown file/fragment links, 13 story headings, 13 point declarations
+totaling 51, and ATR-S001 as the only READY story. Story priority/size and
+dependency metadata, all canonical backlog rows, and all G0–G6 gate definitions
+match the locked HEAD baseline. `git diff --check` passed.

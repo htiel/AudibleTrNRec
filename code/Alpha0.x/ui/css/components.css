@@ -1,0 +1,295 @@
+/**
+ * Component styles: flat pill buttons, forms, tables, tag chips, dialogs,
+ * and disclosures. No gradients, no box-shadow, no text-shadow, no glow
+ * anywhere in this file, per the LCARS flat-design rule.
+ */
+
+/* --- Buttons --------------------------------------------------------------- */
+
+.lcars-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--lcars-min-target);
+  min-width: 0;
+  max-width: 100%;
+  padding: var(--lcars-space-2) var(--lcars-space-4);
+  border: 0;
+  border-radius: 0 var(--lcars-radius-pill) var(--lcars-radius-pill) 0;
+  background: var(--lcars-accent-secondary);
+  color: var(--lcars-black);
+  font-family: inherit;
+  font-size: 0.9rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+  cursor: pointer;
+}
+
+.lcars-btn:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+
+.lcars-btn:active {
+  background: var(--lcars-accent-active);
+}
+
+.lcars-btn-primary { background: var(--lcars-accent-primary); }
+.lcars-btn-secondary { background: var(--lcars-accent-tertiary); }
+.lcars-btn-danger { background: var(--lcars-accent-danger); }
+
+.lcars-btn:disabled {
+  background: var(--lcars-accent-muted);
+  color: var(--lcars-fg);
+  cursor: not-allowed;
+  filter: none;
+}
+
+/* --- Forms and fields -------------------------------------------------------- */
+
+.lcars-form,
+.lcars-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lcars-space-3);
+  margin: var(--lcars-space-3) 0;
+}
+
+.lcars-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lcars-space-1);
+  min-width: 12rem;
+}
+
+.lcars-field-wide {
+  min-width: 100%;
+}
+
+.lcars-field-label {
+  font-size: 0.8rem;
+  color: var(--lcars-accent-secondary);
+}
+
+.lcars-control-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lcars-space-4);
+}
+
+select, input[type="text"], input[type="search"], input[type="number"], textarea {
+  background: var(--lcars-black);
+  color: var(--lcars-fg);
+  border: 2px solid var(--lcars-accent-tertiary);
+  border-radius: var(--lcars-space-2);
+  padding: var(--lcars-space-2);
+  font-family: inherit;
+  font-size: 1rem;
+  min-height: var(--lcars-min-target);
+}
+
+textarea {
+  min-height: 4.5rem;
+  resize: vertical;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: 1.5rem;
+  height: 1.5rem;
+  accent-color: var(--lcars-accent-secondary);
+}
+
+input[type="range"] {
+  width: 100%;
+  min-height: var(--lcars-min-target);
+  accent-color: var(--lcars-accent-secondary);
+}
+
+.lcars-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: var(--lcars-space-2);
+  min-height: var(--lcars-min-target);
+}
+
+.lcars-checkbox-row label {
+  cursor: pointer;
+}
+
+fieldset.lcars-fieldset {
+  border: 2px solid var(--lcars-accent-muted);
+  border-radius: var(--lcars-space-2);
+  padding: var(--lcars-space-3);
+  margin: 0;
+}
+
+.lcars-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lcars-space-2);
+}
+
+.lcars-form-status {
+  min-height: 1.4em;
+  color: var(--lcars-accent-secondary);
+}
+
+.lcars-form-status[role="alert"] {
+  color: var(--lcars-accent-danger);
+}
+
+.lcars-error {
+  color: var(--lcars-accent-danger);
+}
+
+.lcars-note {
+  color: var(--lcars-accent-tertiary);
+  font-style: italic;
+}
+
+/* --- Tables ------------------------------------------------------------------ */
+
+.lcars-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--lcars-space-3) 0;
+}
+
+.lcars-table caption {
+  caption-side: top;
+  text-align: left;
+  color: var(--lcars-accent-secondary);
+  padding-bottom: var(--lcars-space-1);
+}
+
+.lcars-table th,
+.lcars-table td {
+  text-align: left;
+  padding: var(--lcars-space-2);
+  border-bottom: 1px solid var(--lcars-accent-muted);
+  vertical-align: top;
+}
+
+.lcars-table th {
+  background: var(--lcars-accent-muted);
+  color: var(--lcars-fg);
+}
+
+.lcars-title-link {
+  font-weight: bold;
+}
+
+.lcars-subtitle {
+  font-size: 0.85rem;
+  color: var(--lcars-accent-tertiary);
+}
+
+.lcars-group-heading {
+  margin-top: var(--lcars-space-6);
+  color: var(--lcars-accent-secondary);
+}
+
+.lcars-count {
+  color: var(--lcars-accent-secondary);
+}
+
+/* --- Related facet list (read-only, book detail) ------------------------------- */
+
+.lcars-facet-list {
+  padding-left: 1.25rem;
+}
+
+/* --- Metadata list --------------------------------------------------------------- */
+
+.lcars-meta-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--lcars-space-1) var(--lcars-space-4);
+  margin: var(--lcars-space-3) 0;
+}
+
+.lcars-meta-list dt {
+  color: var(--lcars-accent-secondary);
+}
+
+.lcars-meta-list dd {
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .lcars-meta-list {
+    grid-template-columns: 1fr;
+  }
+  .lcars-meta-list dt {
+    margin-top: var(--lcars-space-2);
+  }
+  .lcars-field {
+    min-width: 0;
+  }
+}
+
+/* --- Synthetic-only structural trace -------------------------------------------- */
+
+.lcars-trace-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--lcars-space-3);
+}
+
+.lcars-trace-edge {
+  border: 1px solid var(--lcars-accent-muted);
+  border-radius: var(--lcars-space-2);
+  padding: var(--lcars-space-3);
+}
+
+.lcars-trace-heading {
+  margin: 0 0 var(--lcars-space-1);
+  color: var(--lcars-accent-secondary);
+}
+
+/* --- Status view ------------------------------------------------------------------ */
+
+.lcars-status-block ul {
+  padding-left: 1.25rem;
+}
+
+.lcars-status-statement {
+  font-size: var(--lcars-font-subheader);
+  color: var(--lcars-accent-secondary);
+}
+
+/* --- Dialogs ------------------------------------------------------------------------ */
+
+dialog.lcars-dialog {
+  background: var(--lcars-black);
+  color: var(--lcars-fg);
+  border: 2px solid var(--lcars-accent-secondary);
+  border-radius: var(--lcars-space-2);
+  padding: var(--lcars-space-4);
+  max-width: min(28rem, calc(100vw - 2rem));
+  width: 100%;
+  box-sizing: border-box;
+}
+
+dialog.lcars-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.lcars-dialog-title {
+  margin-top: 0;
+}
+
+.lcars-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--lcars-space-2);
+  margin-top: var(--lcars-space-3);
+}
+
+.lcars-view-intro {
+  color: var(--lcars-accent-tertiary);
+  max-width: 60rem;
+}

@@ -1,8 +1,11 @@
 # Alpha 0.0.1 — detailed stories
 
 **Locked baseline, unanimously approved on 2026-09-16.**
-G0 passed: ATR-S001 is `READY`; the other 12 stories remain `BLOCKED` by named
-dependencies. No story has implementation or test evidence.
+G0 passed. ATR-S001 is `DONE` with a split verdict: no supported vendor route,
+but the pinned community route is technically proven and Captain-approved for
+a private non-commercial alpha. ATR-S002 is `IN_PROGRESS` under the
+[persistent connector change control](10-private-alpha-connector-change-control.md).
+Commercial/public release remains prohibited.
 Stable IDs S001–S012 are retained. S013 isolates previously implicit shared
 security/harness work so G2 has no dependency on a real-data story.
 Full-prefix IDs and aliases resolve in [hierarchy](02-requirements-and-hierarchy.md);
@@ -65,6 +68,14 @@ configured internally; no imported/external user ID is trusted for tenancy.
   disclosed scope, never for the whole library. Missing partitions, unknown
   completion, cap-triggered abort or parse failure cannot promote a snapshot;
   retain last complete state. Scope changes are explicit, not inferred deletions.
+- Snapshot manifest also records participant-attested account alias and
+  marketplace as non-key-forming provenance bound to the internal participant
+  key. Source-evidenced marketplace remains source authority for catalog
+  identity. A mismatch between attested and source-evidenced marketplace
+  quarantines the capture and prevents promotion; missing source marketplace
+  remains unknown rather than being replaced by attestation. Attested provenance
+  is digest-included; equality uses canonical NFC and exact ordinal Unicode-code-
+  point comparison, never locale-sensitive or case-insensitive matching.
 - Canonical logical state: schema version included; object keys lexically sorted;
   Unicode NFC; ordinal Unicode-code-point collation (no locale collation);
   sets sorted by canonical key; semantic ordered arrays retain their order.
@@ -90,6 +101,7 @@ unclassified fields fail validation. Source timestamps and units are validated f
 | --- | --- | --- |
 | Metadata, source identity, library/history/progress values and source timestamps — source | Initial supported values admitted; later changes need evidence of freshness | Absent: retain existing value, quarantine conflicting incoming value. Equal: identical is no-op, conflict quarantined. Older: retain trusted value and quarantine conflict. Initial absent-time data is labeled freshness unknown |
 | Synthetic rating/comment/tag and narrator/series sentinel — local | Import cannot write, delete, or repoint it; explicit test action only | All timestamps irrelevant to local authority |
+| Account alias and declared marketplace — participant-attested provenance | Record only in the snapshot manifest, bound to the internal participant key; never form source/catalog identity or prove an account | Re-import must match the active consented capture; mismatch requires quarantine and a new consent/container lifecycle |
 | Percentage, normalized sort fields, evidence edges — derived | Recompute deterministically from accepted source/local inputs with rule version and pointers | Never use quarantined/stale conflict to recompute trusted values |
 | Attempt/success/capture times, counters, run diagnostics — operational | Inject clock; success advances only after atomic complete-snapshot promotion | Never substitute capture time for absent source freshness |
 
@@ -134,7 +146,8 @@ omnibus; position greater than duration. All records are invented, not redacted 
 - Provider-rendered authentication only in the OS default browser or sanctioned
   authentication session our code cannot observe/script/autofill/intercept.
   No embedded webview, headless/automated browser, profile/cookie extraction,
-  password, MFA code or session-cookie code path. Delegated tokens only if supported.
+  password, MFA code, passkey/WebAuthn relay, password-manager integration, or
+  session-cookie code path. Delegated tokens only if supported.
 - Default experiment ceilings (G1 may lower; increases need reviewed rebaseline):
   100 library entries, 500 history records, 10 catalog lookups, 100 requests/run,
   25 MiB transferred/run, 50 MiB total retained encrypted data, 10 minutes/run,
@@ -153,8 +166,10 @@ omnibus; position greater than duration. All records are invented, not redacted 
   announcement before access. Refusal collects nothing. Withdraw: stop immediately,
   destroy app-managed data/keys within 24 hours, record sanitized receipt.
 - Dedicated OS account or isolated container, no cloud-sync paths, verified backup,
-  indexing/thumbnail, telemetry and crash reporting off. One encrypted container
-  holds all app-managed personal artifacts; secret facility protects its key.
+  indexing/thumbnail, telemetry and crash reporting off. At most one active
+  account container holds all app-managed personal artifacts; a secret facility
+  protects its key. Close and crypto-erase it before another declared account or
+  marketplace is consented or captured.
   TLS for approved transfers; source/catalog adapters alone may access approved
   destinations. No source-supplied URL is fetched or activated, even covers.
 - Raw data expires after validation, before session end, and unconditionally within
@@ -216,6 +231,12 @@ omnibus; position greater than duration. All records are invented, not redacted 
      no hosted custody without justified need, privacy/a11y evidence and re-review.
 - **Specific DoD:** DoD-A; dated dossier only, no account request.
 
+**2026-09-17 result:** completed by
+[the source feasibility dossier](08-source-feasibility-dossier.md). One bounded
+client experiment proved automated library reachability and required field
+coverage. The route is classified as community-tested, unofficial,
+reverse-engineered, Beta, and unsupported.
+
 ## ATR-S002 — Define consent and a safe experiment boundary
 
 - **Feature / epic / theme:** ATR-F02 / ATR-E01 / ATR-T01
@@ -231,6 +252,10 @@ omnibus; position greater than duration. All records are invented, not redacted 
   2. Supply signed-consent template and withdrawal/expiry procedure; Geordi approves
      plain-language interaction spec before code. Fixture keyboard/AT script tests
      equally reachable accept/decline, no pre-check and refusal collecting nothing.
+     Consent explicitly names the participant-attested account alias and
+     marketplace; alias entry accepts only a short opaque participant-chosen
+     label and never an email, login handle, provider identifier, hash, or
+     truncation of one.
   3. Specify credential-absence static review and safe provider handoff; no
      password/MFA/session-cookie code path; Worf checks enforcement at G2.
   4. Specify pre-ingest selection and archive rejection before parsing, including
@@ -239,7 +264,65 @@ omnibus; position greater than duration. All records are invented, not redacted 
      logging allowlist, default-deny egress and full deletion inventory.
   6. Publish incident/revocation runbook and dependency/install-script policy;
      dependency review is G2 prerequisite, not deferred to release.
+  7. Document the authentication ceremony boundary: the provider is the
+     WebAuthn relying party, the OS/browser is the client, the participant's
+     credential manager may act as the authenticator, and ATR is none of these and
+     renders no credential field. Prohibit impersonating, registering, or
+     relaying a relying party for a provider domain; claiming a provider
+     associated domain; synthesizing, exporting, importing, or persisting FIDO
+     credentials; and every password-manager integration surface, including an
+     SDK, Connect server, service account, CLI, SSH agent, extension messaging,
+     vault read, and clipboard/pasteboard read.
+  8. Pre-register delegated-callback requirements as conditional and currently
+     inert: no delegated route is approved, and no callback or token handling
+     is implemented or authorized. A supported delegated route identified by
+     S001 requires G1 design approval and fixture-tested controls before
+     explicit G2 authorization. Require an exact-match registered redirect URI,
+     PKCE S256, single-use high-entropy `state` bound to the initiating session,
+     rejection of unknown or duplicated parameters, a bounded pending-
+     authorization timeout, one-time code exchange, and treatment of the entire
+     callback URL as credential material excluded from logs, traces, exports,
+     and diagnostics. For an approved OIDC flow, also require `nonce` and
+     issuer/audience/expiry validation. Departures from the locked scope or
+     trust boundary require separate change control.
+  9. Specify account and marketplace provenance as a participant attestation.
+     In zero-request import mode, the experiment cannot verify which account
+     produced an artifact. Record in the snapshot manifest a participant-
+     attested alias and marketplace bound to the internal participant key. The
+     alias must not derive from, hash, or truncate a provider identifier, email,
+     or login handle. Attestation is not account proof and is non-key-forming.
+     If an artifact contains source-evidenced marketplace data, a mismatch with
+     the attestation quarantines the capture and prevents snapshot promotion.
+     A different or ambiguous account requires closure, crypto-erasure, and a
+     receipt for the prior container before new consent, a new container, and a
+     new capture. At most one account container may exist at a time; captures
+     must never merge across declared accounts or marketplaces. Do not store a
+     provider customer identifier or use one for tenancy.
 - **Specific DoD:** DoD-A; written G1 design, not runtime security approval.
+
+### ATR-S002 private-connector amendment
+
+The Captain's 2026-09-17 change control supersedes only the conflicting
+experiment assumptions above:
+
+- Headed Edge automation is permitted solely to open and observe the
+  provider-controlled PKCE completion request. ATnR does not render, inspect,
+  relay, or store credential fields, passkeys, passwords, OTPs, or CVF values.
+- The callback URL/code exists only inside the connector process and is never
+  emitted through stdio, logs, diagnostics, browser state, or repository files.
+- One persistent virtual device and its refresh/signing credentials are
+  permitted. Credentials remain sealed with Windows user-scoped DPAPI in the
+  isolated connector.
+- A DPAPI-protected random local identity key may HMAC the provider `user_id`
+  into an opaque account-isolation key. The raw identifier and local key remain
+  inside DPAPI envelopes; neither is used as application tenancy.
+- The participant alias remains a separate short local label and cannot contain
+  an email address or provider identifier.
+- Normal refresh/app shutdown never deregisters. Explicit **Disconnect
+  Audible** deregisters first, then destroys credentials; local library data is
+  deleted separately.
+- Commercial/public shipping remains blocked. Broader distribution requires
+  named legal/licensing and renewed security approval.
 
 ## ATR-S003 — Define source evidence and synthetic fixtures
 
@@ -420,7 +503,8 @@ omnibus; position greater than duration. All records are invented, not redacted 
   7. Delete/disconnect confirmation has distinct accessible name, keyboard
      confirm/cancel, correct dialog focus containment and return to trigger (or
      logical successor if removed). Before confirm announce irreversible scope
-     and provider/user-export-copy limitations as text, not icon/tooltip.
+     and provider-held and external user-export-copy limitations as text, not
+     icon/tooltip.
   8. Inspector sends zero outbound requests; no remote fonts/images/styles/scripts,
      analytics, prefetch or activatable source URLs. Web uses verified restrictive
      CSP, no remote origins or inline scripts; other harness has equivalent denial.
@@ -463,15 +547,24 @@ omnibus; position greater than duration. All records are invented, not redacted 
      before G2 using S008 AC4–7 standards; no dependence on later S008 completion.
      Decline is equally reachable. Export privacy warning and deletion limits
      announced before action, not after.
-  5. Crypto-erase all app-managed personal data in one encrypted container by
-     destroying its key and deleting managed artifacts; test restart and canary
+  5. Maintain at most one active account container and key. Before a different
+     declared account or marketplace can be consented or captured, close the
+     current container, destroy its key, delete its managed artifacts, and issue
+     a non-personal closure receipt; never merge or retain containers across the
+     switch. Test restart and canary
      searches across raw/normalized/temp/extraction/cache/snapshots/credentials,
      database WAL/journal/shm, OS index/thumbnails, swap/undo, shell history,
      clipboard, dumps/core, terminal scrollback, and prior app-managed exports.
      Prevent spill to those external locations, verify absence; do not place actual
      personal data there. User-directed export copies leave custody only with warning.
-     Disclose provider/user-held copies and SSD unlinked-block limits; no secure-
-     overwrite guarantee. Participant verifies MFA and reviews connected apps/devices.
+     Disclose provider-held, vault-service, and user-held copies and SSD
+     unlinked-block limits; no secure-overwrite guarantee. Credentials, notes,
+     or artifacts the participant places in 1Password or another synchronized
+     vault are user-held copies outside app custody: key destruction cannot
+     erase them, and vault synchronization may propagate them to the vault
+     service and enrolled devices. No app-managed secret, key, token, encrypted
+     container, capture, or export may be stored there.
+     Participant verifies MFA and reviews connected apps/devices.
   6. Complete dated dependency/vulnerability/license/lockfile and credential-absence
      checks before G2; unresolved critical/high vulnerability blocks. Runtime,
      package and boundary changes require Worf reapproval, not notification.

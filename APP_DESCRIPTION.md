@@ -168,6 +168,28 @@ must not be adopted without a specific technical, legal, security, and
 maintenance review. The application should clearly tell the user what is being
 accessed and how it will be stored.
 
+**Private alpha decision (2026-09-17):** the Captain approved the pinned
+community-maintained `audible` 0.12.0 external-browser PKCE/device-registration
+method for a personal build and no more than ten named testers. This is a
+user-approved exception for a community-tested, unofficial, reverse-engineered
+API; it is not classified as an official Audible/Amazon integration. The
+connector is isolated in a local Python process, keeps provider credentials
+outside the Node/browser boundary, seals them with Windows user-scoped DPAPI,
+and stores only a DPAPI-encrypted normalized snapshot in SQLite. The persistent
+device remains registered through app shutdown and normal refreshes. It is
+deregistered only after the user explicitly confirms **Disconnect Audible**.
+
+The upstream client hard-codes the Amazon device display as “Audible for
+iPhone”; ATnR must not patch or misrepresent that device profile merely to
+rename it. The application identifies the connection as **ATnR** locally and
+discloses the provider-side label.
+
+This exception is private-alpha-only. Commercial use, public hosting,
+application-store submission, package publication, binary distribution, and
+commercial shipping are blocked pending named legal review of Audible/Amazon
+terms and GPL/AGPL obligations, renewed security review, and explicit Captain
+change control.
+
 ### 2. Library and Listening History
 
 For each available title, the application should track:
@@ -628,6 +650,17 @@ recommendation evaluation.
 ## Privacy and Security Requirements
 
 - Never collect or store an Audible password directly.
+- Never collect, relay, implement, or automate an Audible/Amazon passkey,
+  WebAuthn ceremony, MFA code, or session cookie. Audible/Amazon is the relying
+  party; this application is never a relying party for a domain it does not
+  own.
+- Never integrate with the user's password manager. If the provider offers
+  passkeys, the user may authenticate through their own platform credential
+  manager, such as 1Password, but the application must never read its vault,
+  invoke its SDK or CLI, render a credential field, or store application
+  secrets, keys, tokens, captures, or exports inside it.
+- Provider authentication, including successful passkey authentication, does
+  not authorize this application, create an API, or grant data access.
 - Prefer delegated authorization with revocable, narrowly scoped tokens.
 - Encrypt provider tokens and sensitive user data at rest and in transit.
 - Store secrets using the selected platform's secure secret facility.

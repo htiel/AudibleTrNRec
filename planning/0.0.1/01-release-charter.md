@@ -5,7 +5,37 @@
 - **Champion / approval authority:** Captain
 - **Working name:** Audible Track and Recommend
 - **Release type:** Private, single-user technical feasibility alpha
-- **State:** G0 passed; ATR-S001 ready; no real-data activity or release authorized
+- **State:** Private-alpha connector change control approved 2026-09-17;
+  commercial/public release remains prohibited
+
+## 2026-09-17 private-alpha connector change control
+
+The Captain approved a narrow exception to the locked baseline for a personal
+build and no more than ten named testers. The accepted route is the pinned
+community `audible` 0.12.0 external-browser PKCE/device-registration flow.
+This route is community-tested, unofficial, reverse-engineered, Beta, and
+AGPL-3.0-only; it is not an official Audible/Amazon API.
+
+The exception permits:
+
+- one persistent virtual device per local account profile;
+- provider-controlled headed Edge authorization with no app credential field;
+- GET-only full library metadata/progress synchronization;
+- automatic refresh every 15 minutes while the local server runs;
+- Windows user-scoped DPAPI credential custody outside the repository;
+- a DPAPI-encrypted normalized snapshot in local SQLite;
+- explicit user-initiated disconnect/deregistration and separate local deletion.
+
+Normal refresh and app shutdown must never deregister the device. The upstream
+provider label remains “Audible for iPhone”; ATnR is the truthful local app
+label. Patching device type, client ID derivation, or registration profile to
+rename it is not approved.
+
+Commercial use, public hosting, package publication, installers, store
+submission, and binary distribution remain blocked. Any conveyance requires
+named Audible/Amazon terms review, GPL/AGPL review, Worf approval, and a new
+Captain decision. See
+[the controlling amendment](10-private-alpha-connector-change-control.md).
 
 ## Problem, baseline and goal
 
@@ -82,9 +112,24 @@ and approved scope change: unofficial/reverse-engineered clients, undocumented
 device registration/private endpoints, scraping/automation and permission inferred
 from silence. Password/MFA/session-cookie collection and browser-profile extraction
 are **prohibited without exception**, not candidates for a scope waiver.
-Provider-rendered sign-in may use only the OS default browser or sanctioned auth
-session that our process cannot observe, script, autofill or intercept. No
-embedded webview/headless/automated browser or credential-handling code path.
+Provider-rendered sign-in may use only the OS default browser or a sanctioned
+authentication session that our process cannot observe, script, autofill, or
+intercept. This applies identically to passwords, MFA codes, and passkey
+(WebAuthn/FIDO2) ceremonies: the provider is the relying party, the OS or
+browser is the client, the user's credential manager may act as the
+authenticator, and this application is none of them. Passkey enrollment does
+not relax any application credential prohibition, regardless of the provider's
+available authentication or recovery factors. No embedded webview, headless or
+automated browser, credential-handling code path, or application-rendered
+credential field.
+
+Passkey authentication proves a person to the provider. It authorizes nothing
+to this application, creates no API, and moves no route out of `unknown`. The
+participant's password manager, including 1Password, is entirely outside the
+application trust boundary: no SDK, CLI, service account, agent, browser-
+extension channel, vault read, clipboard/pasteboard read, or autofill into an
+application-controlled surface is permitted. No application secret, key,
+token, capture, export, or encrypted container may be stored inside it.
 
 Affiliate/Associates/advertising/revenue-sharing requirements, compulsory tracking
 IDs or promotional links disqualify a catalog route even “for metadata only.”

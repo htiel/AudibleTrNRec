@@ -1,0 +1,121 @@
+/**
+ * Base element styles: reset, typography, focus visibility, motion, and
+ * screen-reader-only utilities. No gradients, box-shadows, or text-shadows
+ * anywhere in this file or any other stylesheet in this prototype.
+ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--lcars-bg);
+  color: var(--lcars-fg);
+  font-family: var(--lcars-font-family);
+  font-size: var(--lcars-font-normal);
+  line-height: 1.5;
+}
+
+/* Natural-case body copy: comments, synopses, explanations, and titles read
+   as ordinary mixed-case prose, per the "readable, not all-caps" rule. */
+p, li, dd, textarea, .lcars-synopsis, .lcars-note, .lcars-subtitle {
+  font-variant-caps: normal;
+}
+
+/* Chrome/labels use the LCARS uppercase convention; this is applied only to
+   interface labels, never to user data or long-form explanations. */
+.lcars-label-case,
+.lcars-title,
+.lcars-status-pill,
+.lcars-sidebar a,
+.lcars-field-label,
+.lcars-btn,
+legend,
+.lcars-group-heading,
+h2, h3, h4 {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Book titles, author/narrator/genre names, comments, tags, and synopses are
+   content, not UI chrome, and must stay readable in natural case. */
+.lcars-title-link,
+.lcars-subtitle,
+.lcars-synopsis,
+.lcars-note,
+table.lcars-table td,
+.lcars-tag-chip span,
+.lcars-result-meta,
+.lcars-explanation-body,
+.lcars-status-statement,
+option {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+a {
+  color: var(--lcars-accent-tertiary);
+}
+
+a:visited {
+  color: var(--lcars-accent-tertiary);
+}
+
+/* Visible focus indicator everywhere, meeting WCAG 2.4.7/2.4.11. Never
+   removed without an equally visible replacement. */
+:focus {
+  outline: 3px solid var(--lcars-border-focus);
+  outline-offset: 3px;
+}
+
+:focus:not(:focus-visible) {
+  outline: 3px solid var(--lcars-border-focus);
+  outline-offset: 3px;
+}
+
+.lcars-skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -3rem;
+  background: var(--lcars-accent-secondary);
+  color: var(--lcars-black);
+  padding: var(--lcars-space-2) var(--lcars-space-4);
+  border-radius: var(--lcars-radius-pill);
+  z-index: 100;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.lcars-skip-link:focus {
+  top: 1rem;
+}
+
+.lcars-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+  padding: 0;
+  margin: -1px;
+}
+
+/* Respect the user's motion preference: this prototype keeps animation
+   minimal already, but any transition is disabled outright when requested. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

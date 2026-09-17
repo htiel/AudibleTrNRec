@@ -1,0 +1,26 @@
+{
+  "name": "atr-alpha-core-prototype",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Audible Track and Recommend alpha 0.0.1. Synthetic harness by default; optional private-only local Audible connector with commercial shipping blocked.",
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "engines": {
+    "node": ">=20.6.0"
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "test:watch": "node --test --watch \"test/*.test.js\"",
+    "demo": "node scripts/demo.js",
+    "serve": "node scripts/serve.js",
+    "ui": "node scripts/serve.js",
+    "private-alpha": "node scripts/serve.js --private-alpha",
+    "connector:setup": "node scripts/setup-connector.js",
+    "connector:test": "cd connector && ..\\.venv\\Scripts\\python.exe -m unittest discover test",
+    "policy:check": "node scripts/private-alpha-policy.js",
+    "prepack": "node scripts/private-alpha-policy.js --block-pack",
+    "version:print": "node -e \"import('./src/version.js').then(v=>console.log(v.ALPHA_VERSION))\""
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
