@@ -5,7 +5,7 @@
  * selection, no set assembly, and no generated prose. It only answers one
  * question about an already-written synthetic fixture record:
  *
- *   "Is this candidate structure admissible under the alpha 0.0.1 trust
+ *   "Is this candidate structure admissible under the current alpha trust
  *    contract, and does every claim it makes resolve to a known node?"
  *
  * Contract rules implemented here:
@@ -22,7 +22,7 @@
  */
 
 import { safeObject, safeId, safeEnum, safeNumber, safeText, compareText, deepFreeze, LIMITS } from './validate.js';
-import { ContractViolationError } from './errors.js';
+import { ContractViolationError, DIAGNOSTIC_CATEGORIES } from './errors.js';
 import { assertCommercialFree, assertNoIdentityProfiling, assertAllowedRoute, isProfilingKey, findProhibitedKeys } from './trust.js';
 import { CONTRACT_VERSION, POLICY_VERSION } from '../version.js';
 
@@ -281,21 +281,60 @@ export function validateCandidate(rawCandidate, { catalog, knownNodes }) {
 }
 
 /**
+ * Closed rejection vocabulary for candidate diagnostics (ATR-S036).
+ *
+ * A rejection may expose only a positional index and one of these fixed
+ * categories. Candidate identifiers, field values and exception messages are
+ * attacker-controlled text and never cross this boundary — not in a return
+ * value, not in a log line, not in an export.
+ */
+export const CONTRACT_REJECTION_CODES = Object.freeze([
+  // structural contract rules
+  'unknown-field',
+  'unknown-contract-version',
+  'prohibited-route',
+  'dangling-pointer',
+  'floating-claim',
+  'oversized-trace',
+  'identity-proxy',
+  'mislabeled-direct-match',
+  'unsupported-exploratory',
+  'unsupported-perspective-label',
+  'category-difference-is-not-viewpoint',
+  'undisclosed-uncertainty',
+  'missing-baseline',
+  'below-baseline',
+  'preference-gate-failed',
+  'commercial-field',
+  // trust-policy rules
+  'no-advertising-or-paid-placement',
+  'no-user-identity-inference',
+  'approved-evidence-route-only',
+  // shared validation categories
+  ...DIAGNOSTIC_CATEGORIES,
+  // terminal fallback
+  'contract-violation',
+]);
+
+/** Map any thrown error to a closed category without reading its message. */
+export function closedRejectionCode(error) {
+  const code = error?.code ?? error?.details?.rule;
+  return CONTRACT_REJECTION_CODES.includes(code) ? code : 'contract-violation';
+}
+
+/**
  * Validate a set of fixture candidates. Order in, order out — the contract does
  * not reorder, score, or select anything.
  */
 export function validateCandidateSet(rawCandidates, context) {
   const accepted = [];
   const rejected = [];
-  for (const raw of rawCandidates) {
+  for (const [index, raw] of [...rawCandidates].entries()) {
     try {
       accepted.push(validateCandidate(raw, context));
     } catch (error) {
-      rejected.push({
-        candidateId: typeof raw?.candidateId === 'string' ? raw.candidateId : 'unknown',
-        code: error.code ?? error.details?.rule ?? error.name,
-        message: error.message,
-      });
+      // Positional index and closed category only (ATR-S036).
+      rejected.push({ index, code: closedRejectionCode(error) });
     }
   }
   return deepFreeze({

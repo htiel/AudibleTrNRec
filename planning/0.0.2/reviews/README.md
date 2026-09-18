@@ -2,8 +2,10 @@
 
 **Review date:** 2026-09-17
 
-**Status:** All four staged planning reviews received and reconciled;
-dated checkpoint sign-offs and runtime/release approval remain pending.
+**Status:** Historical planning reviews, received and reconciled in 09.
+For current code acceptance see the [implementation review index](../implementation-reviews/README.md)
+and [11 — final verdict](../11-implementation-release-verdict.md):
+owner-only APPROVE WITH CONDITIONS, not named-tester/public release clearance.
 
 | Officer report | Submitted verdict | Main concerns |
 | --- | --- | --- |
@@ -12,7 +14,7 @@ dated checkpoint sign-offs and runtime/release approval remain pending.
 | [Worf](worf-review.md) | REQUIRE CHANGES | Current exposure, bootstrap/extensions, export/nonce parity, unseal, provenance, events/runbook and evidence custody |
 | [Wesley](wesley-review.md) | CONDITIONAL APPROVAL | Bootstrap usability, keyboard viewport, single draft, navigation, Genre, measurement and lifecycle clarity |
 
-Read [09 — Riker consensus](../09-review-consensus.md) for binding disposition,
+Read [09 — Riker consensus](../09-review-consensus.md) for the planning disposition,
 including rejected insecure suggestions, deduplication, all mandatory
 story/package/test mappings, open decisions and gate status. Reports are
 preserved as submitted; neither positive comments nor conditional approvals

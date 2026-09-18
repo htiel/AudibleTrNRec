@@ -4,6 +4,12 @@
 The [backlog](03-backlog.md) owns dependencies, status and WSJF;
 [gates](05-risks-and-release-gates.md) own permission. All estimates are relative.
 
+**Implementation update:** [11](11-implementation-release-verdict.md) records
+23 code-implemented packages, four IN_REVIEW and three BLOCKED. The graph/waves
+below remain the original required execution dependencies, not a retrospective
+assertion that every checkpoint was passed. Owner-only conditional usability
+does not admit W6 live source work or close W7 release clearance.
+
 ## Critical path and readiness
 
 ```text

@@ -45,7 +45,7 @@ export const PROHIBITED_COMMERCIAL_TOKENS = Object.freeze([
  * something this alpha is willing to parse. They are NOT an authorization
  * decision, NOT proof that a route was lawfully obtained, and NOT a permission
  * grant. No access-control decision anywhere may rely on them; a real
- * authorization design is out of scope for alpha 0.0.1.
+ * authorization design is out of scope for this alpha.
  */
 export const ROUTE_POLICY = Object.freeze({
   purpose: 'schema-admissibility',

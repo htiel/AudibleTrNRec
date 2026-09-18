@@ -8,7 +8,7 @@ import {
 import { ValidationError } from '../src/core/errors.js';
 import { isUnknown } from '../src/core/validate.js';
 import { SYNTHETIC_PEOPLE, SYNTHETIC_FACETS, SYNTHETIC_BOOKS, SYNTHETIC_SNAPSHOT, SYNTHETIC_SNAPSHOT_V2, SYNTHETIC_LOCAL_SENTINELS } from '../src/fixtures/synthetic.js';
-import { SYNTHETIC_NOW } from '../src/version.js';
+import { SCHEMA_VERSION, SYNTHETIC_NOW } from '../src/version.js';
 
 const catalog = () => new Catalog({ people: SYNTHETIC_PEOPLE, facets: SYNTHETIC_FACETS, books: SYNTHETIC_BOOKS });
 
@@ -16,7 +16,8 @@ test('normalized records are frozen and carry provenance', () => {
   const book = catalog().book('b-ring-1');
   assert.equal(Object.isFrozen(book), true);
   assert.equal(book.provenance.source, 'synthetic-fixture');
-  assert.equal(book.provenance.schemaVersion, 'atr-schema-0.0.1');
+  assert.equal(book.provenance.schemaVersion, SCHEMA_VERSION);
+  assert.equal(book.provenance.schemaVersion, 'atr-schema-0.0.2');
   assert.throws(() => { 'use strict'; book.title = 'mutated'; }, TypeError);
 });
 

@@ -1,0 +1,46 @@
+{
+  "contractRevision": "atr-source-contract-r1",
+  "status": "proposed-pending-CP-01",
+  "marketplace": "us",
+  "progressUnits": {
+    "percent_complete": {
+      "scale": "percent-0-100",
+      "minimum": 0,
+      "maximum": 100,
+      "invalidPolicy": "reject-record",
+      "absentPolicy": "unknown",
+      "note": "Declared adapter scale. Magnitude must never be used to infer a unit."
+    }
+  },
+  "contributorLimit": 50,
+  "facetLimits": {
+    "categoryLadders": 20,
+    "seriesPerBook": 1
+  },
+  "identity": {
+    "personBasis": ["provider-id", "source-record-occurrence"],
+    "facetBasis": ["provider-id", "source-record-occurrence"],
+    "crossRoleEquivalence": "provider-id-only",
+    "nameEquivalence": "never"
+  },
+  "pagination": {
+    "maxPages": 20,
+    "pageSize": 1000,
+    "maxItems": 20000,
+    "maxCumulativeResponseBytes": 26214400,
+    "byteAccounting": "reserialized-estimate",
+    "byteAccountingIsWireProof": false,
+    "duplicatePolicy": "stop",
+    "capPolicy": "stop-no-probe",
+    "completenessBases": ["short-final-page", "empty-first-page"]
+  },
+  "recordPolicy": {
+    "malformed": "stop-whole-capture",
+    "diagnostics": "position-and-category-only",
+    "partialPromotion": "prohibited"
+  },
+  "observation": {
+    "requireZoneQualifiedInstant": true,
+    "rejectNaiveTimestamps": true
+  }
+}

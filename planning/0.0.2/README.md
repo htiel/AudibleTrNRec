@@ -1,10 +1,18 @@
 # Alpha 0.0.2 — safe private feedback and usable library
 
-**Status: full review reconciled on 2026-09-17; HOLD, A2-G0 BLOCKED.**
-Captain-approved direction is unchanged. Data/Geordi/Wesley are conditional;
-Worf requires changes. Mandatory corrections are incorporated, not proven.
-Checkpoint concurrence, Captain decisions and execution evidence remain
-pending. Implementation remains alpha 0.0.1; no runtime changes accompany this plan.
+**Status: implementation verdict issued 2026-09-17 — owner-only APPROVE WITH
+CONDITIONS. Named testers NO-GO; public/commercial HARD NO-GO.**
+Data APPROVE, Geordi FULL APPROVE (UI scope), Wesley PASS (private evaluation)
+and Worf APPROVE WITH CONDITIONS support the existing owner's usable build.
+This is not a passed full release-gate packet. See
+[11 — final verdict](11-implementation-release-verdict.md) for exact limits.
+
+Current evidence: Node **471 total / 470 pass / 1 skip**; Python **98 total /
+96 pass / 2 skip**; policy PASS, packaging BLOCKED, diff/secret scan CLEAN.
+Reported authenticated server and process-only real-store migration evidence
+show revision 3, exact five-table schema, two receipts, opaque anchor and
+rollback discharge. No personal content was queried for this verdict.
+These runtime results are supplied evidence, not rerun by the documentation task.
 
 **Inventory: 4 themes / 8 epics / 30 features / 30 stories / 112 estimated
 points.** This is release-scope inventory, not a single-PI commitment.
@@ -23,6 +31,17 @@ camera ingestion and Audible handoff are outside the 112 points.
 | [08 — Implementation plan](08-implementation-plan.md) | Gated work packages, current-code change map, schema/API/lifecycle design targets, owner-feedback implementation, tests and release evidence; no code or gate approval |
 | [09 — Review consensus](09-review-consensus.md) | Full finding reconciliation, accepted/rejected/deferred proposals, mandatory work/test mappings, open decisions, gates and Riker HOLD recommendation |
 | [Reviews — index](reviews/README.md) | All four preserved staged officer reports and their submitted verdicts |
+| [10 — Runtime data requirement](10-runtime-data-requirement.md) | Binding real-encrypted-data-only private runtime, fail-closed bootstrap and custody-bounded migration; landed wiring update |
+| [11 — Implementation/release verdict](11-implementation-release-verdict.md) | Owner-only conditional GO versus named/public NO-GO; implemented package matrix, evidence, residuals and formal gates |
+| [Implementation reviews — index](implementation-reviews/README.md) | Current amended Data, Geordi, Wesley and Worf verdicts; distinct from earlier planning reviews |
+
+**Remaining release blockers:** unapproved source-only pbkdf2/pyaes artifacts,
+downloaded-byte hash verification and pip-audit/SBOM, full CP-02 live proof,
+durable/startup security-event evidence and physical iPhone/equivalent rendered
+proof. History/non-owned catalog, source-led architecture, legal and final
+audience gates also remain open. The backlog records 23 IMPLEMENTED,
+4 IN_REVIEW, 3 BLOCKED and no full-DoD DONE; no unavailable feasibility is
+marked successful.
 
 ## What belongs beyond UI and ratings?
 
@@ -62,6 +81,7 @@ and public/cloud/multi-user/commercial distribution are excluded.
 | 2026-09-17 | Make iPhone Air Safari the primary mobile design target while retaining smaller-screen accessibility coverage | Captured as OF-006; mapped to S033, S034 and S038 |
 | 2026-09-17 | Set native iPhone as the intended product destination; defer camera/barcode ingestion and Audible title handoff | OF-007; direction mapped to existing S014 and S042/A2-G4; no inventory increase |
 | 2026-09-17 | Reconcile full four-officer planning review; preserve inventory and add mandatory correction/test traceability | Riker consensus; A2-G0 BLOCKED pending CP/Captain concurrence; no runtime or release authorization |
+| 2026-09-17 | Issue final owner-only implementation verdict after amended reports/current diff; acknowledge real-data runtime and revision-3 migration evidence | 11; owner evaluation conditional GO only, named/public NO-GO, no full release-gate pass |
 
 See [planning conventions](../README.md) and
 [product authority](../../APP_DESCRIPTION.md). Native iPhone is the intended

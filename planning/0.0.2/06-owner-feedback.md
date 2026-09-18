@@ -5,6 +5,13 @@ An entry records intent; it does not mean the implementation is complete or a
 release gate has passed. Canonical delivery status remains in
 [the backlog](03-backlog.md).
 
+**Implementation update:** the entries below preserve the owner's original
+observations and intake statuses. Current code acceptance is recorded in
+[11](11-implementation-release-verdict.md): OF-001–005 have implemented
+behavior, OF-006 has approved UI code but missing physical/rendered evidence,
+and OF-007 is future direction only. “Not started” in an intake entry is
+historical, not the current package status.
+
 The [review consensus](09-review-consensus.md) clarifies acceptance without
 rewriting these owner observations. OF-002 requires root-cause tracing,
 privacy-safe attestation or exhaustive removal including stale state/search.

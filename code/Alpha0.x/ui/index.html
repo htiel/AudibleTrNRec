@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
-  <title>Audible Track and Recommend — Alpha 0.0.1 evidence inspector (synthetic prototype)</title>
+  <title>Audible Track and Recommend</title>
   <link rel="stylesheet" href="/ui/css/tokens.css">
   <link rel="stylesheet" href="/ui/css/base.css">
   <link rel="stylesheet" href="/ui/css/layout.css">
@@ -17,19 +17,25 @@
     <header class="lcars-header" role="banner">
       <div class="lcars-elbow lcars-elbow-top" aria-hidden="true"></div>
       <div class="lcars-header-bar">
-        <h1 class="lcars-title">Audible Track and Recommend — Evidence Inspector</h1>
-        <p id="runtime-status" class="lcars-status-pill">Synthetic data · Import-only, manual refresh · No Audible connection · Alpha 0.0.1</p>
+        <h1 class="lcars-title">Audible Track and Recommend</h1>
+        <p id="runtime-status" class="lcars-status-pill">Loading the active runtime mode…</p>
       </div>
     </header>
 
     <div class="lcars-body">
-      <nav class="lcars-sidebar" aria-label="Primary">
-        <ul>
-          <li><a href="#/library" data-route="library">Library evidence</a></li>
-          <li><a href="#/feasibility" data-route="feasibility">Feasibility &amp; trace</a></li>
-          <li><a href="#/data" data-route="data">Data &amp; lifecycle</a></li>
-        </ul>
+      <nav class="lcars-sidebar" aria-label="Application destinations">
+        <div class="lcars-sidebar-group" aria-label="Primary">
+          <ul>
+            <li><a href="#/library" data-route="library">Library</a></li>
+          </ul>
+        </div>
         <div class="lcars-sidebar-filler" aria-hidden="true"></div>
+        <div class="lcars-sidebar-group" aria-label="Diagnostics and lifecycle">
+          <ul>
+            <li><a href="#/feasibility" data-route="feasibility">Feasibility &amp; trace</a></li>
+            <li><a href="#/data" data-route="data">Data &amp; lifecycle</a></li>
+          </ul>
+        </div>
       </nav>
 
       <main id="main-content" class="lcars-main" tabindex="-1">
@@ -39,7 +45,7 @@
 
     <footer class="lcars-footer" role="contentinfo">
       <div class="lcars-footer-bar">
-        <p id="runtime-footer">Alpha 0.0.1 · Evidence inspector only, no ratings/recommendation product surface · Platform-neutral prototype · Loopback transport only, no outbound network access · No persistence beyond this browser tab</p>
+        <p id="runtime-footer">Loading the active runtime source…</p>
       </div>
       <div class="lcars-elbow lcars-elbow-bottom" aria-hidden="true"></div>
     </footer>

@@ -1,4 +1,5 @@
 import copy
+import json
 import sys
 import types
 import unittest
@@ -80,6 +81,8 @@ class FakeClient:
     def get(self, path, **params):
         if path != "library" or params["num_results"] != 1000:
             raise AssertionError("unexpected request")
+        if params["page"] > 1:
+            raise AssertionError("no page is requested after terminal evidence")
         return {
             "items": [
                 {
@@ -116,6 +119,37 @@ class ServiceTests(unittest.TestCase):
             Client=FakeClient,
         )
 
+    def test_artifact_inventory_reports_existence_without_exposing_anything(self) -> None:
+        empty = self.service.local_artifact_inventory()
+        self.assertEqual(empty["credentialsRetained"], False)
+        self.assertEqual(empty["identitySeedRetained"], False)
+        self.assertEqual(empty["removedBy"], "confirmed-disconnect-only")
+
+        with patch.dict(sys.modules, {"audible": self.audible}):
+            self.service.connect(marketplace="us", account_alias="Synthetic account")
+        held = self.service.local_artifact_inventory()
+        self.assertEqual(held["credentialsRetained"], True)
+        self.assertEqual(held["identitySeedRetained"], True)
+        self.assertEqual(held["protector"], "windows-dpapi")
+
+        # Booleans and closed labels only: no path, account identifier or
+        # credential material may leave this route.
+        self.assertEqual(
+            set(held),
+            {"credentialsRetained", "identitySeedRetained", "protector", "removedBy"},
+        )
+        serialized = json.dumps(held)
+        for forbidden in ("key", "token", "cookie", "customer", "\\", "/"):
+            self.assertNotIn(forbidden, serialized)
+
+        # A local deletion in the application cannot change this answer; only a
+        # confirmed disconnect does.
+        with patch.dict(sys.modules, {"audible": self.audible}):
+            self.service.disconnect()
+        self.assertEqual(
+            self.service.local_artifact_inventory()["credentialsRetained"], False
+        )
+
     def test_connection_persists_until_explicit_disconnect(self) -> None:
         with patch.dict(sys.modules, {"audible": self.audible}):
             status = self.service.connect(
@@ -135,10 +169,86 @@ class ServiceTests(unittest.TestCase):
             )
             result = self.service.sync_library()
             self.assertEqual(result["itemCount"], 1)
-            self.assertEqual(result["snapshot"]["entries"][0]["percentComplete"], 50)
+            # The declared scale is a percentage: 0.5 stays 0.5. It is not
+            # rescaled to 50 because it "looks fractional".
+            self.assertEqual(result["snapshot"]["entries"][0]["percentComplete"], 0.5)
             unsealed = self.service.unseal(result["sealedSnapshot"])
             self.assertEqual(unsealed, result["snapshot"])
             self.assertEqual(FakeAuth.deregistrations, 0)
+
+    def test_sync_reports_declared_completeness_evidence(self) -> None:
+        with patch.dict(sys.modules, {"audible": self.audible}):
+            self.service.connect(marketplace="us", account_alias="Synthetic account")
+            evidence = self.service.sync_library()["completeness"]
+            self.assertEqual(evidence["complete"], True)
+            self.assertEqual(evidence["basis"], "short-final-page")
+            self.assertEqual(evidence["pagesRead"], 1)
+            self.assertEqual(evidence["itemCount"], 1)
+            self.assertFalse(evidence["byteAccountingIsWireProof"])
+            self.assertTrue(evidence["contractRevision"].startswith("atr-source-contract-"))
+
+    def test_a_reconciled_snapshot_can_be_sealed_without_provider_access(self) -> None:
+        with patch.dict(sys.modules, {"audible": self.audible}):
+            self.service.connect(marketplace="us", account_alias="Synthetic account")
+            snapshot = self.service.sync_library()["snapshot"]
+
+        reconciled = copy.deepcopy(snapshot)
+        reconciled["entries"][0]["missingFromSource"] = True
+        # No `audible` module is patched in: sealing must not touch the provider.
+        sealed = self.service.seal(reconciled)["sealedSnapshot"]
+        self.assertEqual(self.service.unseal(sealed), reconciled)
+
+    def test_seal_refuses_anything_that_is_not_a_bound_snapshot(self) -> None:
+        for payload in (None, [], "text", {}, {"schemaVersion": 1}):
+            with self.subTest(payload=repr(payload)):
+                with self.assertRaisesRegex(RuntimeError, "seal-payload-invalid"):
+                    self.service.seal(payload)
+
+        foreign = {
+            "schemaVersion": 1,
+            "source": "some-other-source",
+            "marketplace": "us",
+            "observedAt": "2026-09-17T12:00:00.000Z",
+            "catalog": {"people": [], "facets": [], "books": []},
+            "entries": [],
+        }
+        with self.assertRaisesRegex(RuntimeError, "seal-payload-invalid"):
+            self.service.seal(foreign)
+
+        other_market = dict(foreign, source="audible-community-private-api", marketplace="uk")
+        with self.assertRaisesRegex(RuntimeError, "marketplace-not-allowed"):
+            self.service.seal(other_market)
+
+    def test_local_record_custody_is_purpose_bound_and_round_trips(self) -> None:
+        record = {"purpose": "private-review", "accountKey": "a" * 64, "record": {"overallRating": 4.5}}
+        sealed = self.service.seal_local(record)["sealedPayload"]
+        self.assertEqual(self.service.unseal_local(sealed), record)
+
+    def test_local_custody_refuses_any_other_purpose_or_oversize_payload(self) -> None:
+        for payload in (None, [], "text", {}, {"purpose": "snapshot"}):
+            with self.subTest(payload=repr(payload)):
+                with self.assertRaisesRegex(RuntimeError, "local-payload-invalid"):
+                    self.service.seal_local(payload)
+
+        oversize = {"purpose": "private-review", "record": {"comment": "x" * (256 * 1024)}}
+        with self.assertRaisesRegex(RuntimeError, "local-payload-too-large"):
+            self.service.seal_local(oversize)
+
+        snapshot_sealed = self.service.seal_local({"purpose": "private-review"})["sealedPayload"]
+        self.assertEqual(self.service.unseal_local(snapshot_sealed), {"purpose": "private-review"})
+        other = self.service.seal({
+            "schemaVersion": 1,
+            "source": "audible-community-private-api",
+            "marketplace": "us",
+            "observedAt": "2026-09-17T12:00:00.000Z",
+            "catalog": {"people": [], "facets": [], "books": []},
+            "entries": [],
+        })["sealedSnapshot"]
+        with self.assertRaisesRegex(RuntimeError, "envelope-purpose-mismatch"):
+            # Refused by the purpose-bound header, before any decryption: the
+            # snapshot route can no longer act as an oracle for private
+            # reviews, and vice versa.
+            self.service.unseal_local(other)
 
 
 if __name__ == "__main__":

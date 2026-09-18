@@ -43,8 +43,59 @@ def _dispatch(service: ConnectorService, request: dict[str, Any]) -> dict[str, A
     if method == "disconnect" and not params:
         return service.disconnect()
     if method == "unseal_snapshot" and set(params) == {"sealedSnapshot"}:
+        # Purpose-bound: opens a library snapshot only. A private-review
+        # envelope is refused by the header check, not merely by inspection.
         return service.unseal(params["sealedSnapshot"])
+    if method == "verify_custody" and not params:
+        # Custody proof only: no provider access, no credential read, no state
+        # write. Must succeed before any migration or rollback envelope write.
+        return service.verify_custody()
+    if method == "local_artifact_inventory" and not params:
+        # Existence booleans for connector-owned artifacts, so a local
+        # deletion report can disclose what it does not remove instead of
+        # claiming it did. No credential is read or opened.
+        return service.local_artifact_inventory()
+    if method == "seal_snapshot" and set(params) == {"snapshot"}:
+        # Local custody only; dispatched separately from every provider route.
+        return service.seal(params["snapshot"])
+    if method == "seal_local" and set(params) == {"payload"}:
+        # Local user-owned record custody (private reviews). No provider access.
+        return service.seal_local(params["payload"])
+    if method == "unseal_local" and set(params) == {"sealedPayload"}:
+        return service.unseal_local(params["sealedPayload"])
     raise ConnectorError("rpc-method-not-allowed")
+
+
+#: Closed diagnostic vocabulary allowed to leave the connector alongside a code.
+DIAGNOSTIC_CATEGORIES = frozenset(
+    {
+        "missing-required-field",
+        "invalid-field-value",
+        "unsupported-record-shape",
+        "duplicate-record",
+        "limit-exceeded",
+        "unclassified",
+    }
+)
+
+
+def _safe_detail(error: Exception) -> dict[str, Any] | None:
+    """Reduce an error detail to a bounded position + closed category.
+
+    A source value, message or field name can never reach this output.
+    """
+
+    detail = getattr(error, "detail", None)
+    if not isinstance(detail, dict):
+        return None
+    category = detail.get("category")
+    safe: dict[str, Any] = {
+        "category": category if category in DIAGNOSTIC_CATEGORIES else "unclassified"
+    }
+    index = detail.get("recordIndex")
+    if isinstance(index, int) and not isinstance(index, bool) and 0 <= index < 1_000_000:
+        safe["recordIndex"] = index
+    return safe
 
 
 def main() -> int:
@@ -54,7 +105,11 @@ def main() -> int:
         response = {"ok": True, "result": result}
     except (ConnectorError, CustodyError, PolicyError) as error:
         code = getattr(error, "code", str(error))
-        response = {"ok": False, "error": {"code": code}}
+        failure: dict[str, Any] = {"code": code}
+        detail = _safe_detail(error)
+        if detail is not None:
+            failure["detail"] = detail
+        response = {"ok": False, "error": failure}
     except Exception:
         response = {"ok": False, "error": {"code": "connector-internal-error"}}
     sys.stdout.write(json.dumps(response, ensure_ascii=True, separators=(",", ":")))

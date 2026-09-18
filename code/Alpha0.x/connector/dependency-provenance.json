@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "status": "hashes-recorded-source-artifact-approval-required",
+  "approvedIndexUrl": "https://pypi.org/simple",
+  "requiredInstallFlags": [
+    "--require-hashes",
+    "--no-deps",
+    "--only-binary",
+    ":all:"
+  ],
+  "manifestDigests": {
+    "requirements-private-alpha.txt": "a1e88418304f328dfb8ce559cb71810744581774cc961df55c16b3c62fe3ee59",
+    "requirements-private-alpha.lock": "1033b11f403830072d291c53c3c25a52d40f894edcd531a50c439c44082730fb",
+    "private-alpha-policy.json": "b87704ed612d5dcc966bb2928664aba859d8c9f535a8d159bbf7da25cc3961db",
+    "THIRD-PARTY-NOTICE.txt": "e3bc50a1351711c56a91a98a048aa50f646dbfae491a4ea5bbc6406e66846d59"
+  },
+  "artifactHashesRecorded": true,
+  "artifactHashBlock": {
+    "rule": "Every locked distribution requires a --hash=sha256: entry produced from the approved index before any install is permitted.",
+    "generator": "scripts/record-dependency-hashes.py, querying the approved https://pypi.org JSON API",
+    "recordedAt": "2026-09-17",
+    "targetEnvironment": "CPython 3.13 (3.13.15), win_amd64, pip 26.2.1",
+    "distributionCount": 21,
+    "selectionRule": "Exactly one artifact per pin, chosen by explicit wheel-tag rank (cp313-cp313-win_amd64 > cp3x-abi3-win_amd64 > py3-none-any). Yanked artifacts and missing digests are hard stops. The chosen filename is recorded as a comment above each pin so the wheel/source nature of every distribution is auditable from the digest-protected lock.",
+    "attestation": "index-attested",
+    "attestationLimitation": "Egress to files.pythonhosted.org is blocked on this host, so the artifact bytes could NOT be downloaded and hashed locally. The digests are the ones published by pypi.org over a verified public-CA TLS connection (leaf CN=pypi.org, issuer GlobalSign Atlas R3 DV TLS CA 2025 Q4; no interception proxy observed). These are the same values pip-compile --generate-hashes records. pip verifies the downloaded bytes against them under --require-hashes, so a substituted artifact still fails the install closed. Local byte-level verification remains outstanding and is satisfied by the first successful hash-verified install.",
+    "approver": "Worf + Data (A2-WP018 / ATR-S018)",
+    "installBehaviourUntilApproved": "connector:setup fails closed with dependency-source-artifact-unapproved"
+  },
+  "sourceArtifactExceptions": [
+    {
+      "name": "pbkdf2",
+      "version": "1.3",
+      "filename": "pbkdf2-1.3.tar.gz",
+      "sha256": "ac6397369f128212c43064a2b4878038dab78dab41875364554aaf2a684e6979",
+      "reason": "pbkdf2 has exactly one release ever (1.3, 2011) and has never published a wheel, so it cannot satisfy --only-binary :all:. It is a hard, unguarded top-level import of audible/crypto_provider/legacy_provider.py, which audible/crypto_provider/__init__.py imports unconditionally; `import audible` fails without it. It cannot be dropped from the lock.",
+      "risk": "Installing a source distribution executes its build script. The exact bytes are pinned by sha256, so the executed code is fixed and reviewable, but --only-binary :all: is relaxed for this one distribution.",
+      "accepted": false
+    },
+    {
+      "name": "pyaes",
+      "version": "1.6.1",
+      "filename": "pyaes-1.6.1.tar.gz",
+      "sha256": "02c1b1405c38d3c370b085fb952dd8bea3fadcee6411ad99f312cc129c536d8f",
+      "reason": "pyaes 1.6.1 publishes no wheel and cannot satisfy --only-binary :all:. It is a hard, unguarded top-level import of audible/crypto_provider/legacy_provider.py and is reached through audible/crypto_provider/__init__.py; `import audible` fails without it. It cannot be dropped from the lock.",
+      "risk": "Installing a source distribution executes its build script. The exact bytes are pinned by sha256, so the executed code is fixed and reviewable, but --only-binary :all: is relaxed for this one distribution.",
+      "accepted": false
+    }
+  ],
+  "runtime": {
+    "node": {
+      "minimumVersion": "22.5.0",
+      "unflaggedSqliteVersion": "23.4.0",
+      "sqliteModule": "node:sqlite (bundled, no npm dependency)",
+      "npmDependencies": 0
+    },
+    "python": {
+      "supported": "3.11-3.14",
+      "interpreterResolution": "absolute trusted path only; bare-name PATH resolution rejected"
+    }
+  },
+  "namedResiduals": [
+    {
+      "id": "edge-channel-autoupdate",
+      "detail": "Provider authorization uses the system Microsoft Edge stable channel, which auto-updates. It is not falsely pinned; a major channel change requires Worf/Data re-review before further authorization.",
+      "accepted": false
+    },
+    {
+      "id": "agpl-conveyance",
+      "detail": "audible 0.12.0 is AGPL-3.0-only and reverse-engineered. Named legal review of Audible/Amazon terms and GPL/AGPL obligations is required before any conveyance; commercial and public shipping remain blocked.",
+      "accepted": false
+    },
+    {
+      "id": "vulnerability-audit-record",
+      "detail": "An OSV.dev advisory query was recorded for all 21 pins (see audit block) and returned no advisories. This is not a substitute for a full SBOM-based audit: pip-audit could not be run because it is not installed and installing it requires the blocked files.pythonhosted.org host. Re-run pip-audit on a host with package egress before the security gate passes.",
+      "accepted": false
+    },
+    {
+      "id": "artifact-bytes-not-locally-verified",
+      "detail": "Recorded digests are index-attested from the verified pypi.org JSON API, not computed from locally downloaded bytes, because egress to files.pythonhosted.org is blocked on this host. pip still fails closed on mismatch under --require-hashes. Closed by the first successful hash-verified install, whose output must be recorded here.",
+      "accepted": false
+    },
+    {
+      "id": "legacy-pure-python-crypto-dependencies",
+      "detail": "pbkdf2 1.3 (2011) and pyaes 1.6.1 are unmaintained pure-Python crypto packages in the Audible credential path. They are unconditionally imported by audible's provider registry even though the cryptography provider is preferred at runtime. Removing them requires an upstream change to audible/crypto_provider/__init__.py.",
+      "accepted": false
+    }
+  ],
+  "audit": {
+    "tool": "OSV.dev advisory API (https://api.osv.dev/v1/query)",
+    "toolVersion": "v1",
+    "performedAt": "2026-09-17",
+    "scope": "All 21 pinned distributions in requirements-private-alpha.lock, queried by exact name and version against the PyPI ecosystem.",
+    "criticalFindings": 0,
+    "highFindings": 0,
+    "totalAdvisories": 0,
+    "dependencyIntegrity": "pip check on the installed environment reported no broken requirements (pip 26.2.1, CPython 3.13.15).",
+    "pipAudit": "Not run. pip-audit is not installed and cannot be installed on this host because egress to files.pythonhosted.org is blocked. A full pip-audit run on a host with package egress is still required.",
+    "licenses": {
+      "anyio": "MIT",
+      "audible": "AGPL-3.0-only",
+      "beautifulsoup4": "MIT",
+      "certifi": "MPL-2.0",
+      "cffi": "MIT-0",
+      "cryptography": "Apache-2.0 OR BSD-3-Clause",
+      "greenlet": "MIT AND PSF-2.0",
+      "h11": "MIT",
+      "httpcore": "BSD-3-Clause",
+      "httpx": "BSD-3-Clause",
+      "idna": "BSD-3-Clause",
+      "pbkdf2": "MIT",
+      "pillow": "MIT-CMU",
+      "playwright": "Apache-2.0",
+      "pyaes": "MIT",
+      "pyasn1": "BSD-2-Clause",
+      "pycparser": "BSD-3-Clause",
+      "pyee": "MIT",
+      "rsa": "Apache-2.0",
+      "soupsieve": "MIT",
+      "typing_extensions": "PSF-2.0"
+    },
+    "licenseDisposition": "Permissive throughout except audible 0.12.0 (AGPL-3.0-only), which is tracked by the agpl-conveyance residual. Private-alpha use is internal only; commercial and public conveyance remain blocked."
+  }
+}

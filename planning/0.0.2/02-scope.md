@@ -69,6 +69,10 @@ are negotiated at design review without weakening acceptance criteria.
 
 ## Current architecture: observed, not selected as the final product
 
+**Updated after implementation review, 2026-09-17.** The inventory above is
+unchanged; [11](11-implementation-release-verdict.md) distinguishes implemented
+owner-use capability from unfinished gate evidence and source feasibility.
+
 The [OF-007 native direction](07-native-iphone-direction.md) makes Swift/native
 iPhone the intended destination. The current web/Python alpha remains disposable
 feasibility evidence until a reviewed native architecture exists. S014 records
@@ -80,29 +84,31 @@ Read against [implementation README](../../code/Alpha0.x/README.md) and
 [package](../../code/Alpha0.x/package.json):
 
 - Node ESM, zero npm dependencies, no build step, static HTML/CSS/modules and
-  hash-routed LCARS inspector. Default data is synthetic/in-memory.
+  hash-routed LCARS UI. The private user-facing path is real-encrypted-data-only;
+  fixtures are test/demo infrastructure, never a private bootstrap fallback.
 - The optional Windows-local composition is Node loopback service → serialized
   stdio RPC → isolated Python community connector → provider-hosted Edge
   authorization. Credentials stay on the Python side.
-- The local SQLite store contains a DPAPI-sealed normalized snapshot plus
-  account/marketplace/sync metadata. It does not yet contain a private review
-  store. The UI's local sentinels are fixtures, not working ratings.
-- The service currently validates and saves the returned snapshot; correctness
-  of reconciled persistence, account presentation and success timestamps is
-  remediation work, not an earned architecture property.
-- `node:sqlite` imposes a runtime constraint not satisfied by every version
-  allowed by the existing engine declaration. S019 resolves evidence-based
-  support rather than selecting a new client/backend.
-- The current source/schema/policy versions and storage root remain 0.0.1.
-  Planning 0.0.2 neither bumps them nor relocates personal state.
+- SQLite revision 3 now includes encrypted private feedback, snapshot/sync,
+  migration receipts and an opaque local account anchor: exactly five tables.
+  Data's amendment accepts migration/feedback/isolation for owner use; the
+  supplied real migration receipt contains schema/process evidence only.
+- The service reconciles and durably promotes same-account state, exposes
+  truthful attempts/success/suppression, and preserves retained feedback
+  authority. Review limitations and incomplete source proof remain in 11.
+- Supported Node/SQLite preflight is implemented; it does not select a final
+  platform/backend. Supply-chain clean-install/audit evidence is still blocked.
+- Current application implementation is 0.0.2; storage revision is 3. The
+  version-shaped legacy custody root is retained as migration input, not
+  automatically relocated. This verdict task performed no migration.
 
-Proposed feedback boundary: authenticated local UI/API → bounded domain
+Implemented owner-use feedback boundary: authenticated local UI/API → bounded domain
 validation → account/book-keyed encrypted local authority store.
 Source-sync code has no write authority over annotations. Versioned migrations
 can remap identities only through reviewed, transactional, collision-aware
 mappings; ambiguous identity stays unresolved, never a name-based guess.
-Data/Worf must approve details before implementation; Geordi/Wesley approve
-interaction semantics. Preserve existing safe DOM/URL rendering, commercial
+Current officer acceptance and remaining CP/evidence conditions are in 11.
+Preserve existing safe DOM/URL rendering, commercial
 exclusion and policy controls. Do not select a UI framework, hosted service or
 LLM by inertia.
 

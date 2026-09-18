@@ -1,43 +1,129 @@
 #!/usr/bin/env node
+/**
+ * Connector setup (A2-WP016/WP018 / ATR-S016, ATR-S018).
+ *
+ * Two hard rules:
+ *  1. Only an absolute, existing interpreter inside an approved root is ever
+ *     launched. The previous bare-name `python` fallback is removed: it
+ *     resolved through PATH, which any writable earlier entry can hijack.
+ *  2. No dependency is installed without verified provenance. The install is
+ *     hash-pinned, dependency re-resolution is disabled, only reviewed binary
+ *     wheels are accepted, and the index is the approved one. Until every
+ *     locked distribution carries a recorded artifact hash, and every source
+ *     distribution carries a named hash-bound approval, this command fails
+ *     closed rather than installing an unverified set.
+ */
 
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { assertPrivateAlphaPolicy } from './private-alpha-policy.js';
+
+import { assertPrivateAlphaPolicy, assertDependencyProvenance } from './private-alpha-policy.js';
+import {
+  assertTrustedExecutable,
+  minimalWindowsEnv,
+  pythonAllowedRoots,
+  pythonCandidates,
+} from '../src/security/trusted-paths.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
 const venv = path.join(root, '.venv');
 const venvPython = path.join(venv, 'Scripts', 'python.exe');
-const requirements = path.join(root, 'connector', 'requirements-private-alpha.lock');
+const connectorRoot = path.join(root, 'connector');
+const requirements = path.join(connectorRoot, 'requirements-private-alpha.lock');
 
-function succeeds(command, args) {
-  const result = spawnSync(command, args, { stdio: 'ignore', windowsHide: true });
-  return result.status === 0;
+function runTrusted(executable, args, { inherit = true } = {}) {
+  return spawnSync(executable, args, {
+    cwd: root,
+    stdio: inherit ? 'inherit' : 'ignore',
+    windowsHide: true,
+    shell: false,
+    env: minimalWindowsEnv(),
+  });
 }
 
-function findPython() {
-  const candidates = [
-    process.env.ATNR_PYTHON,
-    process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'Programs', 'Python', 'Python313-x64', 'python.exe'),
-    process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'Programs', 'Python', 'Python313', 'python.exe'),
-    process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'Programs', 'Python', 'Python313-arm64', 'python.exe'),
-    'python',
-  ].filter(Boolean);
-  for (const candidate of candidates) {
-    if ((path.isAbsolute(candidate) && !existsSync(candidate)) || !succeeds(candidate, ['--version'])) continue;
-    return candidate;
+/** First candidate that is absolute, exists in an approved root, and runs. */
+export function findTrustedPython({ env = process.env } = {}) {
+  const allowedRoots = pythonAllowedRoots({ packageRoot: root, env });
+  for (const candidate of pythonCandidates({ packageRoot: root, env })) {
+    let trusted;
+    try {
+      trusted = assertTrustedExecutable(candidate, { allowedRoots, env });
+    } catch {
+      continue; // unsafe root, missing file, relative path or bare name
+    }
+    if (runTrusted(trusted, ['--version'], { inherit: false }).status === 0) return trusted;
   }
-  throw new Error('Python 3.11-3.14 is required. Set ATNR_PYTHON to its full path.');
+  throw new Error([
+    'No trusted Python interpreter was found.',
+    'Install Python 3.11-3.14 for this user and set ATNR_PYTHON to its full absolute path.',
+    'Bare-name and PATH-resolved interpreters are rejected by design.',
+  ].join(' '));
 }
 
-function run(command, args) {
-  const result = spawnSync(command, args, { cwd: root, stdio: 'inherit', windowsHide: false });
+function run(executable, args) {
+  const result = runTrusted(executable, args);
   if (result.status !== 0) throw new Error(`Connector setup command failed (${result.status ?? 'launch'}).`);
 }
 
 assertPrivateAlphaPolicy();
-if (!existsSync(venvPython)) run(findPython(), ['-m', 'venv', venv]);
-run(venvPython, ['-m', 'pip', 'install', '--disable-pip-version-check', '-r', requirements]);
+
+let provenance;
+try {
+  provenance = assertDependencyProvenance({ requireArtifactHashes: true });
+} catch (error) {
+  if (error.message === 'dependency-hashes-not-recorded') {
+    console.error([
+      'ATnR connector install is blocked: artifact hashes are not recorded.',
+      'Run `node scripts/record-dependency-hashes.py` (via the trusted interpreter)',
+      'to record a --hash=sha256: entry for every locked distribution in',
+      'connector/requirements-private-alpha.lock, set artifactHashesRecorded',
+      'to true in connector/dependency-provenance.json, and obtain Worf/Data',
+      'approval (A2-WP018 / ATR-S018) before installing.',
+    ].join(' '));
+    process.exit(1);
+  }
+  if (error.message === 'dependency-source-artifact-unapproved') {
+    console.error([
+      'ATnR connector install is blocked: the lock contains source distributions',
+      'that cannot satisfy --only-binary :all:. Installing a source distribution',
+      'executes its build script, so it requires a named, hash-bound approval.',
+      'Review each entry in sourceArtifactExceptions in',
+      'connector/dependency-provenance.json and set accepted to true only after',
+      'Worf/Data sign-off (A2-WP018 / ATR-S018). The install flags are not',
+      'relaxed globally: each approved distribution is scoped with --no-binary.',
+    ].join(' '));
+    process.exit(1);
+  }
+  console.error(`ATnR connector install is blocked: ${error.message}.`);
+  process.exit(1);
+}
+
+let python;
+if (existsSync(venvPython)) {
+  python = assertTrustedExecutable(venvPython, { allowedRoots: [venv] });
+} else {
+  run(findTrustedPython(), ['-m', 'venv', venv]);
+  python = assertTrustedExecutable(venvPython, { allowedRoots: [venv] });
+}
+
+// `--only-binary :all:` stays in force. Each named, hash-bound approval is
+// scoped to one distribution by name; no wildcard source install is possible.
+const sourceExceptionFlags = provenance.approvedSourceArtifacts.flatMap(
+  (pin) => ['--no-binary', pin.split('==')[0]],
+);
+
+run(python, [
+  '-m', 'pip', 'install',
+  '--disable-pip-version-check',
+  '--no-input',
+  '--index-url', provenance.indexUrl,
+  '--require-hashes',
+  '--no-deps',
+  '--only-binary', ':all:',
+  ...sourceExceptionFlags,
+  '-r', requirements,
+]);
 console.log('ATnR private-alpha connector is installed. Edge is used for provider authorization.');

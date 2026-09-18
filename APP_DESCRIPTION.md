@@ -10,8 +10,12 @@ per-book ratings and feedback collection/storage. Its initial scope, hierarchy,
 stories, dependencies, and gates are maintained in
 [the alpha 0.0.2 plan](planning/0.0.2/README.md).
 
-The Captain approved this planning transition; detailed designs, implementation,
-gate completion, and named-tester clearance remain pending. Alpha 0.0.1 is an
+The implementation has now been reviewed for **owner-only private evaluation
+with conditions**, as recorded in the
+[implementation/release verdict](planning/0.0.2/11-implementation-release-verdict.md).
+The real-data private runtime, encrypted feedback and revision-3 migration are
+implemented; CP/evidence completion, history/non-owned catalog feasibility,
+named-tester and full release clearance remain pending. Alpha 0.0.1 is an
 [archived HOLD/FAIL evidence baseline](planning/archive/README.md), not a passed
 release. Its historical planning approvals do not constitute runtime or release
 clearance. Commercial/public distribution remains **NO-GO**.

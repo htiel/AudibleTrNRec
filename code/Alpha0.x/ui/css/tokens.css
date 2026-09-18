@@ -1,13 +1,3 @@
-/**
- * LCARS design tokens (classic/2369-era palette). Colors are the only
- * approved palette; nothing here is a raw hex value used outside this file.
- *
- * Font note: the canonical LCARS typeface is Antonio (Google Fonts). This
- * prototype is dependency-free and loads no remote assets of any kind, so no
- * network font request is made. We fall back to a locally available
- * condensed sans-serif stack and approximate Antonio's tall, condensed
- * character with letter-spacing and weight instead of a webfont.
- */
 :root {
   --lcars-african-violet: #cc99ff;
   --lcars-almond: #ffaa90;
@@ -29,8 +19,6 @@
   --lcars-violet-creme: #ddbbff;
   --lcars-black: #000000;
 
-  /* Semantic roles built from the palette above; components reference these,
-     never the raw palette names, so a future theme swap stays one file. */
   --lcars-bg: var(--lcars-black);
   --lcars-fg: var(--lcars-space-white);
   --lcars-accent-primary: var(--lcars-butterscotch);
@@ -43,30 +31,20 @@
   --lcars-border-focus-on-light: var(--lcars-black);
 
   --lcars-font-family: 'Arial Narrow', 'Liberation Sans Narrow', Arial, Helvetica, sans-serif;
-
   --lcars-space-1: 0.25rem;
   --lcars-space-2: 0.5rem;
   --lcars-space-3: 0.75rem;
   --lcars-space-4: 1rem;
   --lcars-space-6: 1.5rem;
   --lcars-space-8: 2rem;
-
   --lcars-radius-pill: 1.5rem;
-
-  /* Decorative elbow geometry is fixed in px, not rem: it must never scale
-     with the user's text-size/zoom preference, or the swept curve alone can
-     push the layout past a 320px viewport (Bracer Jack: the swept elbow
-     shape is LCARS, but it is chrome, not content, and content reflow rules
-     govern text, not this fixed decorative geometry). */
   --lcars-radius-elbow: 60px;
   --lcars-elbow-width: 96px;
   --lcars-elbow-height: 72px;
   --lcars-elbow-width-compact: 48px;
   --lcars-elbow-height-compact: 48px;
-
   --lcars-font-title: 1.75rem;
   --lcars-font-subheader: 1.15rem;
   --lcars-font-normal: 1rem;
-
-  --lcars-min-target: 2.5rem;
+  --lcars-min-target: 2.75rem;
 }

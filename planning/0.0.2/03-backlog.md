@@ -3,7 +3,10 @@
 This document owns status, estimates, WSJF, dependencies and acceptance criteria.
 See [hierarchy](02-scope.md), [sequence](04-sequencing.md) and
 [gates](05-risks-and-release-gates.md). Short S/F/A IDs mean permanent `ATR-`
-IDs. **30 stories / 112 estimated points**; no implementation is DONE.
+IDs. **30 stories / 112 estimated points**. Current implementation disposition
+is recorded in [11 — final verdict](11-implementation-release-verdict.md):
+**23 IMPLEMENTED / 4 IN_REVIEW / 3 BLOCKED / 0 full-DoD DONE**.
+Owner-only conditional usability does not close the full release gates.
 
 OF-007's [native direction and future backlog](07-native-iphone-direction.md)
 do not add S/F IDs or points here. Existing S014 records the direction and
@@ -62,38 +65,46 @@ Live activity additionally requires A2-G2 and route-specific
 authorization. PLANNED does not mean READY. Each story extends the existing
 S013 harness with its own tests before DONE; S039 assembles final coverage.
 
+**2026-09-17 implementation update:** `IMPLEMENTED` records code present and
+reviewed for bounded owner use, not every acceptance/evidence condition or
+dependency fully DONE. `IN_REVIEW` records partial contracts/evidence/decision
+work. Source-feasibility and release gates remain blocked as detailed in
+[11's package matrix](11-implementation-release-verdict.md#story-and-work-package-disposition).
+These observations do not retroactively approve missing CP records, change
+the dependency graph or count implemented estimates as earned delivery points.
+
 | Story | Owner | Required reviewers | Dependencies | Status |
 | --- | --- | --- | --- | --- |
-| S014 | Riker | Data, Worf, Geordi, Wesley | Captain scope direction (received); detailed decisions open | PLANNED |
-| S015 | Worf | Data, Geordi | S014, S019 | BLOCKED |
-| S016 | Worf | Data | S014, S019 | BLOCKED |
-| S017 | Worf | Data, Geordi | S016 | BLOCKED |
+| S014 | Riker | Data, Worf, Geordi, Wesley | Captain scope direction (received); detailed decisions open | IN_REVIEW |
+| S015 | Worf | Data, Geordi | S014, S019 | IMPLEMENTED |
+| S016 | Worf | Data | S014, S019 | IMPLEMENTED |
+| S017 | Worf | Data, Geordi | S016 | IMPLEMENTED |
 | S018 | Worf | Data | S014 | BLOCKED |
-| S019 | Data | Worf | S014 | BLOCKED |
-| S020 | Worf | Data | S016, S018 | BLOCKED |
-| S021 | Data | Wesley | S014 | BLOCKED |
-| S022 | Data | Worf, Wesley | S021, S023 | BLOCKED |
-| S023 | Data | Worf | S014 | BLOCKED |
-| S024 | Data | Worf, Wesley | S022, S026 | BLOCKED |
-| S025 | Data | Worf, Geordi | S015, S016 | BLOCKED |
-| S026 | Data | Worf, Wesley | S014 | BLOCKED |
-| S027 | Data | Worf, Geordi | S024, S025 | BLOCKED |
-| S028 | Data | Worf, Geordi | S015, S024, S025, S031 | BLOCKED |
-| S029 | Worf | Data, Geordi | S016, S025, S031 | BLOCKED |
-| S030 | Data | Worf | S024, S026, S028, S029 | BLOCKED |
-| S031 | Data | Worf, Geordi, Wesley | S014, S026 | BLOCKED |
-| S032 | Data | Worf | S015, S024, S028, S029, S030, S031 | BLOCKED |
-| S033 | Geordi | Data, Worf, Wesley | S032, S034, S035 | BLOCKED |
-| S034 | Geordi | Worf, Wesley, Data | S014 | BLOCKED |
-| S035 | Wesley | Geordi, Data, Worf | S027, S034 | BLOCKED |
-| S036 | Data | Worf, Wesley | S014 | BLOCKED |
-| S037 | Geordi | Data, Wesley | S026, S034, S032 | BLOCKED |
-| S038 | Geordi | Data, Worf, Wesley | S033, S037 | BLOCKED |
-| S039 | Data | Worf, Geordi, Wesley | S017, S018, S020, S030, S038, S036 | BLOCKED |
+| S019 | Data | Worf | S014 | IMPLEMENTED |
+| S020 | Worf | Data | S016, S018 | IMPLEMENTED |
+| S021 | Data | Wesley | S014 | IMPLEMENTED |
+| S022 | Data | Worf, Wesley | S021, S023 | IMPLEMENTED |
+| S023 | Data | Worf | S014 | IMPLEMENTED |
+| S024 | Data | Worf, Wesley | S022, S026 | IMPLEMENTED |
+| S025 | Data | Worf, Geordi | S015, S016 | IMPLEMENTED |
+| S026 | Data | Worf, Wesley | S014 | IMPLEMENTED |
+| S027 | Data | Worf, Geordi | S024, S025 | IMPLEMENTED |
+| S028 | Data | Worf, Geordi | S015, S024, S025, S031 | IMPLEMENTED |
+| S029 | Worf | Data, Geordi | S016, S025, S031 | IMPLEMENTED |
+| S030 | Data | Worf | S024, S026, S028, S029 | IMPLEMENTED |
+| S031 | Data | Worf, Geordi, Wesley | S014, S026 | IMPLEMENTED |
+| S032 | Data | Worf | S015, S024, S028, S029, S030, S031 | IMPLEMENTED |
+| S033 | Geordi | Data, Worf, Wesley | S032, S034, S035 | IMPLEMENTED |
+| S034 | Geordi | Worf, Wesley, Data | S014 | IMPLEMENTED |
+| S035 | Wesley | Geordi, Data, Worf | S027, S034 | IMPLEMENTED |
+| S036 | Data | Worf, Wesley | S014 | IMPLEMENTED |
+| S037 | Geordi | Data, Wesley | S026, S034, S032 | IMPLEMENTED |
+| S038 | Geordi | Data, Worf, Wesley | S033, S037 | IMPLEMENTED |
+| S039 | Data | Worf, Geordi, Wesley | S017, S018, S020, S030, S038, S036 | IN_REVIEW |
 | S040 | Data | Worf, Wesley, Riker | S014; bounded route decision; S039 and A2-G2 before live proof | BLOCKED |
 | S041 | Wesley | Data, Worf, Riker | S014; bounded route/rights decision; S039 and A2-G2 before live proof | BLOCKED |
-| S042 | Riker | Data, Worf, Geordi, Wesley | S039, S040, S041; legal and A2-G3/G4 evidence | BLOCKED |
-| S043 | Riker | Data, Worf, Geordi, Wesley | S042; A2-G5; Captain A2-G6 decision | BLOCKED |
+| S042 | Riker | Data, Worf, Geordi, Wesley | S039, S040, S041; legal and A2-G3/G4 evidence | IN_REVIEW |
+| S043 | Riker | Data, Worf, Geordi, Wesley | S042; A2-G5; Captain A2-G6 decision | IN_REVIEW |
 
 ## Shared definition of done
 
@@ -725,6 +736,7 @@ T28–T33 are test families, **not six added stories**.
 | 2026-09-17 | Initial S014–S043 inventory, 112 estimated points; all criteria and detailed design approvals pending | Captain scope direction; Riker synthesis of archived reviews |
 | 2026-09-17 | OF-007 native intent mapped to existing S014/S042 architecture decisions; camera and handoff placed in separate future backlog | Owner direction; no new stories, points, dependencies or delivery approval |
 | 2026-09-17 | Reconcile four staged reviews and map all mandatory corrections, including pre-decrypt schema marker | Riker RC-01–RC-32; inventory/dependencies unchanged; CP concurrence and evidence pending |
+| 2026-09-17 | Record owner-only implementation verdict and code/evidence status; S018/S040/S041 remain blocked, full-DoD DONE not claimed | 11 and amended implementation reports; 471/98 supplied suite denominators, revision-3 process-only migration evidence; no points/dependency/gate waiver |
 
 No waivers are created here. New blockers discovered during implementation
 receive new permanent finding IDs and a reviewed disposition, never a recycled

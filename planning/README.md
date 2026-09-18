@@ -2,10 +2,11 @@
 
 ## Current plan
 
-**[Alpha 0.0.2](0.0.2/README.md)** — initial plan opened on 2026-09-17 by
-Captain-approved transition. **4 themes / 8 epics / 30 features / 30 stories /
-112 estimated points.** Scope direction is approved; detailed designs and
-release gates are not. No story is declared implemented by this transition.
+**[Alpha 0.0.2](0.0.2/README.md)** — implemented build reviewed on 2026-09-17:
+**owner-only APPROVE WITH CONDITIONS; named testers/public/commercial NO-GO**.
+**4 themes / 8 epics / 30 features / 30 stories / 112 estimated points.**
+The [final verdict](0.0.2/11-implementation-release-verdict.md) records code
+acceptance separately from incomplete CP/source/evidence/release gates.
 
 | Document | Authority |
 | --- | --- |
@@ -14,6 +15,8 @@ release gates are not. No story is declared implemented by this transition.
 | [Backlog and stories](0.0.2/03-backlog.md) | Canonical status, WSJF, owners, dependencies, points and acceptance criteria |
 | [Sequencing](0.0.2/04-sequencing.md) | Dependency graph, capacity, implementation/review order |
 | [Risks and release gates](0.0.2/05-risks-and-release-gates.md) | FMEA, evidence, permissions and release decision |
+| [Implementation review index](0.0.2/implementation-reviews/README.md) | Amended officer verdicts, scope and evidence limitations |
+| [Implementation/release verdict](0.0.2/11-implementation-release-verdict.md) | Owner-only usable build versus named/public NO-GO; package status and remaining blockers |
 | [Archive index](archive/README.md) | Immutable historical releases and their outcomes |
 
 ## Archived baseline
@@ -37,7 +40,10 @@ remains evidence, not a list of fixes completed by archiving.
   WSJF = (BV + TC + RR) / size; each CoD factor is 1–5. Dependencies and
   blocking security/accessibility gates take precedence over arithmetic.
 - Status vocabulary: `PLANNED`, `BLOCKED`, `READY`, `IN_PROGRESS`,
-  `IN_REVIEW`, `DONE`, `DEFERRED`, `STOPPED`. The current `03-backlog.md` owns
+  `IN_REVIEW`, `IMPLEMENTED`, `DONE`, `DEFERRED`, `STOPPED`.
+  `IMPLEMENTED` is code present/reviewed for a stated bounded use, not full
+  DoD, earned points or gate clearance; release evidence may remain pending.
+  The current `03-backlog.md` owns
   status and acceptance criteria. Update scope, totals, sequence and gates
   together under explicit change control.
 - Planning approval, implementation evidence, and gate approval are distinct.

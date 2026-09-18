@@ -1,13 +1,17 @@
 # Alpha 0.0.2 risks and release gates
 
-**No A2 gate has passed.** Scope direction is approved; detailed design,
-runtime authorization and release clearance are not. This document supplements,
+**No full A2 gate packet is declared passed by this verdict.**
+[11](11-implementation-release-verdict.md) records an implemented, usable
+**owner-only build APPROVED WITH CONDITIONS**, separately from named-tester/
+public release clearance. Amended officer implementation approvals replace
+their earlier planning verdicts; unresolved CP/source/evidence/legal records
+are not retroactively approved. This document supplements,
 not replaces, the archived
 [gate requirements](../archive/0.0.1/05-risks-and-release-gates.md),
 [private connector change control](../archive/0.0.1/10-private-alpha-connector-change-control.md)
 and [HOLD/FAIL verdict](../archive/0.0.1/feedback-and-bugs/alpha-0.0.1-release-verdict.md).
-The latter controls the implementation assessment; old planning sign-offs do
-not close runtime gates.
+The latter remains the historical 0.0.1 assessment; 11 controls the current
+0.0.2 implementation assessment. Old planning sign-offs do not close gates.
 
 ## Gate matrix
 
@@ -16,13 +20,19 @@ a test total, plan approval or an already running private connection.
 
 | Gate | Scope / mandatory evidence | Authority | Current state |
 | --- | --- | --- | --- |
-| A2-G0 — Design readiness | S014; approved contracts/wireframes/CTQs/FMEA, all mandatory RC corrections reconciled into CP specifications; dated officer concurrence and Captain decisions before code | Wesley + Geordi design; Worf + Data review; Riker reconciliation; Captain new-surface approval | BLOCKED: Worf REQUIRE CHANGES; other officers conditional; CP decisions/evidence outstanding |
+| A2-G0 — Design readiness | S014; approved contracts/wireframes/CTQs/FMEA, all mandatory RC corrections reconciled into CP specifications; dated officer concurrence and Captain decisions before code | Wesley + Geordi design; Worf + Data review; Riker reconciliation; Captain new-surface approval | INCOMPLETE: implementation approved within owner/UI scope; missing CP/Captain records not retroactively passed |
 | A2-G1 — Permission and source plan | Dated supported-route research first; narrow unofficial library exception described precisely; route-specific legal/security/maintenance decision before new domains; formal named legal/licensing review **before any conveyance** | Captain + named qualified legal reviewer; Worf/Data technical review | PENDING; no new route/conveyance approved |
-| A2-G2 — Safety before new real-data activity | Executed applicable security tests 1–12, authenticated API, trusted executables, safe custody, pinned/audited dependencies, consent/lifecycle/incident controls, encrypted feedback and no-egress boundary, synthetic export/delete/migration/residue proof; S039 evidence; applicable safety residual RPN <100 and no blocker | Worf blocking approval; Data and Geordi concurrence | BLOCKED |
+| A2-G2 — Safety before new real-data activity | Executed applicable security tests 1–12, authenticated API, trusted executables, safe custody, pinned/audited dependencies, consent/lifecycle/incident controls, encrypted feedback and no-egress boundary, synthetic export/delete/migration/residue proof; S039 evidence; applicable safety residual RPN <100 and no blocker | Worf blocking approval; Data and Geordi concurrence | PARTIAL owner evidence; BLOCKED for expansion: supply chain, CP-02 full live proof and RC-08 event evidence remain |
 | A2-G3 — Source correctness and four-domain proof | G2 plus bounded route authorization; genuine library/history/progress/non-owned catalog evidence with semantics, completeness, identity and caps; applicable tests 13–15; participant non-owned attestation; private packet-level egress evidence and sanitized process receipts | Data + Worf + Wesley | BLOCKED |
 | A2-G4 — Architecture evidence | Measured comparison/ADR citing G3, supported runtime and reversal triggers, platform-specific threat model; retain adapter/local-authority boundaries. Evaluate OF-007 native iPhone intent under the [native constraints](07-native-iphone-direction.md#architecture-decision-and-portability); current Windows/Node/Python/SQLite is disposable evidence, not proof of a shippable native connector | Data; Worf threat review; Captain future architecture decision | BLOCKED |
 | A2-G5 — Full team readiness | Tests 1–15 on final components or explicit Worf N/A; all 30 mandatory A-IDs plus promoted A012 closed; all selected stories accepted or separately rebaselined; rendered keyboard/AT journey; migration/export/delete recovery; all applicable residual RPN <100; zero security/a11y blockers | Data, Geordi, Worf, Wesley; Riker evidence audit | BLOCKED |
 | A2-G6 — Release and audience | S043 packet, dated G0–G5 approvals, named legal/licensing approval before conveyance, explicit residual acceptance, exact audience/build and tester roster in private custody; Captain PASS/HOLD/FAIL decision | Captain only | BLOCKED |
+
+The owner's existing authenticated runtime and process-only revision-3 migration
+evidence are acknowledged in 11; they do not authorize another account, install,
+new provider route, phone connection or copy. Named testers remain NO-GO for
+the complete blocker set in 11, including physical rendered evidence. A2-G6
+remains blocked for release/conveyance despite conditional existing-owner use.
 
 Public/cloud/multi-user/store/installer/package/binary/commercial distribution
 remains **HARD NO-GO regardless of these private-alpha gates**. Changing it needs
@@ -96,9 +106,9 @@ qualitative planning judgments. Mitigation implementation/evidence is pending;
 no residual is pre-assigned. All RPN ≥100 must be addressed before release.
 Worf security and Geordi accessibility blockers remain blocking at any RPN.
 
-| Risk | Failure mode / effect | Prob. / impact | S | O | D | RPN | Current control / gap | Action / owner |
+| Risk | Failure mode / effect | Prob. / impact | S | O | D | RPN | Initial planning control / gap | Action / owner |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| A2-R01 | Unauthenticated local API exposes or mutates private data | High / High | 9 | 7 | 6 | 378 | Proven bypass remains in current 0.0.1; interim C-1 controls and explicit Captain acceptance of A001/A002 NOT RECORDED | S014 dated interim agreement; S015 capability/extension/bootstrap/nonce/export proof T01/T02; Worf |
+| A2-R01 | Unauthenticated local API exposes or mutates private data | High / High | 9 | 7 | 6 | 378 | Proven 0.0.1 bypass at planning review; 11 records later capability/custody fixes and conditional owner acceptance, not a measured residual re-score | S014 dated interim agreement; S015 capability/extension/bootstrap/nonce/export proof T01/T02; Worf |
 | A2-R02 | Executable/module substitution compromises credential boundary | Medium / High | 9 | 5 | 6 | 270 | Isolated process but resolution/custody evidence incomplete | S016–S020 trusted resolution, cleanup, provenance and guards; Worf |
 | A2-R03 | Wrong units or incomplete import lies about progress/library | High / High | 8 | 7 | 5 | 280 | Validators exist; current expectations/whole-sync gaps | S021–S024 explicit units, complete-or-stop fixtures; Data |
 | A2-R04 | Identity/reconciliation/account mismatch loses or misattributes feedback | Medium / High | 9 | 6 | 6 | 324 | Account-keyed snapshot; no persistent annotation proof | S024–S026, S030, S032 transaction and ambiguity tests; Data |
@@ -162,10 +172,14 @@ packet evidence and named legal review remain separate gates. On failure,
 block promotion, preserve last valid state and invoke the relevant incident/
 recovery runbook; never weaken a control just to make a test pass.
 
-**0.0.2 review verdicts:** Data/Geordi/Wesley conditional; Worf REQUIRE CHANGES.
-Corrections are incorporated in [09](09-review-consensus.md), not newly signed
-off. Dated CP concurrence and execution evidence remain pending.
-**0.0.2 runtime/release approvals: none.** This documentation task reads no
+**Current implementation verdicts:** Data APPROVE; Geordi FULL APPROVE (UI
+scope); Wesley PASS (private evaluation); Worf APPROVE WITH CONDITIONS
+(owner-only). See [implementation reviews](implementation-reviews/README.md)
+and [11](11-implementation-release-verdict.md). Earlier planning positions
+remain historical in 09; no blanket RC closure or residual RPN reduction is
+inferred from test totals.
+**Owner-only runtime conditional GO; named/public release NO-GO.**
+This documentation task reads no
 personal store and runs no app, provider, migration, disconnect/delete,
 packaging or runtime test. It leaves the owner's active app and connection
 untouched. Markdown link and diff validation are documentation checks only.

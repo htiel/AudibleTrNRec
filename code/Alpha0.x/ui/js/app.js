@@ -1,22 +1,21 @@
-/**
- * Application bootstrap: wires the router to the views over a single
- * in-memory `AppStore`. No network call, no storage adapter, no analytics.
- */
-
-import { AppStore } from './store.js';
-import { initRouter } from './router.js';
-import { renderLibraryView } from './views/library-view.js';
-import { renderBookDetailView } from './views/book-detail-view.js';
-import { renderFeasibilityView } from './views/feasibility-view.js';
-import { renderDataView } from './views/data-view.js';
 import { ConnectionApi } from './connection-api.js';
+import { applyRuntimeChrome, isPrivateAlphaRequested, resolveBootstrapState } from './bootstrap-state.js';
+import { renderBootstrapFailureView } from './views/bootstrap-failure-view.js';
+
+const viewRoot = document.getElementById('view-root');
+const mainContent = document.getElementById('main-content');
+const navLinks = [...document.querySelectorAll('[data-route]')];
+const titleEl = document.querySelector('title');
+const headingEl = document.querySelector('.lcars-title');
+const statusEl = document.getElementById('runtime-status');
+const footerEl = document.getElementById('runtime-footer');
 
 let connectionApi = null;
 let connectionInfo = null;
 let liveSnapshot = null;
 let bootstrapError = null;
+const privateModeRequested = isPrivateAlphaRequested(window.location.search);
 try {
-  const privateModeRequested = new URLSearchParams(window.location.search).get('private-alpha') === '1';
   connectionApi = privateModeRequested ? await ConnectionApi.discover() : null;
   if (connectionApi) {
     connectionInfo = await connectionApi.status();
@@ -26,22 +25,14 @@ try {
   bootstrapError = error?.code ?? 'private-alpha-bootstrap-failed';
 }
 
-const store = new AppStore({
-  liveSnapshot,
+const bootstrap = resolveBootstrapState({
+  privateModeRequested,
   connectionApi,
   connectionInfo,
+  liveSnapshot,
   bootstrapError,
 });
-const viewRoot = document.getElementById('view-root');
-const mainContent = document.getElementById('main-content');
-const navLinks = [...document.querySelectorAll('[data-route]')];
-const statusPill = document.getElementById('runtime-status');
-const footerStatus = document.getElementById('runtime-footer');
-
-if (store.runtimeMode === 'private-alpha') {
-  statusPill.textContent = `Private alpha · ${connectionInfo?.connected ? 'Audible connected' : 'Audible disconnected'} · Commercial shipping blocked`;
-  footerStatus.textContent = 'Alpha 0.0.1 · Private local test build · Community-tested unofficial Audible connector · DPAPI-protected credentials · Commercial/public shipping blocked';
-}
+applyRuntimeChrome({ titleEl, headingEl, statusEl, footerEl }, bootstrap.chrome);
 
 function setActiveNav(routeName) {
   for (const link of navLinks) {
@@ -55,9 +46,31 @@ function focusMain() {
   if (mainContent) mainContent.focus();
 }
 
-initRouter({
-  library: () => { renderLibraryView(viewRoot, store); focusMain(); },
-  book: (params) => { renderBookDetailView(viewRoot, store, params[0]); },
-  feasibility: () => { renderFeasibilityView(viewRoot, store); focusMain(); },
-  data: () => { renderDataView(viewRoot, store); focusMain(); },
-}, { onChange: setActiveNav });
+if (bootstrap.failClosed) {
+  setActiveNav('data');
+  renderBootstrapFailureView(viewRoot, {
+    errorCode: bootstrap.errorCode,
+    message: bootstrap.message,
+    currentHref: window.location.href,
+  });
+} else {
+  const [{ initRouter }, { renderLibraryView }, { renderBookDetailView }, { renderFeasibilityView }, { renderDataView }, storeModule] = await Promise.all([
+    import('./router.js'),
+    import('./views/library-view.js'),
+    import('./views/book-detail-view.js'),
+    import('./views/feasibility-view.js'),
+    import('./views/data-view.js'),
+    bootstrap.mode === 'private-alpha' ? import('./private-store.js') : import('./store.js'),
+  ]);
+  const store = bootstrap.mode === 'private-alpha'
+    ? new storeModule.PrivateAppStore({ liveSnapshot, connectionApi, connectionInfo, bootstrapError })
+    : new storeModule.AppStore();
+  if (bootstrap.mode === 'private-alpha' && typeof store.hydrateFeedback === 'function') await store.hydrateFeedback();
+
+  initRouter({
+    library: () => { renderLibraryView(viewRoot, store); focusMain(); },
+    book: (params) => { renderBookDetailView(viewRoot, store, params[0]); },
+    feasibility: () => { renderFeasibilityView(viewRoot, store); focusMain(); },
+    data: () => { renderDataView(viewRoot, store); focusMain(); },
+  }, { onChange: setActiveNav });
+}

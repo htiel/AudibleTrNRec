@@ -1,11 +1,3 @@
-/**
- * Component styles: flat pill buttons, forms, tables, tag chips, dialogs,
- * and disclosures. No gradients, no box-shadow, no text-shadow, no glow
- * anywhere in this file, per the LCARS flat-design rule.
- */
-
-/* --- Buttons --------------------------------------------------------------- */
-
 .lcars-btn {
   display: inline-flex;
   align-items: center;
@@ -26,7 +18,8 @@
   cursor: pointer;
 }
 
-.lcars-btn:hover:not(:disabled) {
+.lcars-btn:hover:not(:disabled),
+.lcars-btn:focus-visible:not(:disabled) {
   filter: brightness(1.15);
 }
 
@@ -44,8 +37,6 @@
   cursor: not-allowed;
   filter: none;
 }
-
-/* --- Forms and fields -------------------------------------------------------- */
 
 .lcars-form,
 .lcars-toolbar {
@@ -89,7 +80,7 @@ select, input[type="text"], input[type="search"], input[type="number"], textarea
 }
 
 textarea {
-  min-height: 4.5rem;
+  min-height: 6rem;
   resize: vertical;
 }
 
@@ -148,8 +139,6 @@ fieldset.lcars-fieldset {
   font-style: italic;
 }
 
-/* --- Tables ------------------------------------------------------------------ */
-
 .lcars-table {
   width: 100%;
   border-collapse: collapse;
@@ -194,13 +183,9 @@ fieldset.lcars-fieldset {
   color: var(--lcars-accent-secondary);
 }
 
-/* --- Related facet list (read-only, book detail) ------------------------------- */
-
 .lcars-facet-list {
   padding-left: 1.25rem;
 }
-
-/* --- Metadata list --------------------------------------------------------------- */
 
 .lcars-meta-list {
   display: grid;
@@ -216,20 +201,6 @@ fieldset.lcars-fieldset {
 .lcars-meta-list dd {
   margin: 0;
 }
-
-@media (max-width: 640px) {
-  .lcars-meta-list {
-    grid-template-columns: 1fr;
-  }
-  .lcars-meta-list dt {
-    margin-top: var(--lcars-space-2);
-  }
-  .lcars-field {
-    min-width: 0;
-  }
-}
-
-/* --- Synthetic-only structural trace -------------------------------------------- */
 
 .lcars-trace-list {
   list-style: none;
@@ -250,8 +221,6 @@ fieldset.lcars-fieldset {
   color: var(--lcars-accent-secondary);
 }
 
-/* --- Status view ------------------------------------------------------------------ */
-
 .lcars-status-block ul {
   padding-left: 1.25rem;
 }
@@ -260,8 +229,6 @@ fieldset.lcars-fieldset {
   font-size: var(--lcars-font-subheader);
   color: var(--lcars-accent-secondary);
 }
-
-/* --- Dialogs ------------------------------------------------------------------------ */
 
 dialog.lcars-dialog {
   background: var(--lcars-black);
@@ -292,4 +259,85 @@ dialog.lcars-dialog::backdrop {
 .lcars-view-intro {
   color: var(--lcars-accent-tertiary);
   max-width: 60rem;
+}
+
+.lcars-card-list {
+  display: grid;
+  gap: var(--lcars-space-3);
+}
+
+.lcars-library-card {
+  border: 1px solid var(--lcars-accent-muted);
+  border-radius: var(--lcars-space-2);
+  padding: var(--lcars-space-3);
+  display: grid;
+  gap: var(--lcars-space-3);
+}
+
+.lcars-library-card-main,
+.lcars-library-card-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lcars-space-1);
+}
+
+.lcars-library-card-side {
+  align-items: flex-start;
+}
+
+.lcars-library-meta,
+.lcars-library-state,
+.lcars-library-feedback-indicator {
+  margin: 0;
+}
+
+.lcars-library-feedback-indicator {
+  color: var(--lcars-accent-secondary);
+}
+
+.lcars-group-details {
+  margin: var(--lcars-space-3) 0;
+}
+
+.lcars-group-summary {
+  min-height: var(--lcars-min-target);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--lcars-accent-secondary);
+}
+
+.lcars-feedback-editor {
+  border-top: 1px solid var(--lcars-accent-muted);
+  padding-top: var(--lcars-space-3);
+  scroll-margin-top: 6rem;
+  scroll-margin-bottom: 10rem;
+}
+
+.lcars-feedback-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--lcars-space-3);
+}
+
+@media (min-width: 720px) {
+  .lcars-library-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+}
+
+@media (max-width: 640px) {
+  .lcars-meta-list {
+    grid-template-columns: 1fr;
+  }
+  .lcars-meta-list dt {
+    margin-top: var(--lcars-space-2);
+  }
+  .lcars-field {
+    min-width: 0;
+  }
+  .lcars-feedback-grid {
+    grid-template-columns: 1fr;
+  }
 }

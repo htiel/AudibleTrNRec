@@ -30,7 +30,10 @@ const STATUS_ORDER = Object.freeze({
 
 const names = (catalog, ids, lookup) => ids.map((id) => catalog[lookup](id)).sort(compareText);
 
-/** Joins source-owned records only; alpha 0.0.1 has no local annotation store. */
+/**
+ * Joins source-owned records only. Locally owned feedback lives in the
+ * encrypted private store and is never merged into this view.
+ */
 export function buildLibraryView(catalog, entries) {
   const rows = [];
   for (const entry of entries) {

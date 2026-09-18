@@ -17,7 +17,7 @@ const catalog = () => new Catalog(
   { source: 'synthetic-fixture', observedAt: SYNTHETIC_NOW },
 );
 
-test('the public surface exposes the 0.0.1 core without exposing a platform', () => {
+test('the public surface exposes the alpha core without exposing a platform', () => {
   for (const name of ['Catalog', 'mergeLibrarySnapshot', 'buildLibraryView', 'sortLibrary',
     'filterLibrary', 'facetCounts', 'assertCommercialFree', 'validateCandidate',
     'validateCandidateSet', 'CONTRACT_SCOPE', 'ALPHA_VERSION', 'SCHEMA_VERSION', 'CONTRACT_VERSION']) {

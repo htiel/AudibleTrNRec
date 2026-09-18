@@ -204,7 +204,8 @@ export const SYNTHETIC_SNAPSHOT = Object.freeze([
 /**
  * Locally authored records (ATR-S003 AC4 sentinel data).
  *
- * Alpha 0.0.1 ships NO ratings/comments feature: these are inert fixtures used
+ * The synthetic fixture set ships NO ratings/comments feature: these are inert
+ * fixtures used
  * only to prove that repeated source imports cannot write, delete, or repoint
  * locally owned records. No module in this build reads them as product input.
  */

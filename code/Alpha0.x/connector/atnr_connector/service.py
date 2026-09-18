@@ -13,19 +13,28 @@ from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from . import SOURCE_NAME
 from .custody import (
     CustodyError,
     SecureJsonStore,
     WindowsDpapiProtector,
+    seal_local_record,
     seal_snapshot,
+    unseal_local_record,
     unseal_snapshot,
+    verify_custody_boundary,
+)
+from .contract import (
+    BYTE_ACCOUNTING,
+    BYTE_ACCOUNTING_IS_WIRE_PROOF,
+    CONTRACT_REVISION,
+    MAX_ITEMS,
+    MAX_PAGES,
+    MAX_RESPONSE_BYTES,
+    PAGE_SIZE,
 )
 from .normalize import NormalizeError, normalize_library
 from .policy import PrivateAlphaPolicy, load_policy
-
-MAX_PAGES = 20
-PAGE_SIZE = 1000
-MAX_RESPONSE_BYTES = 25 * 1024 * 1024
 RESPONSE_GROUPS = ",".join(
     [
         "contributors",
@@ -44,9 +53,11 @@ RESPONSE_GROUPS = ",".join(
 
 
 class ConnectorError(RuntimeError):
-    def __init__(self, code: str) -> None:
+    def __init__(self, code: str, detail: dict[str, Any] | None = None) -> None:
         super().__init__(code)
         self.code = code
+        #: Bounded, category-only diagnostic. Never contains a source value.
+        self.detail = detail
 
 
 def _now() -> str:
@@ -120,6 +131,89 @@ def _authenticator(envelope: dict[str, Any]) -> Any:
         raise ConnectorError("stored-authorization-invalid") from error
 
 
+def collect_library_pages(fetch_page: Any) -> dict[str, Any]:
+    """Accumulate bounded library pages into a provably complete capture.
+
+    `fetch_page(page)` returns the decoded page response. The accumulator is
+    deliberately conservative:
+
+    * a duplicate source identifier - within a page or across pages - is a
+      classified stop, not a silent de-duplication. Dedupe alone proves
+      nothing about completeness;
+    * an over-size page, an over-size cumulative response or an over-size item
+      total stops;
+    * reaching the page cap without terminal evidence stops. There is no
+      page 21 probe and no automatic retry;
+    * completeness is only ever claimed from a declared basis.
+
+    Byte accounting re-serializes the decoded page. That is an *estimate* and
+    is reported as such: it is not wire-byte proof (see the source contract's
+    ``byteAccountingIsWireProof: false``).
+    """
+
+    items: list[Any] = []
+    seen: set[str] = set()
+    response_bytes = 0
+    pages_read = 0
+    completeness_basis: str | None = None
+
+    for page in range(1, MAX_PAGES + 1):
+        response = fetch_page(page)
+        if not isinstance(response, dict):
+            raise ConnectorError("library-response-invalid")
+        page_items = response.get("items")
+        if not isinstance(page_items, list):
+            raise ConnectorError("library-response-invalid")
+        if len(page_items) > PAGE_SIZE:
+            raise ConnectorError("library-page-oversized")
+        pages_read = page
+        response_bytes += len(
+            json.dumps(response, ensure_ascii=True, separators=(",", ":")).encode("utf-8")
+        )
+        if response_bytes > MAX_RESPONSE_BYTES:
+            raise ConnectorError("library-response-too-large")
+
+        for raw in page_items:
+            if not isinstance(raw, dict):
+                raise ConnectorError("library-response-invalid")
+            asin = raw.get("asin")
+            if not isinstance(asin, str) or not asin.strip():
+                raise ConnectorError("library-response-invalid")
+            key = asin.strip()
+            if key in seen:
+                # Overlapping or mutating pages: the prior complete snapshot is
+                # retained rather than guessing which copy is authoritative.
+                raise ConnectorError("library-pagination-duplicate")
+            seen.add(key)
+
+        items.extend(page_items)
+        if len(items) > MAX_ITEMS:
+            raise ConnectorError("library-item-limit")
+
+        if len(page_items) < PAGE_SIZE:
+            completeness_basis = "empty-first-page" if page == 1 and not page_items else "short-final-page"
+            break
+
+    if completeness_basis is None:
+        raise ConnectorError("library-page-limit")
+
+    return {
+        "items": items,
+        "evidence": {
+            "complete": True,
+            "basis": completeness_basis,
+            "pagesRead": pages_read,
+            "itemCount": len(items),
+            "estimatedResponseBytes": response_bytes,
+            "byteAccounting": BYTE_ACCOUNTING,
+            "byteAccountingIsWireProof": BYTE_ACCOUNTING_IS_WIRE_PROOF,
+            "maxPages": MAX_PAGES,
+            "pageSize": PAGE_SIZE,
+            "contractRevision": CONTRACT_REVISION,
+        },
+    }
+
+
 class ConnectorService:
     def __init__(
         self,
@@ -188,32 +282,18 @@ class ConnectorService:
         try:
             import audible
 
-            items: list[Any] = []
-            response_bytes = 0
             with audible.Client(auth=auth) as client:
-                for page in range(1, MAX_PAGES + 1):
-                    response = client.get(
+                def fetch_page(page: int) -> Any:
+                    return client.get(
                         "library",
                         num_results=PAGE_SIZE,
                         page=page,
                         response_groups=RESPONSE_GROUPS,
                     )
-                    if not isinstance(response, dict):
-                        raise ConnectorError("library-response-invalid")
-                    page_items = response.get("items")
-                    if not isinstance(page_items, list):
-                        raise ConnectorError("library-response-invalid")
-                    response_bytes += len(
-                        json.dumps(response, ensure_ascii=True, separators=(",", ":")).encode("utf-8")
-                    )
-                    if response_bytes > MAX_RESPONSE_BYTES:
-                        raise ConnectorError("library-response-too-large")
-                    items.extend(page_items)
-                    if len(page_items) < PAGE_SIZE:
-                        break
-                else:
-                    raise ConnectorError("library-page-limit")
 
+                capture = collect_library_pages(fetch_page)
+
+            items = capture["items"]
             observed_at = _now()
             snapshot = normalize_library(
                 items,
@@ -226,13 +306,16 @@ class ConnectorService:
             return {
                 "status": self._public_status(envelope),
                 "itemCount": len(items),
+                "completeness": capture["evidence"],
                 "snapshot": snapshot,
                 "sealedSnapshot": seal_snapshot(snapshot, self.protector),
             }
         except ConnectorError:
             raise
         except NormalizeError as error:
-            raise ConnectorError("library-normalization-failed") from error
+            raise ConnectorError(
+                "library-normalization-failed", error.diagnostic()
+            ) from error
         except Exception as error:
             raise ConnectorError("library-sync-failed") from error
 
@@ -248,6 +331,88 @@ class ConnectorService:
 
     def unseal(self, encoded: str) -> dict[str, Any]:
         return unseal_snapshot(encoded, self.protector)
+
+    def seal(self, snapshot: Any) -> dict[str, Any]:
+        """Seal a **reconciled** snapshot produced by the local service.
+
+        This is a local custody operation only: it performs no provider access
+        and accepts no arbitrary payload. The value must already be a closed
+        snapshot envelope for the bound marketplace, so this dispatch path can
+        never be used to seal or exfiltrate unrelated data.
+        """
+
+        if not isinstance(snapshot, dict):
+            raise ConnectorError("seal-payload-invalid")
+        required = {"schemaVersion", "source", "marketplace", "observedAt", "catalog", "entries"}
+        if not required.issubset(snapshot):
+            raise ConnectorError("seal-payload-invalid")
+        if snapshot.get("source") != SOURCE_NAME:
+            raise ConnectorError("seal-payload-invalid")
+        if snapshot.get("marketplace") not in self.policy.allowed_marketplaces:
+            raise ConnectorError("marketplace-not-allowed")
+        if not isinstance(snapshot.get("entries"), list) or not isinstance(
+            snapshot.get("catalog"), dict
+        ):
+            raise ConnectorError("seal-payload-invalid")
+        return {"sealedSnapshot": seal_snapshot(snapshot, self.protector)}
+
+    #: Purpose tag required on every locally owned sealed record.
+    LOCAL_RECORD_PURPOSE = "private-review"
+
+    def seal_local(self, payload: Any) -> dict[str, Any]:
+        """Seal a locally owned record (a private review) at rest.
+
+        This route performs no provider access and reads no provider state. It
+        accepts only a purpose-tagged local record, so it cannot be used as a
+        generic encryption oracle for unrelated data.
+        """
+
+        if not isinstance(payload, dict):
+            raise ConnectorError("local-payload-invalid")
+        if payload.get("purpose") != self.LOCAL_RECORD_PURPOSE:
+            raise ConnectorError("local-payload-invalid")
+        if len(json.dumps(payload, ensure_ascii=True)) > 256 * 1024:
+            raise ConnectorError("local-payload-too-large")
+        return {"sealedPayload": seal_local_record(payload, self.protector)}
+
+    def unseal_local(self, encoded: str) -> dict[str, Any]:
+        """Open a locally owned sealed record, refusing any other purpose.
+
+        The envelope header is purpose-bound, so a sealed library snapshot is
+        refused before decryption rather than being opened and then inspected.
+        """
+
+        payload = unseal_local_record(encoded, self.protector)
+        if not isinstance(payload, dict) or payload.get("purpose") != self.LOCAL_RECORD_PURPOSE:
+            raise ConnectorError("local-payload-invalid")
+        return payload
+
+    def verify_custody(self) -> dict[str, Any]:
+        """Prove the OS custody boundary (ACL re-read) before any state write.
+
+        This route performs no provider access, reads no credential and opens
+        no library state. It exists so the runtime can establish the custody
+        proof *before* a rollback envelope or migration writes personal bytes.
+        """
+
+        return verify_custody_boundary()
+
+    def local_artifact_inventory(self) -> dict[str, Any]:
+        """Report whether connector-owned artifacts still exist.
+
+        A local deletion in the application cannot remove these, and the
+        application cannot see them either. This route answers the only honest
+        question it can - existence - with booleans and a closed protector
+        name. No path, no account identifier, no credential material and no
+        file content ever leaves this method.
+        """
+
+        return {
+            "credentialsRetained": bool(self.store.exists()),
+            "identitySeedRetained": bool(self.identity_store.exists()),
+            "protector": "windows-dpapi",
+            "removedBy": "confirmed-disconnect-only",
+        }
 
     def _cleanup_failed_registration(self, auth: Any) -> None:
         try:

@@ -30,7 +30,7 @@ test('the inspector view joins catalog records to the imported snapshot', () => 
   assert.equal(ring.provenance.entrySource, 'synthetic-fixture');
 });
 
-test('alpha 0.0.1 exposes no rating, comment, tag, or favorite column', () => {
+test('the source-owned library view exposes no rating, comment, tag, or favorite column', () => {
   const deferred = ['overallRating', 'storyRating', 'performanceRating', 'favorite', 'tags', 'comment', 'comments'];
   for (const row of view()) {
     for (const field of deferred) {

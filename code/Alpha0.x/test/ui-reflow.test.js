@@ -110,3 +110,23 @@ test('form fields can drop their minimum width at the mobile breakpoint', async 
   const mobileBlock = components.match(/@media \(max-width:\s*640px\)\s*{([\s\S]*?)\n}/)?.[1] ?? '';
   assert.match(mobileBlock, /\.lcars-field\s*{\s*min-width:\s*0;?\s*}/, 'the mobile breakpoint must relax .lcars-field min-width so fields can shrink to fit a 320px viewport');
 });
+
+test('minimum tap targets are raised to 44px and the frame uses dynamic viewport height', async () => {
+  const tokens = await css('tokens.css');
+  const base = await css('base.css');
+  const layout = await css('layout.css');
+  assert.match(tokens, /--lcars-min-target:\s*2\.75rem/);
+  assert.match(layout, /min-height:\s*100vh;[\s\S]*min-height:\s*100dvh;/);
+  assert.match(base, /top:\s*calc\([^)]*env\(safe-area-inset-top\)\)/);
+});
+
+test('safe-area padding protects header, body, footer, and mobile sidebar from iPhone cutouts', async () => {
+  const layout = await css('layout.css');
+  assert.match(layout, /safe-area-inset-top/);
+  assert.match(layout, /safe-area-inset-right/);
+  assert.match(layout, /safe-area-inset-bottom/);
+  assert.match(layout, /safe-area-inset-left/);
+  assert.match(layout, /\.lcars-sidebar-filler\s*{[^}]*background:\s*var\(--lcars-accent-muted\)/s);
+  const mobileBlock = layout.match(/@media \(max-width:\s*640px\)\s*{([\s\S]*?)\n}/)?.[1] ?? '';
+  assert.match(mobileBlock, /\.lcars-sidebar-filler\s*{\s*display:\s*none;?\s*}/);
+});

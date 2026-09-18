@@ -1,5 +1,5 @@
 /**
- * Local inspection helper for the alpha 0.0.1 core. Prints deterministic
+ * Local inspection helper for the alpha core. Prints deterministic
  * output for the synthetic evidence inspector and the closed evidence
  * contract. No network, no files written, no persistence, no recommendations.
  */

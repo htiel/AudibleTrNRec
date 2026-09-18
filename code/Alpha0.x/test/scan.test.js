@@ -43,6 +43,7 @@ const ALLOWANCES = Object.freeze({
   'node-http': Object.freeze(['scripts/serve.js']),
   fetch: Object.freeze(['ui/js/connection-api.js']),
   'child-process': Object.freeze([
+    'scripts/local-capability-bootstrap.js',
     'scripts/setup-connector.js',
     'src/adapters/connector-process.js',
   ]),
@@ -155,6 +156,7 @@ test('allowances are exact and retain their narrow security shape', () => {
   assert.deepEqual(ALLOWANCES['node-http'], ['scripts/serve.js']);
   assert.deepEqual(ALLOWANCES.fetch, ['ui/js/connection-api.js']);
   assert.deepEqual(ALLOWANCES['child-process'], [
+    'scripts/local-capability-bootstrap.js',
     'scripts/setup-connector.js',
     'src/adapters/connector-process.js',
   ]);
@@ -182,8 +184,22 @@ test('allowances are exact and retain their narrow security shape', () => {
   assert.match(api, /credentials:\s*'same-origin'/);
 
   const adapter = stripComments(readFileSync(join(root, 'src', 'adapters', 'connector-process.js'), 'utf8'));
-  assert.match(adapter, /spawn\(this\.pythonPath,\s*\['-m',\s*'atnr_connector\.rpc'\]/);
+  // The interpreter is a validated absolute path (never a bare name), and the
+  // isolation flags that block env/user-site hijack are asserted literally.
+  assert.match(adapter, /spawn\(interpreter,\s*\['-E',\s*'-s',\s*'-B',\s*'-m',\s*'atnr_connector\.rpc'\]/);
+  assert.match(adapter, /assertTrustedExecutable\(/, 'the interpreter must be validated before spawn');
+  assert.match(adapter, /env:\s*minimalWindowsEnv\(/, 'the child must receive a scrubbed environment');
   assert.doesNotMatch(adapter, /\bshell\s*:\s*true\b/);
+
+  const setup = stripComments(readFileSync(join(root, 'scripts', 'setup-connector.js'), 'utf8'));
+  assert.doesNotMatch(setup, /['"]python(?:3)?['"]/, 'setup must not resolve a bare-name interpreter through PATH');
+  assert.match(setup, /--require-hashes/);
+  assert.match(setup, /--only-binary/);
+  assert.match(setup, /--no-deps/);
+  assert.doesNotMatch(setup, /\bshell\s*:\s*true\b/);
+
+  const bootstrap = stripComments(readFileSync(join(root, 'scripts', 'local-capability-bootstrap.js'), 'utf8'));
+  assert.doesNotMatch(bootstrap, /\bshell\s*:\s*true\b/);
 });
 
 test('every rule is live: each detector flags its own positive-control sample', () => {

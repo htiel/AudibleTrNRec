@@ -15,6 +15,7 @@ import {
 } from './validate.js';
 import { ValidationError, classifyDiagnostic } from './errors.js';
 import { stripCommercialFields, assertCommercialFree } from './trust.js';
+import { IDENTITY_BASES } from './source-contract.js';
 import { SCHEMA_VERSION, SYNTHETIC_NOW } from '../version.js';
 
 export const LISTENING_STATUSES = Object.freeze([
@@ -56,6 +57,13 @@ function trackUnknown(unknownFields, field, value) {
   return value;
 }
 
+/**
+ * Declared basis for a catalog identity. `unspecified` is recorded as an
+ * unknown field: it is an admission that separation is not proven, never a
+ * licence to merge two records because their names are equal.
+ */
+export const DECLARED_IDENTITY_BASES = Object.freeze([...IDENTITY_BASES, 'unspecified']);
+
 export function normalizePerson(input, { source = 'synthetic-fixture', observedAt } = {}) {
   const raw = safeObject(input, 'person', { required: true });
   const unknownFields = [];
@@ -66,22 +74,33 @@ export function normalizePerson(input, { source = 'synthetic-fixture', observedA
     if (!roles.includes(r)) roles.push(r);
   }
   if (roles.length === 0) throw new ValidationError('person.roles: at least one role required', 'person.roles');
+  const identityBasis = isUnknown(raw.identityBasis)
+    ? 'unspecified'
+    : safeEnum(raw.identityBasis, DECLARED_IDENTITY_BASES, 'person.identityBasis', { required: true });
+  if (identityBasis === 'unspecified') unknownFields.push('identityBasis');
   return deepFreeze({
     personId: safeId(raw.personId, 'person.personId'),
     displayName,
     sortName: trackUnknown(unknownFields, 'sortName', safeText(raw.sortName, 'person.sortName')) ?? displayName,
     roles: roles.slice().sort(),
+    identityBasis,
     provenance: provenance({ source, observedAt, unknownFields }),
   });
 }
 
 export function normalizeFacet(input, { source = 'synthetic-fixture', observedAt } = {}) {
   const raw = safeObject(input, 'facet', { required: true });
+  const unknownFields = [];
+  const identityBasis = isUnknown(raw.identityBasis)
+    ? 'unspecified'
+    : safeEnum(raw.identityBasis, DECLARED_IDENTITY_BASES, 'facet.identityBasis', { required: true });
+  if (identityBasis === 'unspecified') unknownFields.push('identityBasis');
   return deepFreeze({
     facetId: safeId(raw.facetId, 'facet.facetId'),
     type: safeEnum(raw.type, FACET_TYPES, 'facet.type', { required: true }),
     name: safeText(raw.name, 'facet.name', { required: true }),
-    provenance: provenance({ source, observedAt }),
+    identityBasis,
+    provenance: provenance({ source, observedAt, unknownFields }),
   });
 }
 
@@ -161,7 +180,11 @@ export function normalizeLibraryEntry(input, { source = 'synthetic-fixture', obs
     lastListenedAt: trackUnknown(unknownFields, 'lastListenedAt', safeIsoDate(raw.lastListenedAt, 'libraryEntry.lastListenedAt')),
     completedAt: trackUnknown(unknownFields, 'completedAt', safeIsoDate(raw.completedAt, 'libraryEntry.completedAt')),
     lastSyncedAt: safeIsoDate(observedAt ?? SYNTHETIC_NOW, 'libraryEntry.lastSyncedAt', { required: true }),
-    missingFromSource: false,
+    /** Source observation instant, kept distinct from the local commit time. */
+    sourceObservedAt: safeIsoDate(raw.sourceObservedAt ?? observedAt ?? SYNTHETIC_NOW, 'libraryEntry.sourceObservedAt', { required: true }),
+    /** Last observation in which the source actually listed this entry. */
+    lastSeenAt: safeIsoDate(raw.lastSeenAt ?? observedAt ?? SYNTHETIC_NOW, 'libraryEntry.lastSeenAt', { required: true }),
+    missingFromSource: safeBoolean(raw.missingFromSource, 'libraryEntry.missingFromSource') ?? false,
   };
   entry.provenance = provenance({
     source,
@@ -253,7 +276,12 @@ export function mergeLibrarySnapshot(previousEntries, incomingRaw, { observedAt 
     }
     const before = previous.get(entry.bookId) ?? null;
     if (before && SOURCE_OWNED_FIELDS.every((f) => before[f] === entry[f]) && before.missingFromSource === false) {
-      next.set(entry.bookId, deepFreeze({ ...before, lastSyncedAt: entry.lastSyncedAt }));
+      next.set(entry.bookId, deepFreeze({
+        ...before,
+        lastSyncedAt: entry.lastSyncedAt,
+        sourceObservedAt: entry.sourceObservedAt,
+        lastSeenAt: entry.lastSeenAt,
+      }));
       report.unchanged.push(entry.bookId);
     } else if (before) {
       next.set(entry.bookId, entry);

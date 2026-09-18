@@ -4,10 +4,20 @@
 
 **Execution lead:** Commander William Riker
 
-**Status:** Review-reconciled planning baseline, **HOLD / A2-G0 BLOCKED**.
-The [consensus](09-review-consensus.md) incorporates mandatory review corrections;
-dated CP concurrence and Captain decisions are still required. No implementation
-or gate approval is asserted. Packages remain PLANNED/BLOCKED.
+**Status:** Implementation reviewed; **owner-only APPROVE WITH CONDITIONS**.
+Named testers/public/commercial remain NO-GO. Current package status and
+evidence limits are in [11 — implementation verdict](11-implementation-release-verdict.md)
+and [03](03-backlog.md); 23 packages have implemented code, four are IN_REVIEW
+and three BLOCKED. No full-DoD DONE or blanket A2-G0–G6 pass is claimed.
+
+Sections below preserve the reviewed **design/execution baseline**, not an
+assertion that all proposed physical schemas, APIs or evidence artifacts
+shipped unchanged. “Current/existing” code descriptions in that baseline refer
+to its planning inspection. The later [runtime requirement](10-runtime-data-requirement.md)
+and 11 control current state: real-data-only private startup, storage revision
+3 with account anchor, two migration receipts and reviewed lifecycle wiring.
+Differences/unfinished evidence (notably RC-08 events and purpose-header limits)
+are explicit in 11; proposed requirements are not silently marked satisfied.
 
 **Inventory unchanged: 4 themes / 8 epics / 30 features / 30 stories /
 112 relative points.** Packages are execution aliases, not additional stories or
@@ -144,7 +154,8 @@ weakening them. `D/W/G/Y/R` below mean Data/Worf/Geordi/Wesley/Riker.
 
 This reproduces canonical scoring, descending by exact WSJF, then CoD, then ID.
 Hard dependencies and gates take precedence. `*` is a mandatory critical
-override; `†` is the accessibility minimum HIGH. No package is READY today.
+override; `†` is the accessibility minimum HIGH. This is the original dispatch
+order; current observed implementation status is in 03/11, not inferred READY.
 
 | ID | Title | BV | TC | RR | CoD | Size | WSJF | Priority |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |

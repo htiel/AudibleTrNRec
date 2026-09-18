@@ -1,5 +1,11 @@
 # Alpha 0.0.2 full planning review consensus
 
+**Historical planning-stage verdict:** preserved below. For subsequent
+implementation evidence and owner-only conditional GO, see
+[11 — implementation/release verdict](11-implementation-release-verdict.md).
+Named/public release remains blocked; implementation acceptance is not
+retroactive CP or source-feasibility approval.
+
 **Date:** 2026-09-17
 
 **Reconciliation owner:** Commander William Riker

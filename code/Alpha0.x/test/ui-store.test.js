@@ -217,7 +217,7 @@ test('exportState is JSON-serializable, schema-tagged, and contains no ratings/a
   const store = new AppStore();
   const exported = store.exportState();
   const roundTrip = JSON.parse(JSON.stringify(exported));
-  assert.equal(roundTrip.alphaVersion, '0.0.1');
+  assert.equal(roundTrip.alphaVersion, '0.0.2');
   assert.equal(roundTrip.runtimeProfile.transport, 'loopback-static-server-only');
   assert.equal(roundTrip.runtimeProfile.outboundNetwork, 'none');
   assert.equal(roundTrip.runtimeProfile.audibleAccess, 'none');

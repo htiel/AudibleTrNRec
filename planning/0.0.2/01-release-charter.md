@@ -2,9 +2,11 @@
 
 **Release:** private, single-user alpha 0.0.2
 
-**Status:** review-reconciled planning baseline; design concurrence and execution
-evidence still pending. **HOLD — not implementation-ready or release-cleared.**
-See [review consensus](09-review-consensus.md).
+**Status:** implemented build accepted for **owner-only private evaluation with
+conditions**; named-tester/public release remains NO-GO. See
+[11 — implementation verdict](11-implementation-release-verdict.md).
+The [planning consensus](09-review-consensus.md) remains historical; requirements
+below are retained, not blanket claims of completed gates or measured CTQs.
 
 **Date:** 2026-09-17
 
@@ -99,14 +101,18 @@ Captain's explicit decision.
 
 ### Interim owner-only exposure controls — 2026-09-17
 
-**A001 (unauthenticated local API) and A002 (executable substitution) remain
-open in 0.0.1.** Scheduling S015/S016 does not protect today's build.
+**Historical 0.0.1 exposure:** A001 (unauthenticated local API) and A002
+(executable substitution) were open at planning review. Scheduling S015/S016
+did not itself provide protection. The later 0.0.2 fixes and Worf's conditional
+owner acceptance are recorded in 11; do not apply this historical paragraph
+as a claim that the current code still vends unauthenticated capabilities.
 Worf C-1 requires a dated Captain decision explicitly accepting both risks for
 owner-only continued use, with these interim operating controls: private mode
 only while actively used, owner-controlled loopback-service shutdown when idle,
 a dedicated extension-free browser profile, and no untrusted local tooling on
-the host while it runs. These reduce exposure; they do not close either defect
-or defend against same-user compromise. Acceptance is **NOT RECORDED**.
+the host while it runs. These reduce exposure, not same-user compromise.
+The planning-stage record did not contain Captain acceptance; current Worf
+owner-use conditions are retained by 11 without inventing an earlier signature.
 
 This is a proposed operating agreement for the Captain, **not authorization for
 this documentation task to stop, disconnect, deregister or alter the app**.

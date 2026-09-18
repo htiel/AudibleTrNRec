@@ -91,11 +91,14 @@ test('index.html declares language, viewport, and a skip link', async () => {
   assert.match(html, /aria-live="assertive"/);
 });
 
-test('index.html discloses the synthetic/import-only/no-Audible-auth status', async () => {
+test('index.html declares runtime-neutral loading copy and split navigation groups', async () => {
   const html = await readFile(path.join(UI_ROOT, 'index.html'), 'utf8');
-  assert.match(html, /Synthetic data/i);
-  assert.match(html, /Import-only/i);
-  assert.match(html, /No Audible connection/i);
+  assert.match(html, /Loading the active runtime mode/i);
+  assert.match(html, /Loading the active runtime source/i);
+  assert.match(html, /viewport-fit=cover/i);
+  assert.match(html, /aria-label="Primary"/i);
+  assert.match(html, /lcars-sidebar-filler/);
+  assert.match(html, /aria-label="Diagnostics and lifecycle"/i);
 });
 
 test('the data view module states the synthetic/offline status explicitly', async () => {
@@ -123,7 +126,7 @@ test('package.json declares zero external dependencies', async () => {
 
 // --- Charter scope compliance (ATR-S008/S009, planning/0.0.1/01-release-charter.md) ---
 
-test('no ui module implements an editable rating/comment/tag/favorite or recommendation/feedback surface', async () => {
+test('ui source remains free of recommendation features and the synthetic store stays read-only', async () => {
   const files = await readAll(['.js']);
   for (const { file, text } of files) {
     assert.doesNotMatch(text, /setBookAnnotation|setFacetAnnotation/, `${file} must not call the deferred annotation-editing API`);
@@ -131,6 +134,8 @@ test('no ui module implements an editable rating/comment/tag/favorite or recomme
     assert.doesNotMatch(text, /recordFeedback/, `${file} must not implement recommendation feedback`);
     assert.doesNotMatch(text, /DIRECT_MATCH|EXPLORATORY|PERSPECTIVE_BROADENING/, `${file} must not present the future recommendation trust-contract labels as UI output`);
   }
+  const syntheticStore = await readFile(path.join(UI_ROOT, 'js/store.js'), 'utf8');
+  assert.doesNotMatch(syntheticStore, /feedbackSave|feedbackDelete|openFeedbackEditor/, 'the synthetic demo store must remain feedback-free');
 });
 
 test('no view file is named or exports a recommendation view', async () => {
@@ -167,4 +172,15 @@ test('the data view labels manual refresh and import-only explicitly', async () 
   assert.match(text, /manual refresh/i);
   assert.match(text, /import-only/i);
   assert.match(text, /never refreshes automatically|never runs on a timer|refreshes automatically/i);
+});
+
+test('private-library views remove Genre from live surfaces and reserve it for synthetic diagnostics only', async () => {
+  const libraryView = await readFile(path.join(UI_ROOT, 'js/views/library-view.js'), 'utf8');
+  const detailView = await readFile(path.join(UI_ROOT, 'js/views/book-detail-view.js'), 'utf8');
+  const feasibilityView = await readFile(path.join(UI_ROOT, 'js/views/feasibility-view.js'), 'utf8');
+  assert.doesNotMatch(libraryView, /placeholder:s*'[^']*genre/i);
+  assert.doesNotMatch(libraryView, /label:s*'Genre'/);
+  assert.doesNotMatch(detailView, /\['Genre'/);
+  assert.match(feasibilityView, /synthetic-only/i);
+  assert.match(feasibilityView, /Genre remains diagnostic-only/i);
 });
