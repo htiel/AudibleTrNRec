@@ -160,7 +160,7 @@ export class AppStore {
     const facets = this.#relatedFacets(book);
     const unknownFields = [...new Set([
       ...book.provenance.unknownFields,
-      ...(entry?.provenance.unknownFields ?? []),
+      ...(entry?.provenance?.unknownFields ?? []),
     ])].sort();
     return { book, entry, facets, unknownFields };
   }

@@ -107,13 +107,11 @@ capture, validation, reconciliation, sealing or commit — leaves the previous
 snapshot, its generation and its success time untouched, including the `null`
 success of a first-sync failure.
 
-**Known gap (handoff to Worf).** Sealing the reconciled snapshot requires a
-`sealSnapshot` capability on the connector adapter
-(`src/adapters/connector-process.js`, not a Data-owned file). The Python side
-already exposes `seal_snapshot`. Until the adapter exposes it, a sync whose
-reconciliation retained anything stops with `reconciled-seal-unavailable` and
-preserves the prior snapshot, rather than storing a snapshot that omits the
-retained records.
+**Implemented:** the connector adapter exposes `sealSnapshot` through the
+closed `seal_snapshot` RPC. If a supplied adapter lacks that capability, the
+service still fails closed with `reconciled-seal-unavailable` and preserves the
+prior snapshot rather than discarding retained records. The earlier adapter
+handoff gap is no longer the normal runtime path.
 
 ## 8. Storage revisions and migration (ATR-S030)
 
@@ -204,11 +202,14 @@ Domain: `src/core/feedback.js`. Persistence: `src/store/feedback-store.js`.
 
 * Overall rating plus optional independent story and narration ratings, each
   `null` or 0.5–5.0 in exact half-star steps. A missing dimension stays missing.
+  This is the storage/domain contract: the current UI offers only five whole-star
+  radio choices plus Clear. Legacy fractional ratings remain readable and are
+  not rounded on load or unrelated edits.
 * Comment ≤ 4000 code points (NFC, astral-safe); tags ≤ 20 × 40 code points,
   case-insensitively de-duplicated with the first display form preserved.
 * Unsupported controls and bidi overrides are **refused**, not stripped: silent
   removal would edit the user's words. Markup is stored verbatim as data.
-* One active record per `(account, canonical book)`, immutable `createdAt`,
+* One active record per `(account, feedback target)`, immutable `createdAt`,
   `updatedAt` advancing only on a committed change, and a revision token that
   makes a stale write a `revision-conflict` instead of an overwrite.
 * Only the opaque account key, book id, generation, revision and a deletion flag
@@ -221,6 +222,28 @@ Domain: `src/core/feedback.js`. Persistence: `src/store/feedback-store.js`.
   If the custodian is unavailable the save **fails**; there is no plaintext
   fallback.
 * Synchronization never writes here, so an import can never overwrite feedback.
+
+The existing `book_id`/`bookId` field also holds namespaced author, narrator and
+series targets (`person:author:*`, `person:narrator:*`, `series:*`); no schema
+revision is added. Group UI feedback uses overall rating, comment and tags,
+separate from member books. Unknown/invalid group targets are not writable.
+Author/narrator display groups normalize equal labels while preserving source
+IDs; multi-source groups use a display-hash target. This does not merge catalog
+identities or migrate prior feedback when a group's identity membership changes.
+
+`GET /api/v1/feedback` lists the active account's non-deleted feedback once at
+bootstrap, including group records, rather than fetching each book separately.
+Browser consumers import `ABSENT_REVISION` from `src/core/feedback.js`, never
+the Node-only persistence module. The store re-exports it for Node consumers.
+Session/CSRF/confirmation protection does not authenticate local processes in
+the keyless owner-only prototype; see the
+[current boundary](../../../planning/0.0.2/12-accumulated-implementation.md#connection-and-current-trust-boundary).
+
+Library filter preferences are separately stored in bounded tab-scoped
+`sessionStorage`, including potentially private search/tag text; no encrypted
+custody or secure-erasure claim applies. Drafts/focus/scroll are not serialized.
+Only the closed LCARS/Liquid Glass theme identifier persists in `localStorage`
+(`atnr:ui-theme:v1`). Neither preference mechanism changes feedback authority.
 
 ## 10. Export and deletion (ATR-S028, ATR-S029)
 
@@ -273,10 +296,10 @@ Connector artifacts are obtained through a closed capability
 only — no path, account identifier or credential material). When the capability
 is absent or the call fails, they are reported as `'unknown'`. Reporting
 `false` for an artifact this process cannot observe would be a claim, not a
-fact. *(Adapter note: exposing this capability to the JS runtime requires
-adding `local_artifact_inventory` to `CONNECTOR_METHODS` in
-`src/adapters/connector-process.js`, which is security-owned. Until then the
-runtime reports `unknown`, which is correct.)*
+fact. The adapter now includes `local_artifact_inventory` in its closed
+`CONNECTOR_METHODS` and exposes `localArtifactInventory()` with a narrowed
+reply. `unknown` is the missing-capability/failure fallback, not the normal
+result of an unfinished adapter handoff.
 
 ### Deletion suppresses automatic repopulation
 

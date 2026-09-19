@@ -28,7 +28,7 @@ import {
   isSyntheticModulePath,
 } from '../src/security/runtime-data-source.js';
 import { createStaticServer } from '../scripts/serve.js';
-import { LocalApiAuth, generateCapability } from '../src/security/local-api-auth.js';
+import { LocalApiAuth } from '../src/security/local-api-auth.js';
 
 /**
  * A custody-root stand-in outside the staging roots the policy refuses. It is
@@ -199,10 +199,9 @@ const syntheticService = () => ({
 });
 
 test('a private session never serves synthetic fixture modules', async (t) => {
-  const capability = generateCapability();
   const server = createStaticServer({
     privateAlphaService: syntheticService(),
-    auth: new LocalApiAuth({ digest: capability.digest }),
+    auth: new LocalApiAuth(),
     runtimeSource: { dataSource: 'local-encrypted' },
   });
   const port = await listen(server);
@@ -231,11 +230,10 @@ test('the synthetic build still serves its fixtures (tests and demos are unaffec
   assert.equal(response.status, 200);
 });
 
-test('the authenticated bootstrap declares the real-data runtime contract', async (t) => {
-  const capability = generateCapability();
+test('the browser-session bootstrap declares the real-data runtime contract', async (t) => {
   const server = createStaticServer({
     privateAlphaService: syntheticService(),
-    auth: new LocalApiAuth({ digest: capability.digest }),
+    auth: new LocalApiAuth(),
     runtimeSource: { dataSource: 'local-encrypted' },
   });
   const port = await listen(server);
@@ -247,7 +245,6 @@ test('the authenticated bootstrap declares the real-data runtime contract', asyn
     'Sec-Fetch-Site': 'same-origin',
     'Sec-Fetch-Mode': 'cors',
     'Sec-Fetch-Dest': 'empty',
-    Authorization: `ATnR-Capability ${capability.display}`,
   });
   assert.equal(response.status, 200);
   const { session } = JSON.parse(response.text);
@@ -259,10 +256,9 @@ test('the authenticated bootstrap declares the real-data runtime contract', asyn
 });
 
 test('an unverified runtime is declared unverified, so the client refuses it', async (t) => {
-  const capability = generateCapability();
   const server = createStaticServer({
     privateAlphaService: syntheticService(),
-    auth: new LocalApiAuth({ digest: capability.digest }),
+    auth: new LocalApiAuth(),
     runtimeSource: null, // custody was never verified
   });
   const port = await listen(server);
@@ -274,7 +270,6 @@ test('an unverified runtime is declared unverified, so the client refuses it', a
     'Sec-Fetch-Site': 'same-origin',
     'Sec-Fetch-Mode': 'cors',
     'Sec-Fetch-Dest': 'empty',
-    Authorization: `ATnR-Capability ${capability.display}`,
   });
   const { session } = JSON.parse(response.text);
   assert.equal(session.runtime.dataSource, 'unverified');

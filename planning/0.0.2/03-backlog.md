@@ -5,7 +5,8 @@ See [hierarchy](02-scope.md), [sequence](04-sequencing.md) and
 [gates](05-risks-and-release-gates.md). Short S/F/A IDs mean permanent `ATR-`
 IDs. **30 stories / 112 estimated points**. Current implementation disposition
 is recorded in [11 — final verdict](11-implementation-release-verdict.md):
-**23 IMPLEMENTED / 4 IN_REVIEW / 3 BLOCKED / 0 full-DoD DONE**.
+**22 IMPLEMENTED / 1 OWNER-ACCEPTED DEVIATION / 4 IN_REVIEW / 3 BLOCKED /
+0 full-DoD DONE**.
 Owner-only conditional usability does not close the full release gates.
 
 OF-007's [native direction and future backlog](07-native-iphone-direction.md)
@@ -73,10 +74,27 @@ work. Source-feasibility and release gates remain blocked as detailed in
 These observations do not retroactively approve missing CP records, change
 the dependency graph or count implemented estimates as earned delivery points.
 
+**2026-09-18 owner change control:** the owner removed S015's manual per-start
+unlock for this dedicated, non-distributed prototype computer. S015 retains
+loopback binding, browser metadata/origin checks, bounded sessions, CSRF, and
+single-use destructive confirmation nonces, but same-user local processes are
+trusted. This is an owner-only accepted deviation and blocks tester/release
+use until a platform-appropriate client boundary replaces it.
+
+**2026-09-19 implementation reconciliation:** [12](12-accumulated-implementation.md)
+records the accumulated changes and fresh automated evidence. S031–S033 cover
+separate book/Author/Narrator/Series feedback and whole-star UI with legacy
+half-step compatibility. S034/S035/S037/S038 cover the module-boundary/visible
+failure fix, bulk hydration, name-based display grouping, fixed desktop rail,
+session filters and UI/accessibility follow-ups. Settings/theme selection is an
+implemented appearance follow-up mapped to S034/S035, not a new native feature
+or a retroactive design approval. No WSJF/point re-estimate or full DoD closure
+is inferred; the original 112 points remain the planning baseline.
+
 | Story | Owner | Required reviewers | Dependencies | Status |
 | --- | --- | --- | --- | --- |
 | S014 | Riker | Data, Worf, Geordi, Wesley | Captain scope direction (received); detailed decisions open | IN_REVIEW |
-| S015 | Worf | Data, Geordi | S014, S019 | IMPLEMENTED |
+| S015 | Worf | Data, Geordi | S014, S019 | OWNER-ACCEPTED DEVIATION |
 | S016 | Worf | Data | S014, S019 | IMPLEMENTED |
 | S017 | Worf | Data, Geordi | S016 | IMPLEMENTED |
 | S018 | Worf | Data | S014 | BLOCKED |
@@ -144,6 +162,14 @@ feedback does not rest on unsafe assumptions.
    or extra feasibility experiment is authorized by this clarification.
 
 ### ATR-S015 — Loopback API authentication
+
+**Original release criteria below, not current prototype behavior.**
+The owner-accepted deviation removes the capability, including re-entry on
+export/deletion. Current session/origin/CSRF and nonce controls are described
+in 12. The original unrelated-local-client protection is **not satisfied**;
+CP-02's old unlock delivery/liveProof mechanism is no longer implemented.
+References to capability/re-unlock in S028 and the review overlay below are
+likewise historical release-design obligations, not operating instructions.
 
 As an owner, I want every local API route authenticated so that an unrelated
 local client cannot read my library or change my state.
@@ -407,19 +433,21 @@ so that it survives restart and every source synchronization.
 As a keyboard or screen-reader user, I want clear private rating and note
 controls so that I can create, revise and delete feedback confidently.
 
-1. Accessible labeled overall/optional story/performance half-star controls
-   expose exact textual values, unrated and clear actions; keyboard operation
-   never relies on star shape/color alone. Comments/tags have labels and limits.
+1. Accessible labeled overall/optional story/performance controls expose five
+   whole-star radio choices; selecting the third means exactly 3 stars and
+   Clear restores Unrated. Legacy half-star values remain truthful until the
+   owner replaces them. Keyboard operation never relies on shape/color alone.
+   Comments/tags have labels and limits.
 2. Use explicit Save for the initial design: visible unsaved/saving/saved/error
    states, draft preserved on failed save, stale revision recovery and a
    navigation warning. No implicit save-success announcement before durability.
 3. Confirm deletion, restore sensible focus, announce outcomes once; render
    hostile synthetic text inertly. Private/local/no-model wording is truthful;
    no recommendation or public-review surface.
-4. The grouped library offers a compact book-level feedback disclosure or a
-   clearly associated edit action. Create/edit/clear/delete can complete
-   without navigating away, and the editor cannot attach feedback to a group
-   heading, contributor, series, status or genre/category.
+4. The grouped library offers compact, clearly associated book and approved
+   author/narrator/known-series feedback actions. Create/edit/clear/delete can
+   complete without navigating away; Status, Unknown series, and
+   genre/category headings remain non-rateable.
 
 ### ATR-S034 — LCARS responsive accessibility
 
@@ -507,12 +535,15 @@ my library deliberately and see my per-book feedback.
 
 1. Selectable available facets show matching-book detail lists and counts.
    Multiple contributors use reviewed deterministic membership; no role
-   fragmentation or name-only identity merge.
+   fragmentation or name-only catalog identity merge. Current normalized-name
+   display grouping retains source IDs and discloses multi-source groups; its
+   display-hash feedback target is not a canonical person assertion.
 2. User-controlled facet/status/tag choices expose clear/remove/all actions;
    missing fields remain unknown and are never inferred.
 3. Matching books expose saved book ratings/comments indicators; navigation
-   remains keyboard/AT accessible. No facet-rating editor, inferred affinity
-   or recommendation score.
+   remains keyboard/AT accessible. Author and Narrator display-group headings
+   and known Series group headings expose distinct private group-rating
+   editors. No genre editor, inferred affinity, or recommendation score.
 4. Data traces approved category/category-ladder fields and either defines a
    deterministic automatic mapping that produces useful genre values (for
    example, LitRPG or Business), or records that the source is insufficient.
@@ -527,7 +558,9 @@ my library deliberately and see my per-book feedback.
 6. Group headings are accessible disclosures with item counts and individual
    expand/collapse controls. When multiple groups exist, keyboard-operable
    Expand all and Collapse all actions are available; collapsed content is
-   removed from the accessibility tree.
+   removed from the accessibility tree. A collapsed Author or
+   Narrator or known Series heading keeps its Rate & Review action visible and
+   opens a sibling editor without expanding the grouped books.
 
 ### ATR-S038 — Filter state and feedback-aware views
 
@@ -553,9 +586,12 @@ not reset how I was browsing.
    Preserve each group's expanded/collapsed state, active grouping/sort/filter
    choices, scroll/return focus and draft safeguards across feedback saves,
    detail/back navigation and recoverable refresh failures. Reset is explicit.
-6. Keep sensitive query/filter state in session memory only, not URLs/logs/
-   hosted services or persistent browser storage. Explain reset on full app
-   restart; preserve active controls/focus under rerender.
+6. By OF-008 change control, preserve validated, bounded filter/sort/group/
+   collapse state across refreshes in tab-scoped `sessionStorage`, not URLs,
+   logs, hosted services or durable `localStorage`. Query/tag text can be
+   private; this is not DPAPI custody or guaranteed erasure on tab closure.
+   Browser session restoration may retain it. Drafts, editor identity, focus
+   and scroll are not serialized; preserve active controls/focus on rerender.
 7. On the iPhone Air target, replace wide-table dependence with compact
    progressive disclosure. Title, current state, primary action and feedback
    controls remain immediately usable while lower-priority metadata reflows or
@@ -688,7 +724,7 @@ old blocker. This table covers every A001–A051 exactly once.
 | A040 | Deferred custody-helper performance optimization | No weakening hardening for unmeasured speed |
 | A041 | Selected consistent route focus | S034 |
 | A042, A044 | Selected reset/filter-state behavior | S038; no claim default order is currently wrong |
-| A043 | Selected facet navigation only | S037; separate facet ratings/preferences deferred |
+| A043 | Facet navigation plus explicit group feedback | S037/S031–S033; author/narrator/known-series feedback implemented, genre/inferred preferences deferred |
 | A045 | Historical bounded DPAPI residual; renewed CP-03/04 disposition required for feedback, not an A001/A002 waiver | S029/S030/S032 direct-DPAPI baseline with erasure limits, legacy binding and migration proof; no new approval claimed |
 | A047 | Selected port validation | S015; do not assume NaN selects an ephemeral port |
 | A048 | Accepted fixed-producer limit strengthened for new surface | S020 |

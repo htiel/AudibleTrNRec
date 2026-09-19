@@ -37,7 +37,7 @@ are negotiated at design review without weakening acceptance criteria.
 | Feature | Story | Capability | Product brief section / inherited finding |
 | --- | --- | --- | --- |
 | ATR-F14 | S014 | Approved boundary and recovery contracts | Privacy; synchronization; A003–A005, A016–A017, A049 |
-| ATR-F15 | S015 | Authenticated loopback API | Account connection/privacy; A001, A047 |
+| ATR-F15 | S015 | Owner-only loopback session boundary | Account connection/privacy; A001, A047; manual local authentication removed by owner change control on 2026-09-18 |
 | ATR-F16 | S016 | Trusted executables and custody order | Security; A002, A021 |
 | ATR-F17 | S017 | Provider-origin validation and owned-browser cleanup | Account connection; A019, A046 |
 | ATR-F18 | S018 | Verified dependency provenance | Security/terms; A018 |
@@ -84,7 +84,8 @@ Read against [implementation README](../../code/Alpha0.x/README.md) and
 [package](../../code/Alpha0.x/package.json):
 
 - Node ESM, zero npm dependencies, no build step, static HTML/CSS/modules and
-  hash-routed LCARS UI. The private user-facing path is real-encrypted-data-only;
+  hash-routed UI with default LCARS and opt-in Liquid Glass appearance. The
+  private user-facing path is real-encrypted-data-only;
   fixtures are test/demo infrastructure, never a private bootstrap fallback.
 - The optional Windows-local composition is Node loopback service → serialized
   stdio RPC → isolated Python community connector → provider-hosted Edge
@@ -102,8 +103,10 @@ Read against [implementation README](../../code/Alpha0.x/README.md) and
   version-shaped legacy custody root is retained as migration input, not
   automatically relocated. This verdict task performed no migration.
 
-Implemented owner-use feedback boundary: authenticated local UI/API → bounded domain
-validation → account/book-keyed encrypted local authority store.
+Implemented owner-use feedback boundary: session-protected local UI/API → bounded domain
+validation → account/target-keyed encrypted local authority store.
+The removed per-start key is not replaced with local-process authentication;
+same-user process trust is accepted for the dedicated owner computer only.
 Source-sync code has no write authority over annotations. Versioned migrations
 can remap identities only through reviewed, transactional, collision-aware
 mappings; ambiguous identity stays unresolved, never a name-based guess.
@@ -114,9 +117,17 @@ LLM by inertia.
 
 ## Feedback and facets boundary
 
-- One active private per-book record per local account/book. Overall rating
-  supports half-stars; story/content and narration/performance are independent
-  optional dimensions. Unrated is null, not zero or an inferred score.
+- One active private record per local account and canonical feedback target.
+  Books support overall, story/content, and narration/performance dimensions.
+  Author/narrator display groups and known series support an overall rating,
+  comment, and tags from their group heading; they never inherit or overwrite
+  book feedback. Equal-name contributor groups retain source IDs and disclose
+  multi-source membership; this is not canonical identity merging. There is no
+  automatic prior-feedback migration when group membership changes.
+  The UI offers five whole-star radio choices; story/content and
+  narration/performance are independent optional dimensions. Unrated is null,
+  not zero or an inferred score. The persistence validator continues to accept
+  legacy half-star values so existing feedback is never silently rounded.
 - Comments/tags may exist without a rating. Created/updated timestamps, explicit
   source and revision/conflict semantics accompany local data. Users can edit,
   clear a dimension, delete feedback, export it and permanently delete local
@@ -126,11 +137,21 @@ LLM by inertia.
   metadata can populate it automatically through a deterministic mapping;
   otherwise every visible Genre surface is removed rather than left
   permanently Unknown. Detail/matching-book views expose
-  **book-level** feedback. No separate facet-rating editor, inferred affinity,
-  ideology classification or automatic preference extraction in 0.0.2.
+  **book-level** feedback plus explicit author/narrator/series feedback. No
+  genre rating editor, inferred affinity, ideology classification or automatic
+  preference extraction in 0.0.2.
 - Preserve filter/sort/group state during navigation, refresh and feedback
-  saves within the local session. No private query in URLs, logs or browser
-  persistent storage; cross-session saved searches require new review.
+  saves within the local session. By owner change control on 2026-09-18, the
+  last valid state is retained in versioned, bounded tab-scoped session storage
+  so refresh does not reset the Library. Private query/tag values never enter
+  URLs, logs, or long-lived local storage. Browser session restoration can
+  retain tab state; this is not encrypted custody or guaranteed erasure.
+  Cross-session saved searches still require new review.
+- Settings (`#/settings`, header gear and sidebar) persists only a closed theme
+  identifier in `localStorage`; LCARS remains default. The Liquid Glass web
+  interpretation references verified Apple iOS 27/iPadOS 27 resources, not a
+  native SDK or copied assets. [12](12-accumulated-implementation.md) records
+  provenance, degraded-storage behavior and web/native/accessibility limits.
 
 ## Mandatory inherited work and explicit deferrals
 
@@ -154,7 +175,7 @@ LLM integration (local or hosted), generated explanations, embeddings and
 sentiment analysis; public/cloud/multi-user/commercial deployment or conveyance
 without clearance; native mobile/client migration and final implementation
 selection (native iPhone product intent is recorded, architecture is gated);
-Audible library/progress/rating writes; social/public reviews; facet ratings,
+Audible library/progress/rating writes; social/public reviews; genre ratings,
 favorites/abandoned/listen-again editing; cross-device sync; remote covers/fonts;
 new marketplaces; automatic retries/backoff or increased caps; production
 background-sync infrastructure; manual personal-export import as a replacement

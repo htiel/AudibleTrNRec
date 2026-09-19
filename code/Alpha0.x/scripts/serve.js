@@ -372,9 +372,9 @@ function confirmationResource(policy, route, body) {
 }
 
 /**
- * Every `/api/v1` route — including bootstrap — is authenticated by the
- * per-start capability first. Host/Origin/fetch-metadata/CSRF remain enforced
- * as defence in depth and never substitute for that capability.
+ * Browser metadata is checked before any private route is handled. All routes
+ * after bootstrap require a bounded session; mutations additionally require
+ * CSRF, and destructive actions consume single-use confirmation nonces.
  */
 async function handlePrivateAlphaApi(req, res, { service, auth, headers, events, runtimeSource }) {
   const url = new URL(req.url ?? '/', `http://${req.headers.host}`);
@@ -389,18 +389,11 @@ async function handlePrivateAlphaApi(req, res, { service, auth, headers, events,
     expectedOrigin,
   });
   if (!decision.ok) {
-    recordSafely(
-      events,
-      decision.code === 'local-api-reauth-required' ? 'local-reauth' : 'local-auth',
-      decision.code === 'local-api-throttled'
-        ? 'throttled'
-        : (decision.code === 'local-api-locked' ? 'locked' : 'denied'),
-      { failureCount: auth.failures },
-    );
+    recordSafely(events, 'local-auth', 'denied');
     respondJson(res, decision.status, { ok: false, error: { code: decision.code } }, headers);
     return;
   }
-  recordSafely(events, 'local-auth', 'allowed', { failureCount: auth.failures });
+  recordSafely(events, 'local-auth', 'allowed');
 
   const { policy } = decision;
 
@@ -414,7 +407,7 @@ async function handlePrivateAlphaApi(req, res, { service, auth, headers, events,
   if (url.pathname === '/api/v1/session') {
     const session = auth.createSession();
     if (!session) {
-      respondJson(res, 401, { ok: false, error: { code: 'local-api-locked' } }, headers);
+      respondJson(res, 429, { ok: false, error: { code: 'local-api-session-capacity' } }, headers);
       return;
     }
     respondJson(res, 200, {
@@ -445,6 +438,13 @@ async function handlePrivateAlphaApi(req, res, { service, auth, headers, events,
       ok: true,
       result: narrowDeletionInventory(await service.deletionInventory()),
     }, headers);
+    return;
+  }
+  if (url.pathname === '/api/v1/feedback' && method === 'GET') {
+    if (!service.feedbackStore || typeof service.feedbackStore.list !== 'function') {
+      throw Object.assign(new Error('feedback-store-unavailable'), { code: 'feedback-store-unavailable' });
+    }
+    respondJson(res, 200, { ok: true, result: await service.feedbackStore.list() }, headers);
     return;
   }
   if (route.bookId && method === 'GET') {
@@ -540,9 +540,7 @@ async function handlePrivateAlphaApi(req, res, { service, auth, headers, events,
     recordSafely(events, 'lifecycle', 'allowed');
     // Deliberately no invalidation. A sync cannot change account identity: the
     // service resolves the account join first and refuses a mismatch with
-    // `different-account-local-data-exists` rather than importing it. Dropping
-    // the owner's session every 15 minutes would train them to re-enter their
-    // capability on reflex, which is exactly how a prompt becomes worthless.
+    // `different-account-local-data-exists` rather than importing it.
     respondJson(res, 200, { ok: true, result: await service.sync() }, headers);
     return;
   }
@@ -590,7 +588,7 @@ async function handlePrivateAlphaApi(req, res, { service, auth, headers, events,
     const purged = await service.purgeAllLocalData();
     // The ownership anchor is gone. Every session and nonce was bound to an
     // account generation that no longer has any local data behind it, so the
-    // owner re-unlocks before anything else happens.
+    // browser obtains a fresh session before anything else happens.
     auth.invalidateBindings();
     recordSafely(events, 'local-auth', 'invalidated');
     respondJson(res, 200, { ok: true, result: purged }, headers);
@@ -668,9 +666,9 @@ export function createStaticServer({
   securityEvents = null,
   runtimeSource = null,
 } = {}) {
-  // Fail closed: the private API may not exist without a capability verifier.
+  // Fail closed: the private API may not exist without its session controller.
   if (privateAlphaService && !(auth instanceof LocalApiAuth)) {
-    throw new Error('local-api-auth-required');
+    throw new Error('local-api-session-controller-required');
   }
   const events = securityEvents ?? (privateAlphaService ? new SecurityEventLog() : null);
   const headers = privateAlphaService ? PRIVATE_ALPHA_SECURITY_HEADERS : SECURITY_HEADERS;
@@ -782,7 +780,6 @@ if (isMainModule()) {
 
   let runtime = null;
   let auth = null;
-  let unlockDisplay = null;
   let runtimeSource = null;
   if (privateMode) {
     // S019: the runtime check runs *before* the SQLite-dependent import.
@@ -792,41 +789,19 @@ if (isMainModule()) {
       console.error(runtimeCheck.message);
       process.exit(1);
     }
-    const { generateCapability, LocalApiAuth: Auth } = await import('../src/security/local-api-auth.js');
-    const { showLocalUnlockCapability } = await import('./local-capability-bootstrap.js');
-    const capability = generateCapability();
-    auth = new Auth({ digest: capability.digest });
-    try {
-      // The capability is never printed, logged, written or placed in a URL.
-      // This resolves only once the window has actually appeared; a display
-      // that never becomes ready stops startup rather than leaving the private
-      // API protected by a code the owner can never read.
-      unlockDisplay = await showLocalUnlockCapability({
-        capability: capability.display,
-        origin: `http://127.0.0.1:${port}`,
-      });
-    } catch {
-      console.error([
-        'ATnR: the trusted local unlock display could not be opened or did not',
-        'become ready, so the private API cannot be authenticated.',
-        'Startup stopped (fail closed).',
-      ].join(' '));
-      process.exit(1);
-    }
+    const { LocalApiAuth: Auth } = await import('../src/security/local-api-auth.js');
+    auth = new Auth();
     try {
       runtime = await import('./private-alpha-runtime.js').then(({ createPrivateAlphaRuntime }) => (
         createPrivateAlphaRuntime({ packageRoot: PACKAGE_ROOT })
       ));
     } catch (error) {
       // Fixed text only: no path, count, title or identifier is printed. The
-      // unlock window is closed so the capability does not remain on screen
-      // for a server that will never listen.
       console.error([
         'ATnR: the private runtime could not be composed on the real encrypted',
         'local state, so startup stopped (fail closed).',
         `Reason: ${typeof error?.code === 'string' ? error.code : 'private-runtime-unavailable'}.`,
       ].join(' '));
-      unlockDisplay?.close();
       process.exit(1);
     }
 
@@ -854,7 +829,6 @@ if (isMainModule()) {
         `Reason: ${typeof error?.code === 'string' ? error.code : 'runtime-state-unverified'}.`,
       ].join(' '));
       try { runtime?.close(); } catch { /* nothing usable was opened */ }
-      unlockDisplay?.close();
       process.exit(1);
     }
   }
@@ -862,12 +836,11 @@ if (isMainModule()) {
   const server = createStaticServer({ privateAlphaService: runtime, auth, runtimeSource });
   server.on('close', () => {
     runtime?.close();
-    unlockDisplay?.close();
   });
   server.listen(port, '127.0.0.1', () => {
     console.log(`Alpha ${ALPHA_VERSION} ${privateMode ? 'private' : 'synthetic'} UI: http://127.0.0.1:${server.address().port}/${privateMode ? '?private-alpha=1#/data' : ''}`);
     console.log(privateMode
-      ? 'ATnR private alpha only. Enter the code from the "ATnR local unlock" window. Commercial/public shipping is blocked.'
+      ? 'ATnR owner-only prototype. Local machine access is trusted; commercial/public shipping is blocked.'
       : 'Loopback static server only. No outbound requests, persistence, or real Audible data.');
   });
 }

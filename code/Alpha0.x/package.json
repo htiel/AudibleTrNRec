@@ -3,7 +3,7 @@
   "version": "0.0.2",
   "private": true,
   "type": "module",
-  "description": "Audible Track and Recommend alpha 0.0.1. Synthetic harness by default; optional private-only local Audible connector with commercial shipping blocked.",
+  "description": "Audible Track and Recommend alpha 0.0.2 private real-data library prototype with commercial shipping blocked.",
   "license": "SEE LICENSE IN ../../LICENSE",
   "engines": {
     "node": ">=22.5.0"

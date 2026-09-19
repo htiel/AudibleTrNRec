@@ -5,10 +5,15 @@ The [backlog](03-backlog.md) owns dependencies, status and WSJF;
 [gates](05-risks-and-release-gates.md) own permission. All estimates are relative.
 
 **Implementation update:** [11](11-implementation-release-verdict.md) records
-23 code-implemented packages, four IN_REVIEW and three BLOCKED. The graph/waves
+22 IMPLEMENTED packages, one OWNER-ACCEPTED DEVIATION (S015), four IN_REVIEW
+and three BLOCKED. The graph/waves
 below remain the original required execution dependencies, not a retrospective
 assertion that every checkpoint was passed. Owner-only conditional usability
 does not admit W6 live source work or close W7 release clearance.
+The [accumulated implementation record](12-accumulated-implementation.md) maps
+later owner-use UI/feedback/Settings follow-ups without changing wave estimates.
+The CP-02 unlock baseline below is historical: it was removed, not proven.
+Tester expansion still requires a reviewed replacement local-client boundary.
 
 ## Critical path and readiness
 

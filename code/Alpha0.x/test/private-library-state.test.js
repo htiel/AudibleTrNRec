@@ -58,6 +58,10 @@ function connectionApi() {
   const calls = [];
   return {
     calls,
+    feedbackList: async () => {
+      calls.push(['list']);
+      return [...state.values()];
+    },
     feedbackGet: async (bookId) => {
       calls.push(['get', bookId]);
       return state.get(bookId) ?? { bookId, record: null, revision: ABSENT_REVISION, generation: 0, deleted: false };
@@ -110,6 +114,101 @@ test('private store keeps one draft per book across duplicate grouped appearance
   assert.equal(store.librarySession.activeEditorBookId, 'aud-us-book-one');
   assert.equal(store.activeDraftFor('aud-us-book-one').bookId, 'aud-us-book-one');
   assert.equal(store.activeDraftFor('aud-us-book-two'), null);
+});
+
+test('author and narrator groups use distinct encrypted feedback targets', async () => {
+  const api = connectionApi();
+  const store = new PrivateAppStore({
+    liveSnapshot: liveSnapshot(),
+    connectionApi: api,
+    connectionInfo: { connected: true, local: { hasLocalSnapshot: true } },
+  });
+
+  store.setLibrarySession({ groupBy: 'authors' });
+  const authorGroup = store.queryLibrary().groups[0];
+  const authorTarget = store.groupFeedbackTarget(authorGroup);
+  assert.match(authorTarget.targetId, /^person:author:/);
+
+  const opened = await store.openGroupFeedbackEditor(authorGroup);
+  assert.equal(opened.status, 'opened');
+  assert.equal(store.activeDraftFor(authorTarget.targetId).targetType, 'group');
+  store.updateFeedbackDraft({ overallRating: 4.5, comment: 'Consistently strong work' });
+  const saved = await store.saveFeedbackDraft();
+  assert.equal(saved.ok, true);
+  assert.deepEqual(api.calls[0], ['get', authorTarget.targetId]);
+  assert.equal(api.calls[1][0], 'save');
+  assert.equal(api.calls[1][1], authorTarget.targetId);
+  assert.equal(store.activeDraftFor(authorTarget.targetId).targetLabel, authorGroup.label);
+
+  store.discardFeedbackDraft();
+  store.setLibrarySession({ groupBy: 'narrators' });
+  const narratorTarget = store.groupFeedbackTarget(store.queryLibrary().groups[0]);
+  assert.match(narratorTarget.targetId, /^person:narrator:/);
+  assert.notEqual(narratorTarget.targetId, authorTarget.targetId);
+});
+
+test('repeated name-only narrator identities form one display group without duplicate books', () => {
+  const snapshot = liveSnapshot();
+  snapshot.catalog.people.push({
+    personId: 'p-narrator-occurrence-two',
+    displayName: '  NARRATOR   ONE  ',
+    roles: ['narrator'],
+    identityBasis: 'source-record-occurrence',
+  });
+  snapshot.catalog.books[1].narratorIds = ['p-narrator-occurrence-two'];
+  const store = new PrivateAppStore({
+    liveSnapshot: snapshot,
+    connectionApi: connectionApi(),
+    connectionInfo: { connected: true, local: { hasLocalSnapshot: true } },
+  });
+
+  store.setLibrarySession({ groupBy: 'narrators' });
+  const groups = store.queryLibrary().groups;
+  assert.equal(groups.length, 1);
+  assert.deepEqual(groups[0].items.map((row) => row.bookId).sort(), ['aud-us-book-one', 'aud-us-book-two']);
+  assert.deepEqual(groups[0].personIds, ['p-narrator', 'p-narrator-occurrence-two']);
+  assert.match(groups[0].key, /^narrator-label:[a-f0-9]{16}$/);
+  const target = store.groupFeedbackTarget(groups[0]);
+  assert.match(target.targetId, /^person:narrator:display-[a-f0-9]{16}$/);
+  assert.equal(target.sourceIdentityCount, 2);
+});
+
+test('a canonical series group has its own encrypted feedback target', async () => {
+  const api = connectionApi();
+  const store = new PrivateAppStore({
+    liveSnapshot: liveSnapshot(),
+    connectionApi: api,
+    connectionInfo: { connected: true, local: { hasLocalSnapshot: true } },
+  });
+  store.setLibrarySession({ groupBy: 'series' });
+  const seriesGroup = store.queryLibrary().groups.find((group) => group.key !== 'series:unknown');
+  const target = store.groupFeedbackTarget(seriesGroup);
+  assert.deepEqual(target, {
+    targetId: 'series:s-private-series',
+    kind: 'series',
+    label: 'Private Series',
+    sourceIdentityCount: 0,
+  });
+
+  const opened = await store.openGroupFeedbackEditor(seriesGroup);
+  assert.equal(opened.status, 'opened');
+  store.updateFeedbackDraft({ overallRating: 5, comment: 'Strong throughout' });
+  const saved = await store.saveFeedbackDraft();
+  assert.equal(saved.ok, true);
+  assert.equal(api.calls[0][1], 'series:s-private-series');
+  assert.equal(api.calls[1][1], 'series:s-private-series');
+  assert.equal(store.feedbackFor('aud-us-book-one').record, null);
+});
+
+test('unknown person groups never expose a review target', () => {
+  const store = new PrivateAppStore({
+    liveSnapshot: liveSnapshot(),
+    connectionApi: connectionApi(),
+    connectionInfo: { connected: true, local: { hasLocalSnapshot: true } },
+  });
+  assert.equal(store.groupFeedbackTarget({ field: 'authors', key: 'author:unknown', label: 'Unknown author' }), null);
+  assert.equal(store.groupFeedbackTarget({ field: 'series', key: 'series:unknown', label: 'Unknown series' }), null);
+  assert.equal(store.groupFeedbackTarget({ field: 'status', key: 'status:completed', label: 'Completed' }), null);
 });
 
 test('private store preserves grouping, collapse, focus, and scroll across a save', async () => {

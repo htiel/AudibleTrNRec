@@ -31,6 +31,46 @@
 .lcars-btn-secondary { background: var(--lcars-accent-tertiary); }
 .lcars-btn-danger { background: var(--lcars-accent-danger); }
 
+/* Icon-only pill button (header gear/Settings link). Square-ish so the
+   glyph centers, but never smaller than the shared minimum touch target. */
+.lcars-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--lcars-min-target);
+  height: var(--lcars-min-target);
+  border-radius: 50%;
+  background: var(--lcars-black);
+  color: var(--lcars-accent-secondary);
+  text-decoration: none;
+}
+
+.lcars-icon-btn:hover,
+.lcars-icon-btn:focus-visible {
+  filter: brightness(1.25);
+}
+
+.lcars-icon-btn[aria-current="page"] {
+  background: var(--lcars-accent-active);
+  color: var(--lcars-black);
+}
+
+/* Gear glyph drawn from CSS only (no image asset, no icon font/CDN), the
+   same technique already used for the group-disclosure chevron below. */
+.lcars-icon-gear {
+  display: inline-block;
+  width: 1.1rem;
+  height: 1.1rem;
+  line-height: 1.1rem;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.lcars-icon-gear::before {
+  content: '\2699';
+}
+
 .lcars-btn:disabled {
   background: var(--lcars-accent-muted);
   color: var(--lcars-fg);
@@ -44,6 +84,47 @@
   flex-direction: column;
   gap: var(--lcars-space-3);
   margin: var(--lcars-space-3) 0;
+}
+
+.lcars-sidebar-toolbar {
+  margin: 0;
+  gap: var(--lcars-space-4);
+}
+
+.lcars-sidebar-toolbar h2,
+.lcars-sidebar-toolbar h3 {
+  margin: 0;
+}
+
+.lcars-sidebar-toolbar h2 {
+  font-size: 1rem;
+  color: var(--lcars-black);
+}
+
+.lcars-sidebar-toolbar h3 {
+  font-size: 0.85rem;
+  color: var(--lcars-black);
+}
+
+.lcars-sidebar-toolbar .lcars-control-row {
+  flex-direction: column;
+  gap: var(--lcars-space-2);
+}
+
+.lcars-sidebar-toolbar .lcars-field,
+.lcars-sidebar-toolbar .lcars-field-wide {
+  min-width: 0;
+  width: 100%;
+}
+
+.lcars-sidebar-toolbar .lcars-field-label,
+.lcars-sidebar-toolbar legend,
+.lcars-sidebar-toolbar .lcars-checkbox-row {
+  color: var(--lcars-black);
+}
+
+.lcars-sidebar-toolbar fieldset.lcars-fieldset {
+  border-color: var(--lcars-black);
 }
 
 .lcars-field {
@@ -106,6 +187,31 @@ input[type="range"] {
 
 .lcars-checkbox-row label {
   cursor: pointer;
+}
+
+.lcars-theme-option {
+  align-items: flex-start;
+  height: auto;
+  min-height: var(--lcars-min-target);
+}
+
+.lcars-theme-option input[type="radio"] {
+  margin-top: 0.6rem;
+  flex-shrink: 0;
+}
+
+.lcars-theme-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lcars-space-1);
+}
+
+.lcars-theme-option-text label {
+  cursor: pointer;
+}
+
+.lcars-theme-option-text .lcars-note {
+  max-width: 48rem;
 }
 
 fieldset.lcars-fieldset {
@@ -305,6 +411,35 @@ dialog.lcars-dialog::backdrop {
   align-items: center;
   cursor: pointer;
   color: var(--lcars-accent-secondary);
+  gap: var(--lcars-space-3);
+  justify-content: space-between;
+  flex-wrap: wrap;
+  list-style: none;
+}
+
+/* `display: flex` above removes the browser's native <summary> disclosure
+   triangle, so a group row otherwise gives sighted users no visual sign it
+   is an expand/collapse control. Restore an explicit chevron and flip it
+   with the <details> [open] state; ::-webkit-details-marker covers Safari,
+   which keeps its own marker even once display changes. */
+.lcars-group-summary::-webkit-details-marker {
+  display: none;
+}
+
+.lcars-group-summary::before {
+  content: '\25B8';
+  order: -1;
+  color: var(--lcars-accent-tertiary);
+  flex-shrink: 0;
+  transition: transform 0.15s ease-out;
+}
+
+details[open] > .lcars-group-summary::before {
+  transform: rotate(90deg);
+}
+
+.lcars-group-review-button {
+  margin-left: auto;
 }
 
 .lcars-feedback-editor {
@@ -318,6 +453,65 @@ dialog.lcars-dialog::backdrop {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
   gap: var(--lcars-space-3);
+}
+
+.lcars-rating-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.lcars-rating-fieldset legend {
+  margin-bottom: var(--lcars-space-2);
+  color: var(--lcars-accent-secondary);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.lcars-rating-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lcars-space-2);
+}
+
+.lcars-rating-choice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--lcars-min-target);
+  width: var(--lcars-min-target);
+  min-height: var(--lcars-min-target);
+  padding: 0;
+  border: 3px solid var(--lcars-accent-tertiary);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.lcars-rating-fieldset[data-rating="1"] .lcars-rating-choice[data-value="1"],
+.lcars-rating-fieldset[data-rating="2"] .lcars-rating-choice:is([data-value="1"], [data-value="2"]),
+.lcars-rating-fieldset[data-rating="3"] .lcars-rating-choice:is([data-value="1"], [data-value="2"], [data-value="3"]),
+.lcars-rating-fieldset[data-rating="4"] .lcars-rating-choice:is([data-value="1"], [data-value="2"], [data-value="3"], [data-value="4"]),
+.lcars-rating-fieldset[data-rating="5"] .lcars-rating-choice {
+  background: var(--lcars-accent-primary);
+}
+
+.lcars-rating-choice:has(input:focus-visible) {
+  outline: 3px solid var(--lcars-border-focus);
+  outline-offset: 2px;
+}
+
+.lcars-rating-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 @media (min-width: 720px) {

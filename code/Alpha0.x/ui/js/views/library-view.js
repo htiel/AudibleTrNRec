@@ -91,11 +91,45 @@ function renderSyntheticResults(container, store, query) {
 }
 
 function ratingOptions(name, selected, onChange) {
-  const options = [{ value: '', label: 'Unrated' }];
-  for (let value = 0.5; value <= 5; value += 0.5) options.push({ value: value.toFixed(1), label: `${value.toFixed(1)} stars` });
-  const control = labeledSelect(name, name === 'overallRating' ? 'Overall rating' : (name === 'storyRating' ? 'Story rating' : 'Performance rating'), options, { onChange: (event) => onChange(event.target.value === '' ? null : Number(event.target.value)) });
-  control.select.value = selected === null || selected === undefined ? '' : Number(selected).toFixed(1);
-  return control.wrap;
+  const legend = name === 'overallRating' ? 'Overall rating' : (name === 'storyRating' ? 'Story rating' : 'Performance rating');
+  const choices = [];
+  let fieldset = null;
+  for (let value = 1; value <= 5; value += 1) {
+    const id = `${name}-${value}`;
+    const input = h('input', {
+      type: 'radio',
+      id,
+      name,
+      value: String(value),
+      class: 'lcars-rating-input',
+      checked: selected === value || undefined,
+      onchange: () => {
+        if (fieldset) fieldset.dataset.rating = String(value);
+        onChange(value);
+      },
+    });
+    choices.push(h('label', {
+      for: id,
+      class: 'lcars-rating-choice',
+      'data-value': String(value),
+      title: `${value} ${value === 1 ? 'star' : 'stars'}`,
+    }, [
+      input,
+      h('span', { class: 'lcars-sr-only', text: `${value} ${value === 1 ? 'star' : 'stars'}` }),
+    ]));
+  }
+  const legacy = typeof selected === 'number' && !Number.isInteger(selected)
+    ? h('p', { class: 'lcars-note', text: `Current saved rating: ${selected} stars. Choose a whole-star value to replace it.` })
+    : null;
+  fieldset = h('fieldset', {
+    class: 'lcars-rating-fieldset',
+    'data-rating': Number.isInteger(selected) ? String(selected) : '0',
+  }, [
+    h('legend', { text: legend }),
+    h('div', { class: 'lcars-rating-options' }, choices),
+    legacy,
+  ]);
+  return fieldset;
 }
 
 function feedbackStatusText(draft) {
@@ -111,16 +145,25 @@ function feedbackStatusText(draft) {
 function buildPrivateFeedbackEditor(store, row, rerender) {
   const draft = store.activeDraftFor(row.bookId);
   if (!draft) return null;
-  const comment = h('textarea', { id: `feedback-comment-${row.bookId}`, oninput: (event) => { store.updateFeedbackDraft({ comment: event.target.value }); rerender(); } });
+  let statusMessage = null;
+  const updateDraft = (changes) => {
+    const updated = store.updateFeedbackDraft(changes);
+    if (statusMessage && updated) {
+      statusMessage.textContent = feedbackStatusText(updated);
+      statusMessage.setAttribute('role', updated.validationCode || updated.errorCode ? 'alert' : 'status');
+    }
+  };
+  const comment = h('textarea', { id: `feedback-comment-${row.bookId}`, oninput: (event) => updateDraft({ comment: event.target.value }) });
   comment.value = draft.draft.comment;
-  const tags = h('input', { id: `feedback-tags-${row.bookId}`, type: 'text', autocomplete: 'off', placeholder: 'comma-separated private tags', value: draft.draft.tagsText, oninput: (event) => { store.updateFeedbackDraft({ tagsText: event.target.value }); rerender(); } });
+  const tags = h('input', { id: `feedback-tags-${row.bookId}`, type: 'text', autocomplete: 'off', placeholder: 'comma-separated private tags', value: draft.draft.tagsText, oninput: (event) => updateDraft({ tagsText: event.target.value }) });
   const statusRole = draft.validationCode || draft.errorCode ? 'alert' : 'status';
+  statusMessage = h('p', { class: 'lcars-form-status', role: statusRole, text: feedbackStatusText(draft) });
   const section = h('section', { class: 'lcars-feedback-editor', 'aria-label': `Private feedback for ${row.title}`, id: `feedback-editor-${row.bookId}`, tabindex: '-1' }, [
-    h('p', { class: 'lcars-note', text: 'Private feedback is attached only to this book. Group headings are never save targets.' }),
+    h('p', { class: 'lcars-note', text: 'This editor saves feedback only for this book. Author and Narrator group headings have separate person feedback.' }),
     h('div', { class: 'lcars-feedback-grid' }, [
-      ratingOptions('overallRating', draft.draft.overallRating, (value) => { store.updateFeedbackDraft({ overallRating: value }); rerender(); }),
-      ratingOptions('storyRating', draft.draft.storyRating, (value) => { store.updateFeedbackDraft({ storyRating: value }); rerender(); }),
-      ratingOptions('narrationRating', draft.draft.narrationRating, (value) => { store.updateFeedbackDraft({ narrationRating: value }); rerender(); }),
+      ratingOptions('overallRating', draft.draft.overallRating, (value) => updateDraft({ overallRating: value })),
+      ratingOptions('storyRating', draft.draft.storyRating, (value) => updateDraft({ storyRating: value })),
+      ratingOptions('narrationRating', draft.draft.narrationRating, (value) => updateDraft({ narrationRating: value })),
     ]),
     h('div', { class: 'lcars-field lcars-field-wide' }, [h('label', { for: `feedback-comment-${row.bookId}`, class: 'lcars-field-label', text: 'Private comment' }), comment]),
     h('div', { class: 'lcars-field lcars-field-wide' }, [h('label', { for: `feedback-tags-${row.bookId}`, class: 'lcars-field-label', text: 'Private tags' }), tags]),
@@ -130,16 +173,61 @@ function buildPrivateFeedbackEditor(store, row, rerender) {
       h('button', { type: 'button', class: 'lcars-btn lcars-btn-danger', text: 'Delete', disabled: draft.saving || draft.revision === 'rev-0-absent', onclick: async () => { const confirmed = await confirmAction({ title: "Delete this book's private feedback?", message: 'This deletes the saved feedback for this book only. It does not disconnect Audible or delete the local library snapshot.', confirmLabel: 'Delete feedback' }); if (!confirmed) return; try { await store.deleteFeedback(row.bookId); rerender(); announce("Deleted this book's private feedback."); } catch (error) { announce(describePrivateError(error), { assertive: true }); } } }),
       h('button', { type: 'button', class: 'lcars-btn lcars-btn-secondary', text: 'Discard', disabled: draft.saving, onclick: () => { store.discardFeedbackDraft(); rerender(); announce('Discarded the unsaved private feedback draft.'); } }),
     ]),
-    h('p', { class: 'lcars-form-status', role: statusRole, text: feedbackStatusText(draft) }),
+    statusMessage,
   ]);
   window.setTimeout(() => section.focus(), 0);
   return section;
 }
 
+function buildGroupFeedbackEditor(store, group, rerender) {
+  const target = store.groupFeedbackTarget(group);
+  const draft = target ? store.activeDraftFor(target.targetId) : null;
+  if (!draft) return null;
+  let statusMessage = null;
+  const updateDraft = (changes) => {
+    const updated = store.updateFeedbackDraft(changes);
+    if (statusMessage && updated) {
+      statusMessage.textContent = feedbackStatusText(updated);
+      statusMessage.setAttribute('role', updated.validationCode || updated.errorCode ? 'alert' : 'status');
+    }
+  };
+  const commentId = `person-feedback-comment-${target.targetId}`;
+  const tagsId = `person-feedback-tags-${target.targetId}`;
+  const comment = h('textarea', { id: commentId, oninput: (event) => updateDraft({ comment: event.target.value }) });
+  comment.value = draft.draft.comment;
+  const tags = h('input', { id: tagsId, type: 'text', autocomplete: 'off', placeholder: `private tags for this ${target.kind}`, value: draft.draft.tagsText, oninput: (event) => updateDraft({ tagsText: event.target.value }) });
+  statusMessage = h('p', { class: 'lcars-form-status', role: draft.validationCode || draft.errorCode ? 'alert' : 'status', text: feedbackStatusText(draft) });
+  const editor = h('section', {
+    class: 'lcars-feedback-editor lcars-group-feedback-editor',
+    'aria-label': `Private ${target.kind} feedback for ${target.label}`,
+    id: `feedback-editor-${target.targetId}`,
+    tabindex: '-1',
+  }, [
+    h('h4', { text: `Rate & review ${target.label}` }),
+    h('p', { class: 'lcars-note', text: target.sourceIdentityCount > 1
+      ? `Audible supplied ${target.sourceIdentityCount} source records with this ${target.kind} name. This private feedback is attached to the combined display group, not copied to its books.`
+      : `This private feedback is attached to this ${target.kind}, not to every book in the group.` }),
+    h('div', { class: 'lcars-feedback-grid' }, [
+      ratingOptions('overallRating', draft.draft.overallRating, (value) => updateDraft({ overallRating: value })),
+    ]),
+    h('div', { class: 'lcars-field lcars-field-wide' }, [h('label', { for: commentId, class: 'lcars-field-label', text: `Private comment about this ${target.kind}` }), comment]),
+    h('div', { class: 'lcars-field lcars-field-wide' }, [h('label', { for: tagsId, class: 'lcars-field-label', text: `Private ${target.kind} tags` }), tags]),
+    h('div', { class: 'lcars-form-actions' }, [
+      h('button', { type: 'button', class: 'lcars-btn lcars-btn-primary', text: draft.saving ? 'Saving…' : 'Save', disabled: draft.saving, onclick: async () => { const result = await store.saveFeedbackDraft(); rerender(); if (result?.ok) announce(`Private ${target.kind} feedback saved.`); else announce(describePrivateError({ code: result?.code }), { assertive: true }); } }),
+      h('button', { type: 'button', class: 'lcars-btn lcars-btn-secondary', text: 'Clear', disabled: draft.saving, onclick: () => { store.clearFeedbackDraft(); rerender(); } }),
+      h('button', { type: 'button', class: 'lcars-btn lcars-btn-danger', text: 'Delete', disabled: draft.saving || draft.revision === 'rev-0-absent', onclick: async () => { const confirmed = await confirmAction({ title: `Delete private feedback for this ${target.kind}?`, message: `This deletes only the saved rating, comment, and tags for ${target.label}. It does not delete book feedback.`, confirmLabel: `Delete ${target.kind} feedback` }); if (!confirmed) return; try { await store.deleteFeedback(target.targetId); rerender(); announce(`Deleted private ${target.kind} feedback.`); } catch (error) { announce(describePrivateError(error), { assertive: true }); } } }),
+      h('button', { type: 'button', class: 'lcars-btn lcars-btn-secondary', text: 'Discard', disabled: draft.saving, onclick: () => { store.discardFeedbackDraft(); rerender(); } }),
+    ]),
+    statusMessage,
+  ]);
+  window.setTimeout(() => editor.focus(), 0);
+  return editor;
+}
+
 function buildPrivateRow(row, store, rerender) {
   return h('article', { class: 'lcars-library-card' }, [
     h('div', { class: 'lcars-library-card-main' }, [
-      h('a', { href: `#/book/${row.bookId}`, class: 'lcars-title-link', text: row.title, onclick: () => { store.noteReturnFocus(row.bookId); store.noteScrollPosition(window.scrollY); }, 'data-book-focus': row.bookId }),
+      h('a', { href: `#/book/${row.bookId}`, class: 'lcars-title-link', text: row.title, onclick: () => { store.noteReturnFocus(row.bookId); store.noteScrollPosition(document.getElementById('main-content')?.scrollTop ?? window.scrollY); }, 'data-book-focus': row.bookId }),
       row.subtitle ? h('p', { class: 'lcars-subtitle', text: row.subtitle }) : null,
       h('p', { class: 'lcars-library-meta', text: `Authors: ${row.authors.join(', ') || 'Unknown author'}` }),
       h('p', { class: 'lcars-library-meta', text: `Narrators: ${row.narrators.join(', ') || 'Unknown narrator'}` }),
@@ -157,12 +245,12 @@ function buildPrivateRow(row, store, rerender) {
 
 function buildPrivateToolbar(store, rerender) {
   const state = store.librarySession;
-  const form = h('form', { class: 'lcars-toolbar', 'aria-label': 'Sort, filter, group, and edit the private library', onsubmit: (event) => event.preventDefault() });
+  const form = h('form', { class: 'lcars-toolbar lcars-sidebar-toolbar', 'aria-label': 'Sort, filter, and group the private library', onsubmit: (event) => event.preventDefault() });
   const update = (patch) => { store.setLibrarySession(patch); rerender(); };
   const debouncedQuery = debounce((value) => update({ query: value }), 120);
   const debouncedTag = debounce((value) => update({ tagQuery: value }), 120);
-  const search = h('input', { type: 'search', id: 'lib-search', autocomplete: 'off', value: state.query, placeholder: 'e.g. title, author, narrator, series', oninput: (event) => debouncedQuery(event.target.value) });
-  const tagSearch = h('input', { type: 'search', id: 'lib-tags', autocomplete: 'off', value: state.tagQuery, placeholder: 'filter by private tag', oninput: (event) => debouncedTag(event.target.value) });
+  const search = h('input', { type: 'search', id: 'lib-search', autocomplete: 'off', maxlength: '500', value: state.query, placeholder: 'e.g. title, author, narrator, series', oninput: (event) => debouncedQuery(event.target.value) });
+  const tagSearch = h('input', { type: 'search', id: 'lib-tags', autocomplete: 'off', maxlength: '200', value: state.tagQuery, placeholder: 'filter by private tag', oninput: (event) => debouncedTag(event.target.value) });
   const sort = labeledSelect('lib-sort', 'Sort books within groups by', LIBRARY_SORT_FIELDS.map((field) => ({ value: field, label: PRIVATE_SORT_LABELS[field] ?? field })), { onChange: (event) => update({ sortField: event.target.value }) });
   sort.select.value = state.sortField;
   const direction = labeledSelect('lib-direction', 'Sort direction', [{ value: 'asc', label: 'Ascending' }, { value: 'desc', label: 'Descending' }], { onChange: (event) => update({ sortDirection: event.target.value }) });
@@ -173,12 +261,21 @@ function buildPrivateToolbar(store, rerender) {
   const statusFieldset = h('fieldset', { class: 'lcars-fieldset' }, [h('legend', { text: 'Status' }), ...statusOptions.map(({ value, count }) => { const id = `lib-status-${value}`; const input = h('input', { type: 'checkbox', id, checked: state.statuses.includes(value) || undefined, onchange: (event) => { const next = new Set(store.librarySession.statuses); if (event.target.checked) next.add(value); else next.delete(value); update({ statuses: [...next] }); } }); return h('div', { class: 'lcars-checkbox-row' }, [input, h('label', { for: id, text: `${formatStatus(value)} (${count})` })]); })]);
   const filterSelect = (id, label, key) => { const control = labeledSelect(id, label, [{ value: 'any', label: 'Any' }, { value: 'rated', label: 'Rated' }, { value: 'unrated', label: 'Unrated' }], { onChange: (event) => update({ [key]: event.target.value }) }); control.select.value = state[key]; return control.wrap; };
   form.append(
-    h('div', { class: 'lcars-field lcars-field-wide' }, [h('label', { for: 'lib-search', class: 'lcars-field-label', text: 'Search title, author, narrator, or series' }), search]),
+    h('h2', { text: 'Library controls' }),
+    h('h3', { text: 'Grouping and order' }),
     h('div', { class: 'lcars-control-row' }, [sort.wrap, direction.wrap, group.wrap]),
-    h('div', { class: 'lcars-control-row' }, [filterSelect('lib-rating-overall', 'Overall rating', 'overallRatingFilter'), filterSelect('lib-rating-story', 'Story rating', 'storyRatingFilter'), filterSelect('lib-rating-narration', 'Performance rating', 'narrationRatingFilter'), h('div', { class: 'lcars-field' }, [h('label', { for: 'lib-tags', class: 'lcars-field-label', text: 'Private tags' }), tagSearch])]),
-    h('div', { class: 'lcars-checkbox-row' }, [h('input', { type: 'checkbox', id: 'lib-has-comment', checked: state.hasComment || undefined, onchange: (event) => update({ hasComment: event.target.checked }) }), h('label', { for: 'lib-has-comment', text: 'Show only books with a private comment' })]),
+    h('h3', { text: 'Status' }),
     statusFieldset,
+    h('h3', { text: 'Rating filters' }),
+    h('div', { class: 'lcars-control-row' }, [filterSelect('lib-rating-overall', 'Overall rating', 'overallRatingFilter'), filterSelect('lib-rating-story', 'Story rating', 'storyRatingFilter'), filterSelect('lib-rating-narration', 'Performance rating', 'narrationRatingFilter')]),
+    h('div', { class: 'lcars-checkbox-row' }, [h('input', { type: 'checkbox', id: 'lib-has-comment', checked: state.hasComment || undefined, onchange: (event) => update({ hasComment: event.target.checked }) }), h('label', { for: 'lib-has-comment', text: 'Has a private comment' })]),
+    h('h3', { text: 'Text filters' }),
+    h('div', { class: 'lcars-field lcars-field-wide' }, [h('label', { for: 'lib-search', class: 'lcars-field-label', text: 'Title, author, narrator, or series' }), search]),
+    h('div', { class: 'lcars-field' }, [h('label', { for: 'lib-tags', class: 'lcars-field-label', text: 'Private tags' }), tagSearch]),
     h('button', { type: 'button', class: 'lcars-btn lcars-btn-secondary', text: 'Reset filters', onclick: () => { store.resetLibraryFilters(); rerender(); announce('Reset the private library filters, sort, grouping, and collapsed groups.'); } }),
+    store.libraryStateWarning
+      ? h('p', { class: 'lcars-form-status', role: 'alert', text: describePrivateError({ code: store.libraryStateWarning }) })
+      : h('p', { class: 'lcars-form-status', role: 'status', text: 'Library controls are preserved for refreshes in this browser tab.' }),
   );
   return form;
 }
@@ -187,7 +284,11 @@ function restoreLibraryFocusAndScroll(store, region) {
   const focusBookId = store.consumeReturnFocus?.();
   if (focusBookId) window.setTimeout(() => region.querySelector(`[data-book-focus="${focusBookId}"]`)?.focus?.(), 0);
   const scrollTop = store.consumeScrollPosition?.();
-  if (scrollTop !== null && scrollTop !== undefined) window.setTimeout(() => window.scrollTo({ top: scrollTop, behavior: 'auto' }), 0);
+  if (scrollTop !== null && scrollTop !== undefined) window.setTimeout(() => {
+    const main = document.getElementById('main-content');
+    if (main) main.scrollTo({ top: scrollTop, behavior: 'auto' });
+    else window.scrollTo({ top: scrollTop, behavior: 'auto' });
+  }, 0);
 }
 
 /**
@@ -219,12 +320,40 @@ function renderPrivateResults(container, store, rerender) {
     container.appendChild(suppressedLibraryNotice());
     return;
   }
+  if (result.total === 0) {
+    container.appendChild(h('div', { class: 'lcars-status-block' }, [
+      h('p', { class: 'lcars-status-statement', role: 'status', text: 'No library titles are stored on this device.' }),
+      h('p', {}, [h('a', { href: '#/data', class: 'lcars-btn lcars-btn-secondary', text: 'Go to Data & lifecycle to synchronize Audible' })]),
+    ]));
+    return;
+  }
   if (result.groups) {
     if (result.groups.length > 1) container.appendChild(h('div', { class: 'lcars-form-actions' }, [h('button', { type: 'button', class: 'lcars-btn lcars-btn-secondary', text: 'Expand all', onclick: () => { store.expandAllGroups(); rerender(); announce('Expanded all groups.'); } }), h('button', { type: 'button', class: 'lcars-btn lcars-btn-secondary', text: 'Collapse all', onclick: () => { store.collapseAllGroups(); rerender(); announce('Collapsed all groups.'); } })]));
     if (result.groups.length === 0) container.appendChild(h('p', { text: 'No titles match the current filters.' }));
     for (const group of result.groups) {
-      const details = h('details', { class: 'lcars-group-details', open: !store.librarySession.collapsedGroupKeys.includes(group.key) || undefined, ontoggle: (event) => { const nowOpen = event.currentTarget.open; const wasOpen = !store.librarySession.collapsedGroupKeys.includes(group.key); if (nowOpen === wasOpen) return; store.toggleGroup(group.key); announce(`${nowOpen ? 'Expanded' : 'Collapsed'} ${group.label}.`); } }, [h('summary', { class: 'lcars-group-summary', text: `${group.label} (${group.items.length})` }), h('div', { class: 'lcars-card-list' }, group.items.map((row) => buildPrivateRow(row, store, rerender)))]);
-      container.appendChild(details);
+      const target = store.groupFeedbackTarget(group);
+      const summaryChildren = [h('span', { text: `${group.label} (${group.items.length})` })];
+      if (target) {
+        summaryChildren.push(h('button', {
+          type: 'button',
+          class: 'lcars-btn lcars-btn-primary lcars-group-review-button',
+          text: store.activeDraftFor(target.targetId) ? 'Editor open' : 'Rate & review',
+          onclick: async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const outcome = await store.openGroupFeedbackEditor(group);
+            if (outcome.status === 'blocked-dirty') {
+              announce('Save or discard the open private feedback draft before reviewing another book, person, or series.', { assertive: true });
+              document.getElementById(`feedback-editor-${outcome.activeBookId}`)?.focus?.();
+              return;
+            }
+            rerender();
+            announce(`Opened private ${target.kind} feedback for ${target.label}.`);
+          },
+        }));
+      }
+      const details = h('details', { class: 'lcars-group-details', open: !store.librarySession.collapsedGroupKeys.includes(group.key) || undefined, ontoggle: (event) => { const nowOpen = event.currentTarget.open; const wasOpen = !store.librarySession.collapsedGroupKeys.includes(group.key); if (nowOpen === wasOpen) return; store.toggleGroup(group.key); announce(`${nowOpen ? 'Expanded' : 'Collapsed'} ${group.label}.`); } }, [h('summary', { class: 'lcars-group-summary' }, summaryChildren), h('div', { class: 'lcars-card-list' }, group.items.map((row) => buildPrivateRow(row, store, rerender)))]);
+      container.appendChild(h('div', { class: 'lcars-group' }, [details, buildGroupFeedbackEditor(store, group, rerender)]));
     }
   } else if (result.rows.length === 0) {
     container.appendChild(h('p', { text: 'No titles match the current filters.' }));
@@ -233,7 +362,7 @@ function renderPrivateResults(container, store, rerender) {
   }
 }
 
-export function renderLibraryView(root, store) {
+export function renderLibraryView(root, store, { controlsRoot = null } = {}) {
   clear(root);
   const live = store.runtimeMode === 'private-alpha';
   const heading = h('h2', { id: 'library-heading', text: live ? 'Private Audible library' : 'Synthetic demo library' });
@@ -243,11 +372,14 @@ export function renderLibraryView(root, store) {
   const rerender = () => {
     clear(section);
     if (live) {
-      section.append(heading, intro, buildPrivateToolbar(store, rerender), resultsRegion);
+      const toolbar = buildPrivateToolbar(store, rerender);
+      if (controlsRoot) controlsRoot.replaceChildren(toolbar);
+      section.append(heading, intro, resultsRegion);
       renderPrivateResults(resultsRegion, store, rerender);
     } else {
       const toolbar = buildSyntheticToolbar(store, () => renderSyntheticResults(resultsRegion, store, readSyntheticState(toolbar)));
-      section.append(heading, intro, toolbar, resultsRegion);
+      if (controlsRoot) controlsRoot.replaceChildren(toolbar);
+      section.append(heading, intro, ...(controlsRoot ? [] : [toolbar]), resultsRegion);
       renderSyntheticResults(resultsRegion, store, readSyntheticState(toolbar));
     }
     restoreLibraryFocusAndScroll(store, resultsRegion);

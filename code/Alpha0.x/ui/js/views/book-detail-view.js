@@ -23,7 +23,7 @@ function buildMetadata(catalog, book, entry, { live } = {}) {
     ['Last listened', formatDate(entry?.lastListenedAt ?? null)],
     ['Completed', formatDate(entry?.completedAt ?? null)],
     ['Library record source', entry ? formatProvenance(entry.provenance.source) : 'Unknown — no library entry for this title'],
-    ['Library record captured at', formatDate(entry?.provenance.observedAt ?? null)],
+    ['Library record captured at', formatDate(entry?.provenance?.observedAt ?? null)],
   ];
   if (live) entries.push(['Private feedback', 'Use the Library view to edit this book\'s private rating, comment, and tags without losing your place.']);
   const dl = h('dl', { class: 'lcars-meta-list' });
@@ -46,11 +46,13 @@ export function renderBookDetailView(root, store, bookId) {
   const detail = store.bookDetail(bookId);
   const live = store.runtimeMode === 'private-alpha';
   if (!detail) {
-    mount(root, h('section', {}, [
-      h('h2', { text: 'Title not found' }),
+    const section = h('section', {}, [
+      h('h2', { tabindex: '-1', text: 'Title not found' }),
       h('p', { text: live ? 'This title is not available in the current private library snapshot.' : 'This title does not exist in the synthetic catalog. It may have been removed by a delete-all action.' }),
       h('a', { href: '#/library', class: 'lcars-btn lcars-btn-secondary', text: 'Back to library', onclick: () => store.noteReturnFocus?.(bookId) }),
-    ]));
+    ]);
+    mount(root, section);
+    section.querySelector('h2')?.focus?.();
     return;
   }
   const { book, entry, facets, unknownFields, feedback } = detail;

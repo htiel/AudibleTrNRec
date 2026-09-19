@@ -87,8 +87,8 @@ test('the action is labelled as a library and feedback purge, not a total erasur
   assert.equal(/text: 'Delete all local ATnR data'/.test(source), false);
   assert.match(source, /text: 'Delete library and feedback data'/);
   assert.match(handler, /Delete all local library and feedback data\?/);
-  // The owner is told they must unlock again, because the purge drops bindings.
-  assert.match(handler, /unlock ATnR again/);
+  // The owner is told the browser session will be invalidated by the purge.
+  assert.match(handler, /current session will end and the page will reload/);
 });
 
 test('the consent text states an empty store honestly rather than inventing residue', () => {
@@ -113,10 +113,9 @@ test('the inventory route is read strength and has both a policy and a handler',
   const policy = ROUTE_POLICY['GET /api/v1/inventory'];
   assert.ok(policy, 'the inventory route must have a closed policy');
   assert.equal(policy.class, 'read');
-  // The capability and a live session are still required; only the nonce is
-  // not, because this is what the owner reads in order to consent.
+  // A live session is required; no nonce is needed because this is what the
+  // owner reads in order to consent.
   assert.equal(policy.session, true);
-  assert.equal(policy.reauth, false);
   assert.equal(policy.confirm, null);
   assert.ok(IMPLEMENTED_API_ROUTES.includes('GET /api/v1/inventory'));
 });
@@ -180,7 +179,7 @@ test('a failed inventory load blocks the purge instead of guessing', async () =>
   assert.deepEqual(requests.map(({ url }) => url), ['/api/v1/inventory']);
 });
 
-test('loading the inventory needs no re-entered capability and no nonce', async () => {
+test('loading the inventory needs only the active browser session and no nonce', async () => {
   const requests = [];
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url, options = {}) => {
@@ -195,10 +194,8 @@ test('loading the inventory needs no re-entered capability and no nonce', async 
   };
   try {
     const api = new ConnectionApi({
-      capability: 'capability-token',
       sessionId: 'session-123',
       csrfToken: 'csrf-12345678901234567890123456789012',
-      requestCapability: async () => { throw new Error('a read must not prompt for the capability again'); },
     });
     await api.deletionInventory();
   } finally {
@@ -209,7 +206,6 @@ test('loading the inventory needs no re-entered capability and no nonce', async 
   const [read] = requests;
   assert.equal(read.method, 'GET');
   assert.equal(read.body, null);
-  assert.equal(read.headers.Authorization, 'ATnR-Capability capability-token');
+  assert.equal(read.headers.Authorization, undefined);
   assert.equal(read.headers['X-ATnR-Session'], 'session-123');
-  assert.equal(read.headers['X-ATnR-Reauth'], undefined);
 });

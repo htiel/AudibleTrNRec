@@ -67,6 +67,21 @@ test('a first save requires the absent-revision token and returns a record', asy
   assert.equal(store.count(), 1);
 });
 
+test('a canonical person target persists through the encrypted feedback store', async (t) => {
+  const { store, database } = openStore(t);
+  const targetId = 'person:author:catalog-person-one';
+  const saved = await store.save(
+    targetId,
+    { overallRating: 4.5, comment: 'Consistently strong work', tags: ['favorite-author'] },
+    { expectedRevision: ABSENT_REVISION },
+  );
+  const read = await store.get(targetId);
+  assert.deepEqual(read.record, saved.record);
+  const row = database.prepare('SELECT sealed_payload FROM private_review WHERE book_id = ?').get(targetId);
+  assert.ok(row?.sealed_payload);
+  assert.equal(Buffer.from(row.sealed_payload).toString('utf8').includes('Consistently strong work'), false);
+});
+
 test('nothing readable is written outside the sealed payload', async (t) => {
   const { store, database } = openStore(t);
   await store.save(BOOK, { overallRating: 5, comment: 'unmistakable-secret-phrase', tags: ['private-tag'] }, { expectedRevision: ABSENT_REVISION });

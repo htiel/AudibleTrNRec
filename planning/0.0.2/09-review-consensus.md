@@ -6,6 +6,15 @@ implementation evidence and owner-only conditional GO, see
 Named/public release remains blocked; implementation acceptance is not
 retroactive CP or source-feasibility approval.
 
+**Later change control:** on 2026-09-18 the owner removed the local capability
+and re-entry flow for the dedicated prototype. RC-02/03/04, CP-02 delivery and
+related unlock requirements below are preserved historical design decisions,
+not current controls or instructions. Session/CSRF/origin/nonce checks remain;
+unrelated local-client protection is not satisfied. The
+[2026-09-19 implementation record](12-accumulated-implementation.md) also records
+whole-star UI, browser-storage exceptions and Settings/theme follow-ups.
+Those observations do not amend these officers' historical sign-offs.
+
 **Date:** 2026-09-17
 
 **Reconciliation owner:** Commander William Riker

@@ -34,7 +34,6 @@ import {
   parseVersion,
 } from '../scripts/supported-runtime.js';
 import { assertDependencyProvenance, APPROVED_INDEX_HOSTS } from '../scripts/private-alpha-policy.js';
-import { DELIVERY_DECISION } from '../scripts/local-capability-bootstrap.js';
 import { CONNECTOR_ERROR_CODES, parseConnectorReply } from '../src/adapters/connector-process.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -313,33 +312,6 @@ test('the recorded connector lock is well formed and fully hash pinned', () => {
   assert.equal(filenames.length, 21);
   // No digest is reused across distributions.
   assert.equal(new Set(hashes.map((line) => line.trim())).size, 21);
-});
-
-// --- CP-02: per-start local unlock decision record ---------------------------
-
-test('the CP-02 unlock decision is ratified without claiming live proof', () => {
-  assert.equal(DELIVERY_DECISION.selected, 'launcher-owned-transient-display');
-  assert.equal(DELIVERY_DECISION.entropyBits, 256);
-  assert.equal(DELIVERY_DECISION.ratified, true);
-
-  // No ambient transport may be re-enabled by the ratification.
-  for (const [channel, enabled] of Object.entries(DELIVERY_DECISION.transports)) {
-    assert.equal(enabled, false, `transport ${channel} must stay disabled`);
-  }
-  // The weak and at-rest alternatives stay rejected.
-  for (const rejected of ['owner-acl-one-use-token-file', 'six-digit-pin', 'salted-short-code',
-    'qr-or-url-token-transport', 'public-token-vending-endpoint']) {
-    assert.equal(DELIVERY_DECISION.rejected.includes(rejected), true, rejected);
-  }
-
-  const record = DELIVERY_DECISION.ratification;
-  assert.equal(record.control, 'CP-02');
-  assert.match(record.decidedOn, /^\d{4}-\d{2}-\d{2}$/);
-  assert.ok(record.decidedBy.length > 0);
-  assert.ok(record.scope.length > 0);
-  // Ratification is a design decision; it must not masquerade as evidence.
-  assert.equal(record.liveProof, false);
-  assert.ok(record.remainingEvidence.length >= 4);
 });
 
 // --- S020: RPC reply guards ---------------------------------------------------

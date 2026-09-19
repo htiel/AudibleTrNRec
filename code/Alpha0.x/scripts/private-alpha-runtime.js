@@ -99,6 +99,7 @@ export async function createPrivateAlphaRuntime({ packageRoot, root = privateDat
   };
 
   service.feedbackStore = {
+    list: async () => (await feedbackFor()).list(),
     get: async (bookId) => (await feedbackFor()).get(bookId),
     save: async (bookId, payload, expectedRevision) => (
       (await feedbackFor()).save(bookId, payload, { expectedRevision })

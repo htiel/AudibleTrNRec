@@ -7,6 +7,10 @@
 **4 themes / 8 epics / 30 features / 30 stories / 112 estimated points.**
 The [final verdict](0.0.2/11-implementation-release-verdict.md) records code
 acceptance separately from incomplete CP/source/evidence/release gates.
+The [2026-09-19 accumulated implementation record](0.0.2/12-accumulated-implementation.md)
+covers the uncommitted follow-ups, current test evidence, keyless loopback trust,
+group feedback, browser preferences and theme provenance. Historical reports
+do not automatically approve those later changes.
 
 | Document | Authority |
 | --- | --- |
@@ -17,6 +21,7 @@ acceptance separately from incomplete CP/source/evidence/release gates.
 | [Risks and release gates](0.0.2/05-risks-and-release-gates.md) | FMEA, evidence, permissions and release decision |
 | [Implementation review index](0.0.2/implementation-reviews/README.md) | Amended officer verdicts, scope and evidence limitations |
 | [Implementation/release verdict](0.0.2/11-implementation-release-verdict.md) | Owner-only usable build versus named/public NO-GO; package status and remaining blockers |
+| [Accumulated implementation](0.0.2/12-accumulated-implementation.md) | Current working-tree behavior, executed evidence, Apple references and residual limits |
 | [Archive index](archive/README.md) | Immutable historical releases and their outcomes |
 
 ## Archived baseline
@@ -43,6 +48,8 @@ remains evidence, not a list of fixes completed by archiving.
   `IN_REVIEW`, `IMPLEMENTED`, `DONE`, `DEFERRED`, `STOPPED`.
   `IMPLEMENTED` is code present/reviewed for a stated bounded use, not full
   DoD, earned points or gate clearance; release evidence may remain pending.
+  `OWNER-ACCEPTED DEVIATION` records S015's dedicated-computer exception, not
+  completion of its original local-client authentication criterion.
   The current `03-backlog.md` owns
   status and acceptance criteria. Update scope, totals, sequence and gates
   together under explicit change control.

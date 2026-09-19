@@ -2,8 +2,7 @@ import {
   Catalog, buildLibraryView, safeId, validateLiveSnapshot,
 } from '../../src/index.js';
 import { compareText } from '../../src/core/validate.js';
-import { validateFeedbackInput } from '../../src/core/feedback.js';
-import { ABSENT_REVISION } from '../../src/store/feedback-store.js';
+import { ABSENT_REVISION, validateFeedbackInput } from '../../src/core/feedback.js';
 import {
   createLibrarySessionState,
   mergeLibrarySessionState,
@@ -25,6 +24,38 @@ const STATUS_ORDER = Object.freeze({
 
 function feedbackShell(bookId) {
   return Object.freeze({ bookId, record: null, revision: ABSENT_REVISION, generation: 0, deleted: false });
+}
+
+function groupFeedbackTarget(group) {
+  if (!group || !['authors', 'narrators', 'series'].includes(group.field) || group.key.endsWith(':unknown')) return null;
+  const kind = group.field === 'authors' ? 'author' : (group.field === 'narrators' ? 'narrator' : 'series');
+  const identity = kind === 'series'
+    ? group.key.slice(group.key.indexOf(':') + 1)
+    : (group.personIds?.length === 1
+      ? group.personIds[0]
+      : `display-${stableLabelHash(group.normalizedLabel ?? group.label)}`);
+  const targetId = kind === 'series' ? `series:${identity}` : `person:${kind}:${identity}`;
+  return /^[a-z0-9][a-z0-9._:-]{0,63}$/i.test(targetId)
+    ? Object.freeze({
+      targetId,
+      kind,
+      label: group.label,
+      sourceIdentityCount: group.personIds?.length ?? 0,
+    })
+    : null;
+}
+
+function normalizedPersonLabel(value) {
+  return String(value).normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
+}
+
+function stableLabelHash(value) {
+  let hash = 0xcbf29ce484222325n;
+  for (const byte of new TextEncoder().encode(value)) {
+    hash ^= BigInt(byte);
+    hash = BigInt.asUintN(64, hash * 0x100000001b3n);
+  }
+  return hash.toString(16).padStart(16, '0');
 }
 
 function emptyDraft() {
@@ -65,7 +96,9 @@ function feedbackSummary(record) {
   });
   const tags = Array.isArray(record.tags) ? record.tags.slice() : [];
   const parts = [];
-  if (record.overallRating !== null && record.overallRating !== undefined) parts.push(`Overall ${record.overallRating.toFixed(1)}★`);
+  if (record.overallRating !== null && record.overallRating !== undefined) {
+    parts.push(`Overall ${Number.isInteger(record.overallRating) ? record.overallRating : record.overallRating.toFixed(1)}★`);
+  }
   else parts.push('Unrated');
   if (record.comment) parts.push('has comment');
   if (tags.length > 0) parts.push(`${tags.length} tag${tags.length === 1 ? '' : 's'}`);
@@ -155,33 +188,64 @@ function filterRows(rows, state) {
 
 function groupRows(rows, field) {
   const groups = new Map();
-  const add = (key, label, row) => {
-    if (!groups.has(key)) groups.set(key, { key, label, items: [] });
-    groups.get(key).items.push(row);
+  const add = (key, label, row, personId = null, normalizedLabel = null) => {
+    if (!groups.has(key)) groups.set(key, {
+      key,
+      label,
+      normalizedLabel,
+      personIds: [],
+      items: [],
+    });
+    const group = groups.get(key);
+    if (personId && !group.personIds.includes(personId)) group.personIds.push(personId);
+    if (!group.items.some((item) => item.bookId === row.bookId)) group.items.push(row);
   };
   for (const row of rows) {
     if (field === 'status') add(`status:${row.status}`, row.statusLabel, row);
     else if (field === 'series') add(`series:${row.seriesId ?? 'unknown'}`, row.series ?? 'Unknown series', row);
     else if (field === 'authors') {
       if (row.authorIds.length === 0) add('author:unknown', 'Unknown author', row);
-      else row.authorIds.forEach((id, index) => add(`author:${id}`, row.authors[index] ?? 'Unknown author', row));
+      else row.authorIds.forEach((id, index) => {
+        const label = row.authors[index] ?? 'Unknown author';
+        const normalizedLabel = normalizedPersonLabel(label);
+        add(`author-label:${stableLabelHash(normalizedLabel)}`, label, row, id, normalizedLabel);
+      });
     } else if (field === 'narrators') {
       if (row.narratorIds.length === 0) add('narrator:unknown', 'Unknown narrator', row);
-      else row.narratorIds.forEach((id, index) => add(`narrator:${id}`, row.narrators[index] ?? 'Unknown narrator', row));
+      else row.narratorIds.forEach((id, index) => {
+        const label = row.narrators[index] ?? 'Unknown narrator';
+        const normalizedLabel = normalizedPersonLabel(label);
+        add(`narrator-label:${stableLabelHash(normalizedLabel)}`, label, row, id, normalizedLabel);
+      });
     }
   }
   return [...groups.values()]
     .sort((left, right) => compareText(left.label, right.label) || compareText(left.key, right.key))
-    .map((group) => ({ ...group, items: group.items.slice() }));
+    .map((group) => ({
+      ...group,
+      field,
+      personIds: group.personIds.slice().sort(compareText),
+      items: group.items.slice(),
+    }));
 }
 
 export class PrivateAppStore {
-  constructor({ liveSnapshot = null, connectionApi = null, connectionInfo = null, bootstrapError = null } = {}) {
+  constructor({
+    liveSnapshot = null,
+    connectionApi = null,
+    connectionInfo = null,
+    bootstrapError = null,
+    initialLibrarySession = null,
+    libraryStateWarning = null,
+    onLibrarySessionChange = null,
+  } = {}) {
     this.runtimeMode = 'private-alpha';
     this.connectionApi = connectionApi;
     this.connectionInfo = connectionInfo;
     this.bootstrapError = bootstrapError;
-    this.librarySession = createLibrarySessionState();
+    this.librarySession = createLibrarySessionState(initialLibrarySession ?? {});
+    this.libraryStateWarning = libraryStateWarning;
+    this.onLibrarySessionChange = onLibrarySessionChange;
     this.feedbackByBookId = new Map();
     this.feedbackLoaded = false;
     this.feedbackDraft = null;
@@ -217,47 +281,55 @@ export class PrivateAppStore {
   }
 
   setLibrarySession(patch) {
-    this.librarySession = mergeLibrarySessionState(this.librarySession, patch);
+    this.#replaceLibrarySession(mergeLibrarySessionState(this.librarySession, patch));
     return this.librarySession;
   }
 
+  #replaceLibrarySession(next) {
+    this.librarySession = next;
+    if (typeof this.onLibrarySessionChange === 'function') {
+      const result = this.onLibrarySessionChange(next);
+      this.libraryStateWarning = result?.ok === false ? result.code : null;
+    }
+  }
+
   resetLibraryFilters() {
-    this.librarySession = resetLibraryFilters(this.librarySession);
+    this.#replaceLibrarySession(resetLibraryFilters(this.librarySession));
     return this.librarySession;
   }
 
   toggleGroup(key) {
-    this.librarySession = toggleGroupExpanded(this.librarySession, key);
+    this.#replaceLibrarySession(toggleGroupExpanded(this.librarySession, key));
     return this.librarySession;
   }
 
   expandAllGroups() {
-    this.librarySession = setAllGroupsExpanded(this.librarySession, this.lastLibraryGroups.map((group) => group.key), true);
+    this.#replaceLibrarySession(setAllGroupsExpanded(this.librarySession, this.lastLibraryGroups.map((group) => group.key), true));
     return this.librarySession;
   }
 
   collapseAllGroups() {
-    this.librarySession = setAllGroupsExpanded(this.librarySession, this.lastLibraryGroups.map((group) => group.key), false);
+    this.#replaceLibrarySession(setAllGroupsExpanded(this.librarySession, this.lastLibraryGroups.map((group) => group.key), false));
     return this.librarySession;
   }
 
   noteReturnFocus(bookId) {
-    this.librarySession = mergeLibrarySessionState(this.librarySession, { returnFocusBookId: bookId });
+    this.#replaceLibrarySession(mergeLibrarySessionState(this.librarySession, { returnFocusBookId: bookId }));
   }
 
   consumeReturnFocus() {
     const bookId = this.librarySession.returnFocusBookId;
-    this.librarySession = mergeLibrarySessionState(this.librarySession, { returnFocusBookId: null });
+    this.#replaceLibrarySession(mergeLibrarySessionState(this.librarySession, { returnFocusBookId: null }));
     return bookId;
   }
 
   noteScrollPosition(scrollTop) {
-    this.librarySession = mergeLibrarySessionState(this.librarySession, { scrollTop });
+    this.#replaceLibrarySession(mergeLibrarySessionState(this.librarySession, { scrollTop }));
   }
 
   consumeScrollPosition() {
     const scrollTop = this.librarySession.scrollTop;
-    this.librarySession = mergeLibrarySessionState(this.librarySession, { scrollTop: null });
+    this.#replaceLibrarySession(mergeLibrarySessionState(this.librarySession, { scrollTop: null }));
     return scrollTop;
   }
 
@@ -267,14 +339,7 @@ export class PrivateAppStore {
 
   async hydrateFeedback() {
     if (!this.connectionApi || this.feedbackLoaded) return;
-    const ids = [...new Set(this.entries.map((entry) => entry.bookId))];
-    const results = await Promise.all(ids.map(async (bookId) => {
-      try {
-        return await this.connectionApi.feedbackGet(bookId);
-      } catch {
-        return feedbackShell(bookId);
-      }
-    }));
+    const results = await this.connectionApi.feedbackList();
     for (const result of results) this.feedbackByBookId.set(result.bookId, result);
     this.feedbackLoaded = true;
   }
@@ -326,7 +391,12 @@ export class PrivateAppStore {
   }
 
   bookDetail(bookId) {
-    const safeBookId = safeId(bookId, 'bookId');
+    let safeBookId;
+    try {
+      safeBookId = safeId(bookId, 'bookId');
+    } catch {
+      return null;
+    }
     const book = this.catalog.book(safeBookId);
     if (!book) return null;
     const entry = this.entries.find((value) => value.bookId === safeBookId) ?? null;
@@ -334,7 +404,7 @@ export class PrivateAppStore {
     for (const id of book.authorIds) facets.push({ kind: 'author', id, name: this.catalog.personName(id) });
     for (const id of book.narratorIds) facets.push({ kind: 'narrator', id, name: this.catalog.personName(id) });
     if (book.seriesId) facets.push({ kind: 'series', id: book.seriesId, name: this.catalog.facetName(book.seriesId) });
-    const unknownFields = [...new Set([...book.provenance.unknownFields, ...(entry?.provenance.unknownFields ?? [])])].sort(compareText);
+    const unknownFields = [...new Set([...book.provenance.unknownFields, ...(entry?.provenance?.unknownFields ?? [])])].sort(compareText);
     const feedbackEntry = this.feedbackFor(safeBookId);
     return { book, entry, facets, unknownFields, feedback: feedbackEntry.record, feedbackRevision: feedbackEntry.revision };
   }
@@ -343,7 +413,7 @@ export class PrivateAppStore {
     await this.ensureFeedback(bookId);
     const decision = requestEditor(this.librarySession, bookId);
     if (decision.status === 'blocked-dirty') return decision;
-    this.librarySession = decision.state;
+    this.#replaceLibrarySession(decision.state);
     const current = this.feedbackFor(bookId);
     this.feedbackDraft = {
       bookId,
@@ -357,6 +427,24 @@ export class PrivateAppStore {
       validationCode: null,
     };
     return { status: decision.status, bookId };
+  }
+
+  groupFeedbackTarget(group) {
+    return groupFeedbackTarget(group);
+  }
+
+  async openGroupFeedbackEditor(group) {
+    const target = groupFeedbackTarget(group);
+    if (!target) return { status: 'unavailable' };
+    const outcome = await this.openFeedbackEditor(target.targetId);
+    if (outcome.status === 'blocked-dirty') return outcome;
+    this.feedbackDraft = {
+      ...this.feedbackDraft,
+      targetType: 'group',
+      targetKind: target.kind,
+      targetLabel: target.label,
+    };
+    return { ...outcome, targetId: target.targetId };
   }
 
   activeDraftFor(bookId) {
@@ -373,13 +461,13 @@ export class PrivateAppStore {
       errorCode: null,
       validationCode: null,
     };
-    this.librarySession = mergeLibrarySessionState(this.librarySession, { draftDirty: true });
+    this.#replaceLibrarySession(mergeLibrarySessionState(this.librarySession, { draftDirty: true }));
     return this.feedbackDraft;
   }
 
   discardFeedbackDraft() {
     this.feedbackDraft = null;
-    this.librarySession = closeEditor(this.librarySession);
+    this.#replaceLibrarySession(closeEditor(this.librarySession));
   }
 
   clearFeedbackDraft() {
@@ -402,6 +490,9 @@ export class PrivateAppStore {
       const saved = await this.connectionApi.feedbackSave(this.feedbackDraft.bookId, validated, this.feedbackDraft.revision);
       this.feedbackByBookId.set(saved.bookId, saved);
       this.feedbackDraft = {
+        targetType: this.feedbackDraft.targetType,
+        targetKind: this.feedbackDraft.targetKind,
+        targetLabel: this.feedbackDraft.targetLabel,
         bookId: saved.bookId,
         revision: saved.revision,
         original: saved.record,
@@ -412,7 +503,7 @@ export class PrivateAppStore {
         errorCode: null,
         validationCode: null,
       };
-      this.librarySession = mergeLibrarySessionState(this.librarySession, { draftDirty: false });
+      this.#replaceLibrarySession(mergeLibrarySessionState(this.librarySession, { draftDirty: false }));
       return { ok: true, saved };
     } catch (error) {
       this.feedbackDraft = { ...this.feedbackDraft, saving: false, saved: false, errorCode: error.code ?? 'private-alpha-operation-failed' };
@@ -426,6 +517,9 @@ export class PrivateAppStore {
     this.feedbackByBookId.set(bookId, { bookId, record: null, revision: deleted.revision, generation: deleted.generation, deleted: true });
     if (this.feedbackDraft?.bookId === bookId) {
       this.feedbackDraft = {
+        targetType: this.feedbackDraft.targetType,
+        targetKind: this.feedbackDraft.targetKind,
+        targetLabel: this.feedbackDraft.targetLabel,
         bookId,
         revision: deleted.revision,
         original: null,
@@ -436,7 +530,7 @@ export class PrivateAppStore {
         errorCode: null,
         validationCode: null,
       };
-      this.librarySession = mergeLibrarySessionState(this.librarySession, { draftDirty: false });
+      this.#replaceLibrarySession(mergeLibrarySessionState(this.librarySession, { draftDirty: false }));
     }
     return deleted;
   }

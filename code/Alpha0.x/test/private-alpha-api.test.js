@@ -1,7 +1,7 @@
 /**
  * Loopback API perimeter tests (A2-WP015 / ATR-S015, ATR-S017).
  *
- * Everything here is synthetic: a fake service, a fake capability, an
+ * Everything here is synthetic: a fake service, a browser session, an
  * ephemeral port. No personal runtime file, connector process, or real
  * Audible path is touched.
  */
@@ -20,7 +20,7 @@ import {
   INVENTORY_ITEM_IDS,
 } from '../scripts/serve.js';
 import { deletionInventory } from '../src/store/export.js';
-import { LocalApiAuth, generateCapability, ROUTE_POLICY } from '../src/security/local-api-auth.js';
+import { LocalApiAuth, ROUTE_POLICY } from '../src/security/local-api-auth.js';
 import {
   ACCOUNT_QUARANTINE_CODE,
   PrivateAlphaServiceError,
@@ -108,6 +108,7 @@ function syntheticService(calls = [], { quarantined = false, exportDocument = nu
       return { itemCount: 0 };
     },
     feedbackStore: {
+      list: async () => [...feedback.values()],
       get: async (bookId) => { calls.push(['feedback:get', bookId]); return feedback.get(bookId) ?? { bookId, record: null, revision: 'rev-0-absent', generation: 0, deleted: false }; },
       save: async (bookId, payload, expectedRevision) => {
         calls.push(['feedback:save', bookId, payload, expectedRevision]);
@@ -144,38 +145,34 @@ function syntheticService(calls = [], { quarantined = false, exportDocument = nu
 
 async function startPrivateServer(t, options = {}) {
   const calls = [];
-  const capability = generateCapability();
-  const auth = new LocalApiAuth({ digest: capability.digest });
+  const auth = new LocalApiAuth();
   const server = createStaticServer({ privateAlphaService: syntheticService(calls, options), auth });
   const port = await listen(server);
   t.after(() => server.close());
-  return { calls, capability, auth, server, port };
+  return { calls, auth, server, port };
 }
 
-async function openSession(port, capability) {
+async function openSession(port) {
   const response = await request(port, '/api/v1/session', {
-    headers: browserHeaders(port, { Authorization: `ATnR-Capability ${capability.display}` }),
+    headers: browserHeaders(port),
   });
   assert.equal(response.status, 200);
   return response.value.session;
 }
 
-test('the private API may not exist without a capability verifier', () => {
+test('the private API may not exist without a session controller', () => {
   assert.throws(
     () => createStaticServer({ privateAlphaService: syntheticService() }),
-    /local-api-auth-required/,
+    /local-api-session-controller-required/,
   );
 });
 
-test('every /api/v1 route requires the per-start capability; nothing vends one', async (t) => {
-  const { capability, port } = await startPrivateServer(t);
-
-  // The bootstrap route itself is authenticated: an unauthenticated probe can
-  // learn that the private API exists, and nothing more.
+test('session bootstrap needs browser metadata and later routes need its session', async (t) => {
+  const { port } = await startPrivateServer(t);
   const probe = await request(port, '/api/v1/session', { headers: browserHeaders(port) });
-  assert.equal(probe.status, 401);
-  assert.equal(probe.value.error.code, 'local-api-capability-required');
-  assert.equal(probe.text.includes(capability.display), false);
+  assert.equal(probe.status, 200);
+  assert.match(probe.value.session.sessionId, /^[A-Za-z0-9_-]{20,}$/);
+  assert.match(probe.value.session.csrfToken, /^[A-Za-z0-9_-]{20,}$/);
 
   for (const [method, route] of [
     ['GET', '/api/v1/status'],
@@ -197,55 +194,20 @@ test('every /api/v1 route requires the per-start capability; nothing vends one',
       headers: browserHeaders(port, { 'Content-Type': 'application/json' }),
       body: method === 'POST' ? '{}' : '',
     });
-    assert.equal(denied.status, 401, `${method} ${route} was reachable without a capability`);
-    assert.equal(denied.value.error.code, 'local-api-capability-required');
+    assert.equal(denied.status, 401, `${method} ${route} was reachable without a session`);
+    assert.equal(denied.value.error.code, 'local-api-session-invalid');
   }
 
-  const session = await openSession(port, capability);
+  const session = await openSession(port);
   assert.match(session.sessionId, /^[A-Za-z0-9_-]{20,}$/);
   assert.match(session.csrfToken, /^[A-Za-z0-9_-]{20,}$/);
   assert.equal(session.contractVersion, 'atnr-local-api-1');
 });
 
-test('a forged capability is rejected, throttled, and finally locks out', async (t) => {
-  const { capability, auth, port } = await startPrivateServer(t);
-  let clock = 0;
-  auth.now = () => clock; // deterministic clock for the backoff assertions
-
-  const wrong = generateCapability().display;
-  const first = await request(port, '/api/v1/session', {
-    headers: browserHeaders(port, { Authorization: `ATnR-Capability ${wrong}` }),
-  });
-  assert.equal(first.status, 401);
-  assert.equal(first.value.error.code, 'local-api-capability-invalid');
-
-  // The throttle now applies even to the correct capability.
-  const throttled = await request(port, '/api/v1/session', {
-    headers: browserHeaders(port, { Authorization: `ATnR-Capability ${capability.display}` }),
-  });
-  assert.equal(throttled.status, 429);
-  assert.equal(throttled.value.error.code, 'local-api-throttled');
-
-  // Waiting out each doubling delay still ends in a terminal lock.
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    clock += 60_000;
-    await request(port, '/api/v1/session', {
-      headers: browserHeaders(port, { Authorization: `ATnR-Capability ${wrong}` }),
-    });
-  }
-  assert.equal(auth.locked, true);
-  clock += 60_000;
-  const locked = await request(port, '/api/v1/session', {
-    headers: browserHeaders(port, { Authorization: `ATnR-Capability ${capability.display}` }),
-  });
-  assert.equal(locked.status, 401);
-  assert.equal(locked.value.error.code, 'local-api-locked');
-});
-
 test('CSRF and fetch-metadata remain enforced as defence in depth', async (t) => {
   const { capability, port } = await startPrivateServer(t);
   const session = await openSession(port, capability);
-  const authed = { Authorization: `ATnR-Capability ${capability.display}` };
+  const authed = {};
 
   const noCsrf = await request(port, '/api/v1/sync', {
     method: 'POST',
@@ -295,7 +257,6 @@ test('lifecycle routes run with capability + session + CSRF', async (t) => {
   const { calls, capability, port } = await startPrivateServer(t);
   const session = await openSession(port, capability);
   const headers = browserHeaders(port, {
-    Authorization: `ATnR-Capability ${capability.display}`,
     'Content-Type': 'application/json',
     'X-ATnR-Session': session.sessionId,
     'X-ATnR-CSRF': session.csrfToken,
@@ -323,27 +284,19 @@ test('lifecycle routes run with capability + session + CSRF', async (t) => {
   assert.equal(unknown.value.error.code, 'api-route-not-found');
 });
 
-test('destructive routes require re-entered capability and a single-use nonce', async (t) => {
+test('destructive routes require a single-use session-bound nonce', async (t) => {
   const { calls, capability, port } = await startPrivateServer(t);
   const session = await openSession(port, capability);
   const base = browserHeaders(port, {
-    Authorization: `ATnR-Capability ${capability.display}`,
     'Content-Type': 'application/json',
     'X-ATnR-Session': session.sessionId,
     'X-ATnR-CSRF': session.csrfToken,
   });
-  const reauthed = { ...base, 'X-ATnR-Reauth': capability.display };
+  const reauthed = base;
 
-  // Without re-authentication the destructive route is refused.
-  const noReauth = await request(port, '/api/v1/delete-local', {
-    method: 'POST', headers: base, body: '{}',
-  });
-  assert.equal(noReauth.status, 401);
-  assert.equal(noReauth.value.error.code, 'local-api-reauth-required');
-
-  // With re-authentication but no confirmation nonce it is still refused.
+  // Without a confirmation nonce the destructive route is refused.
   const noNonce = await request(port, '/api/v1/delete-local', {
-    method: 'POST', headers: reauthed, body: '{}',
+    method: 'POST', headers: base, body: '{}',
   });
   assert.equal(noNonce.status, 409);
   assert.equal(noNonce.value.error.code, 'confirmation-required');
@@ -382,11 +335,9 @@ test('local deletion resolves the account join at the moment of erasure', async 
   const { calls, capability, port } = await startPrivateServer(t);
   const session = await openSession(port, capability);
   const reauthed = browserHeaders(port, {
-    Authorization: `ATnR-Capability ${capability.display}`,
     'Content-Type': 'application/json',
     'X-ATnR-Session': session.sessionId,
     'X-ATnR-CSRF': session.csrfToken,
-    'X-ATnR-Reauth': capability.display,
   });
   const issued = await request(port, '/api/v1/confirmation', {
     method: 'POST', headers: reauthed, body: JSON.stringify({ action: 'delete-local' }),
@@ -405,11 +356,9 @@ test('an account mismatch refuses deletion with a closed code and erases nothing
   const { calls, capability, port } = await startPrivateServer(t, { quarantined: true });
   const session = await openSession(port, capability);
   const reauthed = browserHeaders(port, {
-    Authorization: `ATnR-Capability ${capability.display}`,
     'Content-Type': 'application/json',
     'X-ATnR-Session': session.sessionId,
     'X-ATnR-CSRF': session.csrfToken,
-    'X-ATnR-Reauth': capability.display,
   });
   const issued = await request(port, '/api/v1/confirmation', {
     method: 'POST', headers: reauthed, body: JSON.stringify({ action: 'delete-local' }),
@@ -428,15 +377,13 @@ test('an account mismatch refuses deletion with a closed code and erases nothing
   assert.deepEqual(calls, [['delete:join-resolved']]);
 });
 
-/** Destructive-strength headers for an authenticated, re-authenticated session. */
-async function destructiveHeaders(port, capability) {
-  const session = await openSession(port, capability);
+/** Destructive-strength headers for an active browser session. */
+async function destructiveHeaders(port) {
+  const session = await openSession(port);
   return browserHeaders(port, {
-    Authorization: `ATnR-Capability ${capability.display}`,
     'Content-Type': 'application/json',
     'X-ATnR-Session': session.sessionId,
     'X-ATnR-CSRF': session.csrfToken,
-    'X-ATnR-Reauth': capability.display,
   });
 }
 
@@ -448,22 +395,21 @@ async function nonceFor(port, headers, action) {
   return issued.value.result.confirmation;
 }
 
-test('the deletion inventory is authenticated, closed and free of personal text', async (t) => {
+test('the deletion inventory requires a session and is closed and free of personal text', async (t) => {
   const { capability, port } = await startPrivateServer(t);
 
   const unauthenticated = await request(port, '/api/v1/inventory', { headers: browserHeaders(port) });
   assert.equal(unauthenticated.status, 401);
-  assert.equal(unauthenticated.value.error.code, 'local-api-capability-required');
+  assert.equal(unauthenticated.value.error.code, 'local-api-session-invalid');
 
   const session = await openSession(port, capability);
   const authed = browserHeaders(port, {
-    Authorization: `ATnR-Capability ${capability.display}`,
     'X-ATnR-Session': session.sessionId,
   });
 
-  // A live session is required: the capability alone is bootstrap-only.
+  // A live session is required after bootstrap.
   const noSession = await request(port, '/api/v1/inventory', {
-    headers: browserHeaders(port, { Authorization: `ATnR-Capability ${capability.display}` }),
+    headers: browserHeaders(port),
   });
   assert.equal(noSession.status, 401);
 
@@ -509,7 +455,6 @@ test('a widened or malformed inventory fails the response closed', async (t) => 
     const session = await openSession(port, capability);
     const response = await request(port, '/api/v1/inventory', {
       headers: browserHeaders(port, {
-        Authorization: `ATnR-Capability ${capability.display}`,
         'X-ATnR-Session': session.sessionId,
       }),
     });
@@ -520,21 +465,14 @@ test('a widened or malformed inventory fails the response closed', async (t) => 
   }
 });
 
-test('export is specified at destructive strength and never runs weakly', async (t) => {
+test('export requires a single-use confirmation nonce and never runs weakly', async (t) => {
   const { calls, capability, port } = await startPrivateServer(t);
   const reauthed = await destructiveHeaders(port, capability);
-  const base = { ...reauthed };
-  delete base['X-ATnR-Reauth'];
-
-  const noReauth = await request(port, '/api/v1/export', { method: 'POST', headers: base, body: '{}' });
-  assert.equal(noReauth.status, 401);
-  assert.equal(noReauth.value.error.code, 'local-api-reauth-required');
-
   const noNonce = await request(port, '/api/v1/export', { method: 'POST', headers: reauthed, body: '{}' });
   assert.equal(noNonce.status, 409);
   assert.equal(noNonce.value.error.code, 'confirmation-required');
 
-  // Nothing was exported by either refused attempt.
+  // Nothing was exported by the refused attempt.
   assert.deepEqual(calls, []);
 
   const confirmation = await nonceFor(port, reauthed, 'export');
@@ -581,8 +519,8 @@ test('an export is delivered as a bounded, non-renderable download', async (t) =
   assert.equal(Number(exported.headers['content-length']), Buffer.byteLength(exported.text));
   assert.ok(Buffer.byteLength(exported.text) <= MAX_EXPORT_RESPONSE_BYTES);
 
-  // No capability, session, CSRF or reauth material is echoed into the body.
-  for (const secret of [capability.display, reauthed['X-ATnR-Session'], reauthed['X-ATnR-CSRF'], confirmation]) {
+  // No session, CSRF, or confirmation material is echoed into the body.
+  for (const secret of [reauthed['X-ATnR-Session'], reauthed['X-ATnR-CSRF'], confirmation]) {
     assert.equal(exported.text.includes(secret), false);
   }
 });
@@ -702,7 +640,6 @@ test('control bodies are bounded and typed, and errors never describe themselves
   const { capability, port } = await startPrivateServer(t);
   const session = await openSession(port, capability);
   const headers = browserHeaders(port, {
-    Authorization: `ATnR-Capability ${capability.display}`,
     'Content-Type': 'application/json',
     'X-ATnR-Session': session.sessionId,
     'X-ATnR-CSRF': session.csrfToken,
@@ -733,12 +670,11 @@ test('control bodies are bounded and typed, and errors never describe themselves
 test('security events are recorded without any personal or request-derived text', async (t) => {
   const { capability, port, server } = await startPrivateServer(t);
   await openSession(port, capability);
-  await request(port, '/api/v1/session', { headers: browserHeaders(port) });
+  await request(port, '/api/v1/status', { headers: browserHeaders(port) });
 
   const records = server.securityEvents.list();
   assert.ok(records.length >= 2);
   const serialized = JSON.stringify(records);
-  assert.equal(serialized.includes(capability.display), false);
   for (const record of records) {
     assert.deepEqual(
       Object.keys(record).sort(),
@@ -764,15 +700,13 @@ test('synthetic server does not expose the private API', async (t) => {
 });
 
 
-test('feedback read and save use the session contract; deletion does not', async (t) => {
+test('feedback read and save use the session contract; deletion needs confirmation', async (t) => {
   const { calls, capability, port } = await startPrivateServer(t);
   const session = await openSession(port, capability);
   const getHeaders = browserHeaders(port, {
-    Authorization: `ATnR-Capability ${capability.display}`,
     'X-ATnR-Session': session.sessionId,
   });
   const writeHeaders = browserHeaders(port, {
-    Authorization: `ATnR-Capability ${capability.display}`,
     'Content-Type': 'application/json',
     'X-ATnR-Session': session.sessionId,
     'X-ATnR-CSRF': session.csrfToken,
@@ -793,27 +727,31 @@ test('feedback read and save use the session contract; deletion does not', async
   assert.equal(saved.status, 200);
   assert.equal(saved.value.result.record.overallRating, 4.5);
 
+  const listed = await request(port, '/api/v1/feedback', { headers: getHeaders });
+  assert.equal(listed.status, 200);
+  assert.equal(listed.value.result.length, 1);
+  assert.equal(listed.value.result[0].bookId, 'aud-us-book-one');
+
   // The old defect: a bare delete once passed on the sync route's policy.
   const bare = await request(port, '/api/v1/feedback/aud-us-book-one', {
     method: 'DELETE',
     headers: writeHeaders,
     body: JSON.stringify({ expectedRevision: 'rev-1' }),
   });
-  assert.equal(bare.status, 401);
-  assert.equal(bare.value.error.code, 'local-api-reauth-required');
+  assert.equal(bare.status, 409);
+  assert.equal(bare.value.error.code, 'confirmation-required');
   assert.equal(calls.some((entry) => entry[0] === 'feedback:delete'), false);
 });
 
-test('erasing a review demands reauth and a nonce bound to that record and revision', async (t) => {
+test('erasing a review demands a nonce bound to that record and revision', async (t) => {
   const { calls, capability, port } = await startPrivateServer(t);
   const session = await openSession(port, capability);
   const base = browserHeaders(port, {
-    Authorization: `ATnR-Capability ${capability.display}`,
     'Content-Type': 'application/json',
     'X-ATnR-Session': session.sessionId,
     'X-ATnR-CSRF': session.csrfToken,
   });
-  const reauthed = { ...base, 'X-ATnR-Reauth': capability.display };
+  const reauthed = base;
 
   await request(port, '/api/v1/feedback/aud-us-book-one', {
     method: 'PUT',
@@ -821,7 +759,7 @@ test('erasing a review demands reauth and a nonce bound to that record and revis
     body: JSON.stringify({ payload: { overallRating: 4.5 }, expectedRevision: 'rev-0-absent' }),
   });
 
-  // Re-authenticated but unconfirmed is still refused.
+  // An unconfirmed deletion is refused.
   const noNonce = await request(port, '/api/v1/feedback/aud-us-book-one', {
     method: 'DELETE',
     headers: reauthed,
@@ -890,9 +828,9 @@ test('erasing a review demands reauth and a nonce bound to that record and revis
 });
 
 test('a browser-realistic GET without an Origin header completes the bootstrap', async (t) => {
-  const { capability, port } = await startPrivateServer(t);
+  const { port } = await startPrivateServer(t);
   // Browsers omit Origin on same-origin safe requests. Requiring it here made
-  // the real unlock flow unreachable while adding no authority.
+  // normal browser bootstrap unreachable while adding no authority.
   const noOrigin = {
     Host: `127.0.0.1:${port}`,
     'Sec-Fetch-Site': 'same-origin',
@@ -902,18 +840,12 @@ test('a browser-realistic GET without an Origin header completes the bootstrap',
   };
 
   const probe = await request(port, '/api/v1/session', { headers: noOrigin });
-  assert.equal(probe.status, 401);
-  assert.equal(probe.value.error.code, 'local-api-capability-required');
-
-  const session = await request(port, '/api/v1/session', {
-    headers: { ...noOrigin, Authorization: `ATnR-Capability ${capability.display}` },
-  });
-  assert.equal(session.status, 200);
+  assert.equal(probe.status, 200);
+  const session = probe;
 
   const status = await request(port, '/api/v1/status', {
     headers: {
       ...noOrigin,
-      Authorization: `ATnR-Capability ${capability.display}`,
       'X-ATnR-Session': session.value.session.sessionId,
     },
   });
@@ -925,7 +857,6 @@ test('a browser-realistic GET without an Origin header completes the bootstrap',
     headers: {
       ...noOrigin,
       'Content-Type': 'application/json',
-      Authorization: `ATnR-Capability ${capability.display}`,
       'X-ATnR-Session': session.value.session.sessionId,
       'X-ATnR-CSRF': session.value.session.csrfToken,
     },
@@ -938,7 +869,6 @@ test('a browser-realistic GET without an Origin header completes the bootstrap',
     headers: {
       ...noOrigin,
       Referer: 'https://attacker.invalid/',
-      Authorization: `ATnR-Capability ${capability.display}`,
       'X-ATnR-Session': session.value.session.sessionId,
     },
   });
@@ -950,13 +880,12 @@ test('feedback route validation closes invalid ids, malformed bodies, and oversi
   const { capability, port } = await startPrivateServer(t);
   const session = await openSession(port, capability);
   const headers = browserHeaders(port, {
-    Authorization: `ATnR-Capability ${capability.display}`,
     'Content-Type': 'application/json',
     'X-ATnR-Session': session.sessionId,
     'X-ATnR-CSRF': session.csrfToken,
   });
 
-  const badId = await request(port, '/api/v1/feedback/not%20allowed', { headers: browserHeaders(port, { Authorization: `ATnR-Capability ${capability.display}`, 'X-ATnR-Session': session.sessionId }) });
+  const badId = await request(port, '/api/v1/feedback/not%20allowed', { headers: browserHeaders(port, { 'X-ATnR-Session': session.sessionId }) });
   assert.equal(badId.status, 400);
   assert.equal(badId.value.error.code, 'invalid-book-id');
 

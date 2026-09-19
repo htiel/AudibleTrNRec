@@ -18,11 +18,6 @@ export function renderBootstrapFailureView(root, { errorCode, message, currentHr
         class: 'lcars-btn lcars-btn-primary',
         text: 'Retry private alpha',
       }),
-      h('a', {
-        href: '#/data',
-        class: 'lcars-btn lcars-btn-secondary',
-        text: 'Read lifecycle notes',
-      }),
     ]),
   ]);
   mount(root, section);

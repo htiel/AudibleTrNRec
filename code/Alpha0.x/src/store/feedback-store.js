@@ -1,10 +1,10 @@
 /**
- * Encrypted, account/book-keyed private feedback persistence (ATR-S032).
+ * Encrypted, account/target-keyed private feedback persistence (ATR-S032).
  *
  * Guarantees:
  *  - ratings, comments, tags and their timestamps only ever exist on disk
  *    inside a sealed payload. The clear columns are the opaque account key,
- *    the canonical book id, the compare-and-swap generation, the revision
+ *    the canonical book or namespaced person target id, the compare-and-swap generation, the revision
  *    token and a deletion flag;
  *  - a save is acknowledged only after a durable commit. A crypto or storage
  *    failure rolls back and leaves the previously committed record intact;
@@ -18,6 +18,7 @@ import { randomBytes } from 'node:crypto';
 
 import {
   FEEDBACK_LIMITS,
+  ABSENT_REVISION,
   FeedbackError,
   buildFeedbackRecord,
   canonicalFeedback,
@@ -26,11 +27,10 @@ import {
 } from '../core/feedback.js';
 import { CRYPTO_ENVELOPE_VERSION, FEEDBACK_CONTRACT_VERSION } from '../version.js';
 
+export { ABSENT_REVISION } from '../core/feedback.js';
+
 const ACCOUNT_KEY_PATTERN = /^[a-f0-9]{64}$/;
 const BOOK_ID_PATTERN = /^[a-z0-9][a-z0-9._:-]{0,63}$/i;
-
-/** Revision token for a book that has no stored record at all. */
-export const ABSENT_REVISION = 'rev-0-absent';
 
 function issueRevision(generation) {
   return `rev-${generation}-${randomBytes(8).toString('hex')}`;

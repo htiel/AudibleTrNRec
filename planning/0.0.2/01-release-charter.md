@@ -7,6 +7,9 @@ conditions**; named-tester/public release remains NO-GO. See
 [11 — implementation verdict](11-implementation-release-verdict.md).
 The [planning consensus](09-review-consensus.md) remains historical; requirements
 below are retained, not blanket claims of completed gates or measured CTQs.
+The [2026-09-19 accumulated implementation record](12-accumulated-implementation.md)
+covers the later fixes and Settings/theme surface without retroactively granting
+design, security or release approval.
 
 **Date:** 2026-09-17
 
@@ -54,10 +57,15 @@ Captain's explicit decision.
 
 - **In:** inherited mandatory remediation; accessible LCARS refinement;
   encrypted local per-book overall/story/performance ratings, comments and
-  tags; explicit local authority and edit/delete; facets/filter preservation;
+  tags; encrypted author/narrator/series ratings, comments and tags from collapsed
+  group headings; explicit local authority and edit/delete; facets/filter preservation;
   export/deletion; automated tests; migration/recovery; gated source research.
+  Accumulated owner-use follow-ups include normalized contributor display
+  grouping, sidebar filters/fixed desktop rail, session-scoped filter state,
+  progressive whole-star controls, Settings and persistent LCARS/Liquid Glass
+  appearance. These do not add a native platform or source permission.
 - **Out:** recommendation generation or feedback on generated recommendations;
-  LLM/provider integration; author/narrator/genre/series rating editors;
+  LLM/provider integration; genre rating editors;
   public reviews/social features; cloud, multi-user, mobile-platform migration,
   public/commercial distribution; source library/progress/rating mutation;
   camera/barcode ingestion and Audible product-page handoff (future backlog).
@@ -99,26 +107,30 @@ Captain's explicit decision.
    clearance. Public/cloud/store/installer/package/binary/commercial shipping
    remains mechanically **NO-GO**. Do not bypass `private: true` or `prepack`.
 
-### Interim owner-only exposure controls — 2026-09-17
+### Interim owner-only exposure controls — updated 2026-09-18
 
-**Historical 0.0.1 exposure:** A001 (unauthenticated local API) and A002
-(executable substitution) were open at planning review. Scheduling S015/S016
-did not itself provide protection. The later 0.0.2 fixes and Worf's conditional
-owner acceptance are recorded in 11; do not apply this historical paragraph
-as a claim that the current code still vends unauthenticated capabilities.
-Worf C-1 requires a dated Captain decision explicitly accepting both risks for
-owner-only continued use, with these interim operating controls: private mode
-only while actively used, owner-controlled loopback-service shutdown when idle,
-a dedicated extension-free browser profile, and no untrusted local tooling on
-the host while it runs. These reduce exposure, not same-user compromise.
-The planning-stage record did not contain Captain acceptance; current Worf
-owner-use conditions are retained by 11 without inventing an earlier signature.
+**Owner-only local exposure:** A001 (same-user local API access) was explicitly
+accepted by the owner on 2026-09-18 for this dedicated prototype computer; the
+per-start manual unlock was removed. A002 (executable substitution) remains
+mitigated by the trusted-path and custody controls. The accepted operating
+controls are: private mode only while actively used, owner-controlled loopback
+service shutdown when idle, a dedicated browser profile, and no untrusted local
+tooling on the host while it runs. These reduce exposure, not same-user
+compromise. This acceptance does not extend to named testers, shared computers,
+native builds, hosting, or distribution.
 
-This is a proposed operating agreement for the Captain, **not authorization for
+This is the recorded owner-only operating exception, **not authorization for
 this documentation task to stop, disconnect, deregister or alter the app**.
-S014 records the decision and incident procedure; S015/S016 supply actual fixes
-and A2-T01/T03 evidence. No testers are cleared. See
+S014 records the decision and incident procedure; S015 retains browser-session,
+origin, CSRF and nonce controls while S016 retains trusted execution controls.
+No testers are cleared. See
 [RC-01 and open decisions](09-review-consensus.md#remaining-decisions-and-blockers).
+
+Browser preferences are a narrow exception to encrypted content custody:
+tab-scoped filters may contain private search/tag text in `sessionStorage`,
+with no secure-erasure guarantee; only the closed theme identifier persists in
+`localStorage`. Drafts and feedback are not stored there. Neither store grants
+provider access or replaces the encrypted feedback authority.
 
 ## Measurable CTQs
 

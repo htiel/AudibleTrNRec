@@ -92,8 +92,8 @@
 }
 
 .lcars-sidebar {
-  width: 12rem;
-  min-width: 9rem;
+  width: 18rem;
+  min-width: 15rem;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -143,19 +143,32 @@
   flex: 1;
   background: var(--lcars-accent-muted);
   margin: var(--lcars-space-4) 0;
-  border-radius: var(--lcars-radius-pill) 0 0 0;
+  padding: var(--lcars-space-3);
+  border-radius: 0 var(--lcars-radius-pill) var(--lcars-radius-pill) 0;
   min-height: 2rem;
+  min-width: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .lcars-main {
   flex: 1;
   min-width: 0;
   padding: var(--lcars-space-4) calc(var(--lcars-space-4) + env(safe-area-inset-right)) calc(var(--lcars-space-4) + env(safe-area-inset-bottom)) var(--lcars-space-4);
-  overflow-x: auto;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .lcars-main:focus {
   outline: none;
+}
+
+@media (min-width: 641px) {
+  .lcars-frame {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
 }
 
 @media (max-width: 640px) {
@@ -179,7 +192,14 @@
     flex: 1;
   }
   .lcars-sidebar-filler {
-    display: none;
+    width: 100%;
+    flex: 0 0 auto;
+    margin: 0;
+    border-radius: var(--lcars-space-2);
+    overflow: visible;
+  }
+  .lcars-main {
+    overflow: visible;
   }
   .lcars-elbow {
     width: var(--lcars-elbow-width-compact);

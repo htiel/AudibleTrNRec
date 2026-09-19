@@ -128,5 +128,26 @@ test('safe-area padding protects header, body, footer, and mobile sidebar from i
   assert.match(layout, /safe-area-inset-left/);
   assert.match(layout, /\.lcars-sidebar-filler\s*{[^}]*background:\s*var\(--lcars-accent-muted\)/s);
   const mobileBlock = layout.match(/@media \(max-width:\s*640px\)\s*{([\s\S]*?)\n}/)?.[1] ?? '';
-  assert.match(mobileBlock, /\.lcars-sidebar-filler\s*{\s*display:\s*none;?\s*}/);
+  assert.match(mobileBlock, /\.lcars-sidebar\s*{[^}]*safe-area-inset-right[^}]*safe-area-inset-left/s);
+  assert.match(mobileBlock, /\.lcars-sidebar-filler\s*{[^}]*width:\s*100%[^}]*overflow:\s*visible/s);
+});
+
+test('desktop locks the frame and scrolls the main pane without moving the sidebar', async () => {
+  const layout = await css('layout.css');
+  const desktopBlock = layout.match(/@media \(min-width:\s*641px\)\s*{([\s\S]*?)\n}/)?.[1] ?? '';
+  assert.match(desktopBlock, /\.lcars-frame\s*{[^}]*height:\s*100dvh[^}]*overflow:\s*hidden/s);
+  assert.match(layout, /\.lcars-main\s*{[^}]*overflow:\s*auto/s);
+  assert.match(layout, /\.lcars-sidebar-filler\s*{[^}]*overflow-y:\s*auto/s);
+});
+
+test('library controls mount in the gray sidebar in the requested order', async () => {
+  const index = await readFile(path.join(UI_ROOT, 'index.html'), 'utf8');
+  const library = await readFile(path.join(UI_ROOT, 'js', 'views', 'library-view.js'), 'utf8');
+  const app = await readFile(path.join(UI_ROOT, 'js', 'app.js'), 'utf8');
+  assert.match(index, /class="lcars-sidebar-filler"[^>]*>[\s\S]*id="library-sidebar-controls"/);
+  assert.match(app, /renderLibraryView\(viewRoot, store, \{ controlsRoot: librarySidebarControls \}\)/);
+  const grouping = library.indexOf("text: 'Grouping and order'");
+  const status = library.indexOf('statusFieldset,');
+  const text = library.indexOf("text: 'Text filters'");
+  assert.ok(grouping >= 0 && status > grouping && text > status);
 });

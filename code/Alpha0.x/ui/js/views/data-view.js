@@ -142,7 +142,7 @@ function renderPrivateAlphaDataView(root, store) {
     const inventory = await store.connectionApi.deletionInventory();
     const confirmed = await confirmAction({
       title: 'Delete all local library and feedback data?',
-      message: `${describeDeletionInventory(inventory)}\n\nThis cannot be undone. You will need to unlock ATnR again afterwards.`,
+      message: `${describeDeletionInventory(inventory)}\n\nThis cannot be undone. Your current session will end and the page will reload.`,
       confirmLabel: 'Delete library and feedback',
     });
     if (!confirmed) return;

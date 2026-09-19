@@ -1,7 +1,10 @@
 # Alpha 0.0.2 — evidence harness and private Audible connector
 
-Read-only LCARS evidence inspector, platform-neutral domain contracts, and
-executable tests for Audible Track and Recommend.
+Private library/feedback prototype, separate read-only synthetic evidence
+inspector, platform-neutral domain contracts, and executable tests.
+See the [root changelog](../../CHANGELOG.md) and
+[accumulated implementation record](../../planning/0.0.2/12-accumulated-implementation.md)
+for current working-tree behavior, evidence and release restrictions.
 
 **Default mode:** a self-contained, zero-npm-dependency Node.js ESM core,
 loopback server, and browser UI exercised entirely against invented fixtures.
@@ -12,6 +15,64 @@ Amazon-controlled Edge page. Provider credentials remain in the isolated
 Python process and are sealed with user-scoped Windows DPAPI. Node receives
 normalized library data only and stores a DPAPI-encrypted snapshot blob in
 SQLite outside the repository.
+
+Private feedback supports separate book, author, narrator, and series targets.
+Author, narrator, and known-series groups retain a Rate & Review action while
+collapsed; group ratings/comments remain encrypted locally and are never
+copied onto grouped books.
+
+Rating editors use a compact five-circle whole-star meter rather than
+half-step dropdowns. Choosing circle 3 fills circles 1–3; the underlying
+controls retain native radio semantics and exact spoken labels. Clear restores
+Unrated. Legacy stored half-star values remain readable and unchanged until
+the owner deliberately selects a new whole-star value.
+
+The Library's last valid grouping, sort, Status, rating, text/tag filters, and
+collapsed groups survive a page refresh in tab-scoped `sessionStorage`. Search
+and tag text never enters the URL or long-lived `localStorage`, and the saved
+control state is scoped to that browser tab/session. Browser session restoration
+can retain it; tab closure is not secure erasure. This storage can contain private
+queries/tags and is not DPAPI-encrypted. Open editors, unsaved feedback, focus,
+and scroll position are never serialized.
+
+Author/narrator display groups combine normalized equal names and deduplicate
+books while retaining all source person IDs. This is presentation grouping, not
+proof of a shared canonical identity; multi-source groups disclose that fact.
+Series grouping remains ID-based. Display-hash group targets do not
+automatically migrate older person-target feedback when group membership changes.
+
+Library filters live in the sidebar. Above 640 CSS px the desktop frame keeps
+the navigation rail/header/footer stationary while main content and filter
+contents scroll independently; narrower screens return to document flow.
+Native disclosure semantics, explicit chevrons, focus-without-scroll, wrapping,
+safe-area and primary target-size fixes have automated regression guards.
+
+### Settings and appearance
+
+Open **Settings** (`#/settings`) from the header gear or sidebar. Both modes
+offer default **LCARS** and opt-in **Liquid Glass**. Selection applies immediately
+and stores only `lcars` or `liquid-glass` in `localStorage` at
+`atnr:ui-theme:v1`, surviving restart for the same browser origin/profile.
+It does not store library data or change the Audible connection.
+
+Missing preference defaults to LCARS; invalid/unavailable storage fails to the
+default on load. If saving fails, Settings reports that the appearance changed
+for this visit but could not be remembered.
+
+The web theme uses this project's CSS translucency, backdrop blur, rounded
+surfaces and local system fonts. Apple's iOS 27/iPadOS 27 resource listing and
+Materials guidance are the [verified design references](../../planning/0.0.2/12-accumulated-implementation.md#apple-design-resource-provenance-and-native-limits),
+not bundled artwork, SDKs or an endorsement. CSS cannot reproduce native
+refraction, Dynamic Type or direct OS accessibility integration.
+
+#### Residual limitations
+
+- A brief LCARS flash is possible before the theme module executes.
+- CSS reduced-transparency/contrast features depend on browser support.
+  Source/fake-DOM tests are not measured contrast, physical Safari/VoiceOver or
+  rendered keyboard/touch evidence for either theme.
+- Browser preferences are separate from encrypted library/feedback custody;
+  local data deletion is not a claim to purge browser storage or restored tabs.
 
 This remains an architecture experiment, not a final platform decision. The
 connector is unofficial and reverse-engineered. Commercial/public shipping,
@@ -67,7 +128,7 @@ Synthetic fixtures are test material; they are never presented as a library.
   (`%LOCALAPPDATA%\ATnR\Alpha0.0.1\private-alpha`). A failure prints a fixed
   reason code and stops startup — it never degrades to a demo library.
 - A private session cannot fetch `src/fixtures/**`; the server answers `403`.
-- The authenticated bootstrap declares `{ dataSource: 'local-encrypted',
+- The session bootstrap declares `{ dataSource: 'local-encrypted',
   synthetic: false }`, and the browser client refuses any session that does not.
 - An *empty* real library is reported honestly as empty. Empty is a fact; it is
   never a reason to seed demo data.
@@ -107,38 +168,31 @@ Synthetic fixtures are test material; they are never presented as a library.
 > `planning/0.0.2/10-runtime-data-requirement.md`. The synthetic build
 > (`npm run serve`) is unaffected.
 
-### Unlocking the local API
+### Owner-only loopback session
 
-Every `/api/v1` route — including session bootstrap — requires a 256-bit
-capability that is generated fresh on each server start and never written to
-disk, a URL, a log line, an environment variable, or the served page. On start,
-the launcher opens a small **ATnR local unlock** window containing the code.
-Enter it in the browser tab when prompted.
+The project owner explicitly removed the 0.0.2 per-start manual unlock on
+2026-09-18. This private prototype runs only on the owner's dedicated test
+computer, is bound to `127.0.0.1`, and is not approved for release or use on a
+shared/untrusted machine. Same-user local processes are therefore inside the
+accepted prototype trust boundary. This decision does not change Audible
+authorization: **Connect Audible in Edge** still opens Amazon's browser flow
+and registers the device, while **Sync now** uses that encrypted authorization.
 
-- The prompt is local-only and never asks for an Amazon credential of any kind.
-- The server does not begin listening until the unlock window reports, through
-  a fixed readiness token, that it is actually on screen. A display that fails
-  to construct, exits early, or never appears stops startup instead of leaving
-  the private API behind a code nobody can read. The readiness handshake
-  carries no capability material, and the display's stderr is discarded rather
-  than surfaced so a PowerShell error can never echo the code.
-- Five wrong entries lock the API for that server run; restart to obtain a new
-  capability. There is no HTTP endpoint that vends, resets, or recovers one.
+- `GET /api/v1/session` creates a bounded in-memory browser session without
+  asking for a local key. Other API routes require that session.
+- Host, same-origin fetch metadata, Origin/Referer checks, and CSRF protection
+  remain enforced. These reduce browser-origin attacks but do not authenticate
+  another process running as the same Windows user.
 - **Disconnect**, **Delete local library snapshot**, **Delete all local ATnR
-  data**, **Export my data** and **erasing a saved review** each require the
-  capability to be re-entered — on the confirmation request *and* on the
-  destructive request itself — and consume a single-use confirmation nonce that
-  expires in 120 seconds. Export is deliberately specified at destructive
-  strength: it is a complete copy of private history leaving the protected
-  store. A review-deletion nonce is bound to that one book and that one
-  revision, so it cannot be redirected to another title or replayed after the
-  record changes.
+  data**, **Export my data**, and **erasing a saved review** retain single-use
+  confirmation nonces that expire in 120 seconds. Export remains destructive
+  strength because it copies private history. A review-deletion nonce remains
+  bound to the specific book and revision.
 - Each of those actions carries its **own** nonce action, and a nonce is never
   transferable between them. Confirming "delete the snapshot" is not consent to
   erase private reviews, and an export nonce cannot delete anything.
 - A nonce can only be spent by a route that can actually act. A route policy
-  without a handler is refused before the nonce is consumed, so a re-entered
-  capability is never burned on an action that then silently does not happen.
+  without a handler is refused before the nonce is consumed.
 
 **Export and deletion.**
 
@@ -158,13 +212,12 @@ Enter it in the browser tab when prompted.
   including that a copy they already exported is outside this application
   entirely, that deleting a row is not cryptographic erasure, and that local
   deletion does not deregister the provider device. Only then does an explicit
-  confirmation, a re-entered capability and a single-use nonce perform the
-  purge.
+  confirmation and a single-use nonce perform the purge.
 - **If the inventory cannot be loaded, the purge is blocked.** A destructive
   confirmation is never presented over a guess: the load is awaited, so a
   failure stops the flow before any prompt appears and no purge is attempted.
-- `GET /api/v1/inventory` is read strength — capability plus a live session,
-  no nonce, because it is what the owner reads *in order to* consent. Its
+- `GET /api/v1/inventory` is read strength — a live session and no nonce,
+  because it is what the owner reads *in order to* consent. Its
   response is narrowed to a closed, bounded vocabulary of fixed item
   identifiers, booleans, bounded counts and fixed limitation statements. An
   unknown item identifier or an out-of-range count fails the response closed
@@ -225,18 +278,16 @@ src/core/library.js     evidence-inspector projection: sorting, filtering, facet
 src/core/contract.js    closed evidence/ExplainabilityTrace contract validator (NOT a recommender)
 src/fixtures/synthetic.js          synthetic catalog, snapshots, local sentinels, adversarial records
 src/fixtures/contract-fixtures.js  synthetic trace candidates + 26 adversarial rejection fixtures
-scripts/serve.js        dependency-free loopback static server for ui/ (no persistence or outbound requests)
+scripts/serve.js        loopback static server; opt-in private API composes persistence/connector
 scripts/supported-runtime.js      Node/`node:sqlite` preflight; private mode refuses an unsupported runtime
-scripts/local-capability-bootstrap.js  launcher-owned transient unlock display + recorded delivery decision
 scripts/private-alpha-runtime.js  opt-in local connector/runtime composition
 scripts/private-alpha-policy.js   hard private/non-commercial shipping gate + dependency provenance guard
 scripts/setup-connector.js        trusted-interpreter, hash-pinned connector environment setup
 scripts/record-dependency-hashes.py  records one index-attested artifact hash per pin from pypi.org
-src/security/local-api-auth.js    per-start capability, sessions, CSRF, confirmation nonces, route policy
+src/security/local-api-auth.js    browser sessions, CSRF, confirmation nonces, route policy
 src/security/runtime-data-source.js  real-encrypted-state runtime contract + custody containment
 src/security/security-events.js   bounded, memory-only, privacy-safe local security events
 src/security/trusted-paths.js     absolute trusted executable resolution + minimal spawn environment
-ui/js/security/local-unlock.js    accessible local unlock prompt (never an Amazon credential prompt)
 connector/dependency-provenance.json  approved index, required install flags, manifest digests, residuals
 connector/                        isolated Python Audible adapter, DPAPI custody, lockfile, tests, notices
 src/adapters/connector-process.js fixed-command stdio boundary; no credential fields
@@ -247,7 +298,7 @@ src/store/encrypted-snapshot-store.js local SQLite containing only a DPAPI-seale
 src/store/schema.js               frozen persisted schema revisions and fingerprints
 src/store/migration.js            explicit versioned migration, verification, backup and rollback
 src/store/production-migration.js read-only probe, pure plan, and fail-closed real-state entry point
-src/store/feedback-store.js       encrypted account/book-keyed private reviews (CAS, tombstones)
+src/store/feedback-store.js       encrypted account/target-keyed private reviews (CAS, tombstones)
 src/store/local-sealer.js         connector-backed custody for locally owned records
 src/store/export.js               complete portable export document + deletion inventory
 src/sync/live-snapshot.js         closed validation of normalized Audible snapshots
@@ -303,7 +354,7 @@ merge report.
 |----|-----|-------|
 | H1 | Malformed URL (bad percent-encoding, NUL) returns a fixed `400 Bad request` with no error detail; internal failures return a bare `Internal error`. | `scripts/serve.js` |
 | H2 | `realpath()` symlink containment plus a separator-safe `isContained()` check, so `ui-secrets/` cannot pass a `ui` prefix test and a symlink cannot escape the served root. Non-files 404. | `scripts/serve.js` |
-| H3 | `SECURITY_HEADERS` on **every** response including errors: CSP (`default-src 'none'`, `connect-src 'none'`, `frame-ancestors 'none'`), `nosniff`, `no-referrer`, CORP/COOP `same-origin`, `permissions-policy`, `no-store`; plus a loopback-only `Host` allowlist (403 otherwise) against DNS rebinding. | `scripts/serve.js` |
+| H3 | `SECURITY_HEADERS` on **every** response including errors: restrictive CSP (`default-src 'none'`, `frame-ancestors 'none'`; private mode permits same-origin API connections), `nosniff`, `no-referrer`, CORP/COOP `same-origin`, `permissions-policy`, `no-store`; plus a loopback-only `Host` allowlist (403 otherwise) against DNS rebinding. | `scripts/serve.js` |
 | H4 | `Object.hasOwn(routes, name)` so `constructor`/`toString`/`__proto__` route names fall back to the default route. | `ui/js/router.js` |
 | H5 | `sharedFacetTrace()` returns `{ edges, shown, total, limit, truncated }`; the feasibility view discloses the cap instead of silently dropping edges. | `ui/js/store.js`, `ui/js/views/feasibility-view.js` |
 | H6 | `ROUTE_POLICY` states in code that the route allowlist is **schema admissibility only** (`grantsAuthorization: false`, `provesLawfulAccess: false`, `isAccessControl: false`). It is not authorization and must never be cited as such. | `src/core/trust.js` |
@@ -345,16 +396,11 @@ Still required:
   the first successful hash-verified install closes this;
 - **a full `pip-audit` run** — the tool is not installed and cannot be
   installed here for the same reason;
-- **live proof of CP-02**: the per-start local unlock design is now ratified
-  (2026-09-17) on the owner's explicit authorization to build 0.0.2, and the
-  rejected alternatives (token file, short PIN, QR/URL, automatic injection,
-  HTTP vending) remain rejected in `scripts/local-capability-bootstrap.js`.
-  Ratification is a design decision, not evidence: `liveProof` is still
-  `false` and the recorded `remainingEvidence` items must be observed on a
-  real launch;
-- **interim exposure**: any 0.0.1 server started before this change served an
-  unauthenticated local API. Restart under 0.0.2 before further use, and treat
-  a machine shared with another interactive user as out of scope;
+- **accepted owner-only local exposure**: on 2026-09-18 the owner removed the
+  manual local unlock for this dedicated prototype computer. Any process
+  running as the same Windows user can obtain a browser session and reach
+  private API operations. Keep the server stopped when idle; do not use this
+  build on a shared or untrusted machine; do not convey it to testers;
 - a witnessed persistent real-account connect, restart, automatic refresh, and
   explicit disconnect/reconnect drill;
 - packet-level destination evidence and measured request/byte/runtime ceilings;
@@ -367,12 +413,11 @@ Still required:
 
 ### Alpha 0.0.2 security foundation (S015–S020, S036)
 
-- `src/security/local-api-auth.js` — per-start 256-bit capability, digest-only
-  storage, constant-time verification, bounded failures with a terminal lock,
-  bounded sessions with CSRF, and single-use confirmation nonces bound to
-  action, resource, session and account generation. `ROUTE_POLICY` is a closed
-  table in which read, export and destructive routes all require the same
-  capability authority. Erasing a private review is classified destructive in
+- `src/security/local-api-auth.js` — bounded in-memory browser sessions with
+  CSRF and single-use confirmation nonces bound to action, resource, session
+  and account generation. `ROUTE_POLICY` is a closed table. This owner-only
+  prototype deliberately does not authenticate same-user local processes.
+  Erasing a private review is classified destructive in
   its own right — it never borrows the policy of a lifecycle route — and its
   nonce is resource-bound to the book and revision the owner confirmed. Export
   and the aggregate purge each carry their own action, so no confirmation is
@@ -413,6 +458,23 @@ Still required:
   private root, resolved after the root's ACL is verified.
 
 ## Current verification
+
+**Latest executed working-tree checks — 2026-09-19:** Node v24.18.0:
+`npm test` **487 total / 486 pass / 0 fail / 1 skip**; Python 3.13.15 in the
+existing venv: `npm run connector:test` **98 total / 96 pass / 0 fail / 2 skip**;
+`npm run policy:check` **PASS**, with both unapproved source artifacts still
+blocking fresh installation. Skips are symlink controls, not passing evidence.
+No live account, private-state operation or new rendered-browser run was used.
+The [evidence record](../../planning/0.0.2/12-accumulated-implementation.md#executed-evidence-and-limitations)
+distinguishes current checks from earlier supplied results below.
+
+The blank-page regression is fixed by importing the feedback sentinel from the
+browser-safe core instead of Node persistence. Routing starts before a single
+bulk `GET /api/v1/feedback` hydration request; failures show a focusable refusal.
+Module-graph, bulk-feedback, group-target, filter-persistence, rating, Settings
+and theme tests guard those behaviors without claiming native/device proof.
+
+### Historical workstream evidence
 
 Alpha 0.0.2 data/sync/persistence foundation, verified on Windows 11 on
 2026-09-17 (data workstream):
@@ -486,13 +548,10 @@ Alpha 0.0.2 security foundation, verified on Windows 11 on 2026-09-17:
   verified with synthetic payloads and an in-memory stand-in custodian only.
   No connector process was launched, no DPAPI operation was performed and no
   personal record was sealed, opened or read.
-- Three integration defects found by independent review are fixed and covered
-  by regression tests: a same-origin `GET` bootstrap no longer requires an
-  `Origin` header browsers do not send; review deletion has its own destructive
-  policy with a record- and revision-bound nonce instead of borrowing the sync
-  route's; and the client now re-authenticates the destructive request itself,
-  not only the nonce issuance, releasing the re-entered capability in a
-  `finally` block.
+- The same-origin `GET` bootstrap accepts the browser's normal omission of an
+  `Origin` header, while mutations still require an exact origin. Review
+  deletion has its own destructive policy with a record- and revision-bound
+  nonce instead of borrowing the sync route's policy.
 - Runtime data-source and custody-boundary controls verified with temporary
   directories and synthetic paths only. No personal custody root was created,
   read, hardened or deleted; no sync, disconnect or delete was invoked; no
@@ -506,23 +565,22 @@ Alpha 0.0.2 security foundation, verified on Windows 11 on 2026-09-17:
   verification outstanding; the active `.venv` was not modified. `pip check`
   reported no broken requirements, and an OSV.dev query across all 21 pins
   returned zero advisories.
-- Four must-fixes from the final security review are implemented and covered by
+- Three retained must-fixes from the final security review are implemented and covered by
   regression tests (`test/final-review-fixes.test.js`,
   `connector/test/test_envelope_purpose.py`): the OS custody proof now precedes
   any rollback write or migration through a `verify_custody` RPC and a
   `CustodyProofGate`; sealed envelopes are purpose-bound so the snapshot route
-  cannot decrypt a private review, refusing before the protector is called; the
-  local unlock display must report a fixed readiness token before the server
-  listens; and `TEMP`/`TMP` are no longer forwarded to the connector child
+  cannot decrypt a private review, refusing before the protector is called; and
+  `TEMP`/`TMP` are no longer forwarded to the connector child
   process. Every assertion uses temporary directories and stand-in protectors.
   The connector was not launched, no DPAPI call was made and no real custody
   root was touched.
 - Lifecycle HTTP surfaces (`POST /api/v1/export`, `POST /api/v1/delete-all`)
-  verified against a stand-in service with synthetic documents only: auth,
-  reauth, nonce issuance, cross-action nonce refusal, replay refusal, account
+  verified against a stand-in service with synthetic documents only: browser
+  sessions, nonce issuance, cross-action nonce refusal, replay refusal, account
   mismatch with zero erasures, download headers, the size ceiling, and a closed
   error for an internal export failure. No export was written, no deletion was
-  performed against stored data, and no capability, session, CSRF or nonce
+  performed against stored data, and no session, CSRF or nonce
   value appears in an export body.
 - Informed-consent deletion flow (`test/deletion-consent.test.js`): the
   inventory route is authenticated and read-strength, its response is closed
@@ -530,17 +588,17 @@ Alpha 0.0.2 security foundation, verified on Windows 11 on 2026-09-17:
   states the limitations including exported copies, and a failed inventory load
   blocks the purge without prompting or erasing. Route policy and handler
   tables are asserted to be in exact parity. Connector-owned artifacts are
-  reported as `unknown` rather than flattened to "not retained": this screen
-  cannot observe them, and a false reassurance about credentials would be
-  worse than admitting ignorance.
+  observed through the adapter's narrowed `local_artifact_inventory` reply.
+  If that capability is unavailable or fails, they remain `unknown`, not
+  falsely reported as "not retained".
 - Lifecycle binding invalidation (`test/lifecycle-bindings.test.js`) is wired
   after every successful mutation and before its response, with deliberately
   asymmetric strength:
   - A successful connect, disconnect or complete deletion calls
     `invalidateBindings()`. The account generation advances, every session and
-    every outstanding confirmation is dropped, and the owner re-unlocks. A
-    nonce issued against the previous account or state generation cannot be
-    spent against the next one.
+    every outstanding confirmation is dropped, and the reloaded page obtains a
+    fresh session. A nonce issued against the previous account or state
+    generation cannot be spent against the next one.
   - A successful snapshot deletion or review deletion calls
     `invalidateConfirmations()`. Outstanding nonces are dropped; the session
     survives. These transitions change what a pending confirmation refers to
@@ -549,11 +607,10 @@ Alpha 0.0.2 security foundation, verified on Windows 11 on 2026-09-17:
     the account join first and refuses a mismatch with
     `different-account-local-data-exists` rather than importing it, so a sync
     cannot change account identity. Dropping the session every fifteen minutes
-    would train the owner to dismiss the unlock prompt, which is a worse
-    outcome than the risk it would remove.
+    would interrupt the owner without improving account isolation.
   Review nonces remain bound to record and revision, so ordinary editing is
   unaffected. The client reports an invalidated binding truthfully and asks the
-  owner to unlock again instead of silently retrying.
+  owner to reload for a fresh session instead of silently retrying.
 - The complete-deletion control is labelled "Delete library and feedback data",
   not "delete everything". Provider credentials, the local identity seed and
   the Audible device registration survive it; only a confirmed Disconnect
@@ -636,7 +693,7 @@ is restricted to:
   delete (irreversibly erases all in-memory synthetic state); and export
   (a versioned JSON snapshot of the current in-memory state only).
 
-Explicitly **out of scope** for this alpha, and removed from an earlier draft
+Explicitly **out of scope for the synthetic inspector**, and removed from an earlier draft
 of this UI during a scope correction: editable book/facet ratings, comments,
 tags, or favorites; any recommendation, ranking, or feedback surface; and the
 future DIRECT_MATCH/EXPLORATORY/PERSPECTIVE_BROADENING trust-contract
@@ -659,9 +716,9 @@ condensed system-font stack approximates it instead.
 ## Design rules under test
 
 - **Authority split.** Imported progress lives in library entries. There is no
-  local annotation store in this alpha; inert `SYNTHETIC_LOCAL_SENTINELS`
-  fixtures prove `mergeLibrarySnapshot` has no parameter or code path that can
-  write, delete, or repoint locally owned records.
+  source-sync authority over the private alpha's encrypted annotation store;
+  inert `SYNTHETIC_LOCAL_SENTINELS` fixtures additionally prove
+  `mergeLibrarySnapshot` cannot write, delete, or repoint local records.
 - **Commercial exclusion by construction.** Commercial fields are stripped at
   ingestion, the evidence projection is an allowlist (`toScoringView`), the
   evidence *route* is allowlisted (`assertAllowedRoute`), source ordinal and
@@ -681,6 +738,10 @@ condensed system-font stack approximates it instead.
   in both directions, and never satisfies a threshold filter.
 
 ## Charter traceability (locked alpha 0.0.1 scope)
+
+Historical scope-correction record only: its “no feedback store/API” and
+unchanged-UI statements describe 0.0.1, not the current private 0.0.2 runtime.
+Current 0.0.2 behavior and evidence are documented above.
 
 | Charter item | How this core complies |
 |---|---|

@@ -11,13 +11,13 @@
  *
  *   - connect / disconnect / delete-all change *whose* data this is, or remove
  *     the state every authorization was granted against. They drop sessions
- *     and nonces: the owner re-unlocks.
+ *     and nonces: the browser obtains a fresh session after reload.
  *   - snapshot deletion and review deletion change protected state without
  *     changing account identity. They drop outstanding nonces only. Logging the
  *     owner out for erasing their own snapshot would be disproportionate.
  *   - a routine scheduled sync drops nothing. It cannot change account
  *     identity — the service refuses a mismatch rather than importing it — and
- *     a capability prompt every fifteen minutes trains the owner to dismiss it.
+ *     routine sync must not invalidate the browser session.
  */
 
 import test from 'node:test';
@@ -25,7 +25,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 
 import { createStaticServer } from '../scripts/serve.js';
-import { LocalApiAuth, generateCapability } from '../src/security/local-api-auth.js';
+import { LocalApiAuth } from '../src/security/local-api-auth.js';
 import { ConnectionApi } from '../ui/js/connection-api.js';
 import { EVENT_OUTCOMES } from '../src/security/security-events.js';
 
@@ -84,26 +84,23 @@ function lifecycleService() {
 }
 
 async function startServer(t) {
-  const capability = generateCapability();
-  const auth = new LocalApiAuth({ digest: capability.digest });
+  const auth = new LocalApiAuth();
   const server = createStaticServer({ privateAlphaService: lifecycleService(), auth });
   const port = await listen(server);
   t.after(() => server.close());
-  return { auth, capability, port };
+  return { auth, port };
 }
 
-async function openSession(port, capability) {
+async function openSession(port) {
   const response = await request(port, '/api/v1/session', {
-    headers: browserHeaders(port, { Authorization: `ATnR-Capability ${capability.display}` }),
+    headers: browserHeaders(port),
   });
   assert.equal(response.status, 200);
   const session = response.value.session;
   return browserHeaders(port, {
-    Authorization: `ATnR-Capability ${capability.display}`,
     'Content-Type': 'application/json',
     'X-ATnR-Session': session.sessionId,
     'X-ATnR-CSRF': session.csrfToken,
-    'X-ATnR-Reauth': capability.display,
   });
 }
 
@@ -123,8 +120,8 @@ for (const [label, route, action] of [
   ['delete-all', '/api/v1/delete-all', 'delete-all'],
 ]) {
   test(`a successful ${label} invalidates every session and outstanding nonce`, async (t) => {
-    const { auth, capability, port } = await startServer(t);
-    const headers = await openSession(port, capability);
+    const { auth, port } = await startServer(t);
+    const headers = await openSession(port);
 
     // An export nonce is outstanding across the transition.
     const strayNonce = await issueNonce(port, headers, 'export');
@@ -149,7 +146,7 @@ for (const [label, route, action] of [
     assert.equal(afterRead.value.error.code, 'local-api-session-invalid');
 
     // The stray nonce cannot cross the generation, even with a fresh session.
-    const renewed = await openSession(port, capability);
+    const renewed = await openSession(port);
     const replayed = await request(port, '/api/v1/export', {
       method: 'POST', headers: renewed, body: JSON.stringify({ confirmation: strayNonce }),
     });
@@ -159,8 +156,8 @@ for (const [label, route, action] of [
 }
 
 test('snapshot deletion drops outstanding nonces but does not log the owner out', async (t) => {
-  const { auth, capability, port } = await startServer(t);
-  const headers = await openSession(port, capability);
+  const { auth, port } = await startServer(t);
+  const headers = await openSession(port);
 
   const strayNonce = await issueNonce(port, headers, 'export');
   const generationBefore = auth.accountGeneration;
@@ -187,8 +184,8 @@ test('snapshot deletion drops outstanding nonces but does not log the owner out'
 });
 
 test('erasing a review drops outstanding nonces and keeps the session', async (t) => {
-  const { auth, capability, port } = await startServer(t);
-  const headers = await openSession(port, capability);
+  const { auth, port } = await startServer(t);
+  const headers = await openSession(port);
 
   const strayNonce = await issueNonce(port, headers, 'export');
   const nonce = await issueNonce(port, headers, 'delete-feedback', 'aud-us-book-one:rev-1');
@@ -205,9 +202,9 @@ test('erasing a review drops outstanding nonces and keeps the session', async (t
   assert.equal(replayed.status, 409);
 });
 
-test('a routine sync changes no binding and never forces a re-unlock', async (t) => {
-  const { auth, capability, port } = await startServer(t);
-  const headers = await openSession(port, capability);
+test('a routine sync changes no binding and keeps the session', async (t) => {
+  const { auth, port } = await startServer(t);
+  const headers = await openSession(port);
 
   const nonce = await issueNonce(port, headers, 'export');
   const generationBefore = auth.accountGeneration;
@@ -217,8 +214,7 @@ test('a routine sync changes no binding and never forces a re-unlock', async (t)
     assert.equal(synced.status, 200);
   }
 
-  // Scheduled background work must not drop the owner's session; a capability
-  // prompt every fifteen minutes is a prompt nobody reads.
+  // Scheduled background work must not drop the owner's browser session.
   assert.equal(auth.accountGeneration, generationBefore);
   assert.equal(auth.activeSessions, 1);
   assert.equal(auth.pendingConfirmations, 1);
@@ -231,8 +227,8 @@ test('a routine sync changes no binding and never forces a re-unlock', async (t)
 });
 
 test('an export does not invalidate anything: reading is not a state change', async (t) => {
-  const { auth, capability, port } = await startServer(t);
-  const headers = await openSession(port, capability);
+  const { auth, port } = await startServer(t);
+  const headers = await openSession(port);
 
   const first = await issueNonce(port, headers, 'export');
   const second = await issueNonce(port, headers, 'delete-local');
@@ -250,8 +246,7 @@ test('an export does not invalidate anything: reading is not a state change', as
 });
 
 test('invalidateConfirmations spares sessions; invalidateBindings does not', () => {
-  const capability = generateCapability();
-  const auth = new LocalApiAuth({ digest: capability.digest });
+  const auth = new LocalApiAuth();
   const session = auth.createSession();
   auth.issueConfirmation({ action: 'export', sessionId: session.sessionId });
   assert.equal(auth.activeSessions, 1);
@@ -295,10 +290,8 @@ test('the client discards a session the server invalidated and says so truthfull
   };
   try {
     const api = new ConnectionApi({
-      capability: 'capability-token',
       sessionId: 'session-123',
       csrfToken: 'csrf-12345678901234567890123456789012',
-      requestCapability: async () => 'reentered-capability',
     });
     assert.equal(api.bindingsInvalidated, false);
     await api.disconnect();
@@ -323,10 +316,8 @@ test('a session-invalid response marks the client bindings invalid', async () =>
   });
   try {
     const api = new ConnectionApi({
-      capability: 'capability-token',
       sessionId: 'session-123',
       csrfToken: 'csrf-12345678901234567890123456789012',
-      requestCapability: async () => 'reentered-capability',
     });
     await assert.rejects(() => api.status());
     assert.equal(api.bindingsInvalidated, true);

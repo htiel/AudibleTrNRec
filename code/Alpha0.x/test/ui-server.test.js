@@ -270,6 +270,13 @@ test('the whole ES module graph reachable from the shell resolves to 200', async
     const res = await get(port, pathname);
     assert.equal(res.status, 200, `module ${pathname} -> ${res.status}`);
     assert.match(res.headers['content-type'], /javascript/, pathname);
+    const allSpecifiers = [];
+    for (const m of res.body.matchAll(/\bfrom\s*["']([^"']+)["']/g)) allSpecifiers.push(m[1]);
+    for (const m of res.body.matchAll(/\bimport\s*["']([^"']+)["']/g)) allSpecifiers.push(m[1]);
+    for (const m of res.body.matchAll(/\bimport\s*\(\s*["']([^"']+)["']\s*\)/g)) allSpecifiers.push(m[1]);
+    for (const specifier of allSpecifiers) {
+      assert.match(specifier, /^(?:\.{1,2}\/|\/)/, `browser module ${pathname} imports unresolvable bare specifier ${specifier}`);
+    }
     for (const specifier of extractModuleSpecifiers(res.body)) {
       queue.push(new URL(specifier, new URL(pathname, base)).pathname);
     }

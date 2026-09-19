@@ -142,6 +142,23 @@ test('the fail-closed startup branch in app.js never calls the generic focusMain
   assert.doesNotMatch(failClosedBranch, /focusMain\(\)/, 'the fail-closed branch must not move focus to main content; the refusal heading owns focus instead');
 });
 
+test('focusMain() in app.js suppresses the browser default scroll-into-view on focus', () => {
+  // <main> holds the entire route's content and, at narrow widths, is a plain
+  // in-flow block rather than its own scrollport. Calling .focus() on it
+  // without `preventScroll` lets the browser run its default "scroll the
+  // focused element into view" behavior, which for an element taller than
+  // the viewport centers it instead of aligning its top — jumping the whole
+  // page roughly halfway down on every route render and hiding the header,
+  // nav, and toolbar. `preventScroll: true` keeps the accessible focus move
+  // (so assistive tech announces the new view) without the disruptive jump.
+  const source = readSource('js/app.js');
+  const start = source.indexOf('function focusMain()');
+  assert.notEqual(start, -1, 'expected a focusMain() function in app.js');
+  const end = source.indexOf('\n}', start);
+  const body = source.slice(start, end);
+  assert.match(body, /mainContent\.focus\(\s*\{\s*preventScroll:\s*true\s*\}\s*\)/, 'focusMain() must call mainContent.focus({ preventScroll: true })');
+});
+
 // --- (2) Reset filters must also clear collapsed-group state ---------------
 
 test('resetLibraryFilters clears every filter/sort/group field and all collapsed group keys', () => {

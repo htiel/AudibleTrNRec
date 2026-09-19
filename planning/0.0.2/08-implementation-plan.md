@@ -7,8 +7,9 @@
 **Status:** Implementation reviewed; **owner-only APPROVE WITH CONDITIONS**.
 Named testers/public/commercial remain NO-GO. Current package status and
 evidence limits are in [11 — implementation verdict](11-implementation-release-verdict.md)
-and [03](03-backlog.md); 23 packages have implemented code, four are IN_REVIEW
-and three BLOCKED. No full-DoD DONE or blanket A2-G0–G6 pass is claimed.
+and [03](03-backlog.md); 22 packages are IMPLEMENTED, S015 is an
+OWNER-ACCEPTED DEVIATION, four are IN_REVIEW and three BLOCKED.
+No full-DoD DONE or blanket A2-G0–G6 pass is claimed.
 
 Sections below preserve the reviewed **design/execution baseline**, not an
 assertion that all proposed physical schemas, APIs or evidence artifacts
@@ -18,6 +19,26 @@ and 11 control current state: real-data-only private startup, storage revision
 3 with account anchor, two migration receipts and reviewed lifecycle wiring.
 Differences/unfinished evidence (notably RC-08 events and purpose-header limits)
 are explicit in 11; proposed requirements are not silently marked satisfied.
+
+**2026-09-18 change control:** the owner removed the proposed per-start local
+capability from this dedicated, non-distributed prototype. The CP-02 text below
+is retained as the historical reviewed design baseline, not current behavior.
+[11](11-implementation-release-verdict.md) records the accepted owner-only
+same-user-process exposure and the controls that remain.
+
+**2026-09-19 implementation addendum:** [12](12-accumulated-implementation.md)
+is the current-code companion to this historical design baseline. It covers
+browser-safe feedback imports/one-request hydration, collapsed-group author/
+narrator/series feedback, normalized-name display grouping, sidebar/fixed-rail
+layout, tab-scoped filters, progressive whole-star radios, focus/reflow fixes,
+and Settings with durable LCARS/Liquid Glass selection. Half-star references
+below describe the retained domain contract or superseded control design, not
+new UI choices. Session filter storage and theme-only local storage supersede
+blanket no-browser-storage design wording; drafts remain unpersisted there.
+API capability/re-entry requirements and full-entropy unlock tests below are
+historical obligations, not implemented controls after owner change control.
+No new design sign-off, package/point estimate or source/native approval is
+inferred from this documentation reconciliation.
 
 **Inventory unchanged: 4 themes / 8 epics / 30 features / 30 stories /
 112 relative points.** Packages are execution aliases, not additional stories or
@@ -693,14 +714,17 @@ misleading baseline options.
 
 ### Feedback, grouping and state
 
-- Reuse one editor in detail and inline grouped items. Native labeled controls
-  expose Unrated and each half-star value, independent overall/story/performance
-  fields, clear actions, private comment/tag limits and explicit **Save**.
+- Reuse one editor in detail and inline grouped items. Native labeled radio
+  groups expose five whole-star choices for independent
+  overall/story/performance fields; Clear restores Unrated. The storage
+  contract retains legacy half-star compatibility without silently rounding.
+  Preserve private comment/tag limits and explicit **Save**.
   Draft, saving, saved, field error, storage failure and stale conflict are
   separate states; only durable acknowledgement announces “Saved.”
-- Create/edit/clear/delete completes without leaving grouped results. Book IDs,
-  not group headings, select the target. Use **one active editor in the DOM
-  and one active book draft across the library/detail session**. When the same
+- Create/edit/clear/delete completes without leaving grouped results. Book IDs
+  select book targets; canonical Author, Narrator, and Series IDs select
+  distinct group targets from their headings. Use **one active editor in the DOM
+  and one active feedback draft across the library/detail session**. When the same
   book appears in multiple groups, another edit action focuses/reveals the
   existing editor; it never instantiates a second form. Switching books/routes
   requires explicit Save/Discard/Cancel; failed save preserves the active draft.
@@ -723,22 +747,27 @@ misleading baseline options.
   is absent from the accessibility tree and tab sequence. Collapsing a group
   with an active draft prompts or preserves it in memory with a visible unsaved
   indicator; never silently loses it.
-- Keep query, facets, tag/rating filters, sort/direction, grouping, disclosure
-  state, scroll anchor and return focus in session memory only, partitioned by
-  account/mode. No search/comment/tag value in hashes, URLs, logs, localStorage
-  or hosted services. Opaque book/facet navigation IDs are validated separately.
+- Current OF-008 behavior supersedes the original memory-only filter design:
+  bounded, validated query/status/tag/rating filters, sort/direction, grouping
+  and collapsed keys use versioned tab-scoped session storage. The preference
+  key is not an account identity or encryption boundary. Drafts, editor
+  identity, scroll and return focus are never serialized. No search/comment/tag
+  value enters hashes, URLs, logs, localStorage or hosted services.
+  Opaque book/facet navigation IDs are validated separately.
 - Save and refresh update counts/matches deterministically without clearing
   controls. If a saved book no longer matches its active filter, announce the
   change once and place focus on a sensible retained control; do not strand
   focus in a removed DOM node. Revision conflict preserves the unsaved draft,
   shows the committed version and offers explicit reload/reapply/cancel.
 - Navigation/account/mode change and app close get unsaved-change safeguards
-  where the browser supports them. Explain that full restart clears in-memory
-  drafts/filters; no crash-proof draft promise without encrypted draft design.
+  where the browser supports them. Drafts are in-memory only; filters follow
+  tab/session storage and browser restoration behavior, not a guaranteed purge.
+  No crash-proof draft promise without encrypted draft design.
   Reset explicitly restores documented defaults, independent of option order.
 - Null rating sorts last in either direction; filters support rated/unrated,
-  has-comment, local tags and each dimension. No inferred preference or
-  contributor/facet rating editor.
+  has-comment, local tags and each dimension. Explicit author/narrator/known-
+  series group editors are now implemented; genre and inferred preferences remain
+  deferred. Display grouping does not rewrite canonical source identities.
 
 ### Owner-feedback closure matrix
 

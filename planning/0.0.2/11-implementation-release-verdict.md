@@ -13,6 +13,100 @@ convey source or binaries, or proof of listening-history/non-owned catalog
 access. No scope reduction, gate waiver, native architecture approval or
 publication is issued here.
 
+### Accumulated working-tree reconciliation — 2026-09-19
+
+[12 — accumulated implementation](12-accumulated-implementation.md) is the
+current behavioral/evidence addendum: retained Audible registration and real
+data; keyless loopback limits; blank-page/module-boundary and bulk-feedback
+fixes; separate group feedback; narrator display grouping; sidebar/fixed rail;
+session filters; progressive whole stars; UI/accessibility fixes; and Settings
+with persistent LCARS/Liquid Glass selection. It includes first-party Apple
+iOS 27 resource provenance and explicit web/native limits.
+
+Freshly executed here: `npm test` **487 total / 486 pass / 0 fail / 1 skip**,
+`npm run connector:test` **98 total / 96 pass / 0 fail / 2 skip**,
+`npm run policy:check` **PASS**, with fresh install still blocked by the two
+unapproved source artifacts. This supersedes earlier “current” totals, not
+historical events. No live-account, migration, rendered-browser, packaging or
+secret-scan run was repeated; no subsequent full-team sign-off is claimed.
+
+### Owner change control — 2026-09-18
+
+The owner explicitly removed the per-start local unlock for this dedicated
+prototype computer. This supersedes the CP-02 capability implementation and
+evidence claims below for the current working tree. Audible authorization is
+unchanged: connection/reconnection still uses Amazon's external browser device
+registration, and manual synchronization still uses the retained encrypted
+authorization.
+
+The private API remains loopback-only and retains Host, fetch-metadata,
+Origin/Referer, browser-session, CSRF, account-generation, and single-use
+confirmation-nonce controls. It no longer authenticates another process
+running as the same Windows user. That exposure is explicitly accepted only
+for owner testing on this dedicated computer. The server must be stopped when
+idle. Named testers, shared/untrusted computers, and every distributed,
+hosted, public, or commercial use remain **NO-GO**.
+
+### Reported blank-page corrective verification — 2026-09-18
+
+The private UI blank-page regression is corrected in the current working tree.
+The browser-safe feedback contract no longer imports Node-only persistence,
+the router renders before feedback hydration completes, and startup hydrates
+saved feedback with one bulk request rather than one connector-backed request
+per library entry. A visible fail-closed view now replaces uncaught bootstrap
+or hydration failures.
+
+The prior workstream recorded verification against the owner's real encrypted
+local snapshot. The following observations were **not rerun in the 2026-09-19
+documentation audit**, and do not establish the later theme's rendered behavior:
+
+- Chromium rendered non-empty Library, valid book-detail, Feasibility,
+  Data & lifecycle, and invalid-book states.
+- Chromium reported no console errors or uncaught page errors.
+- Inline comment entry retained focus and the complete typed value.
+- Initial feedback hydration made exactly one bulk feedback-list request.
+- Collapsed Author groups retained a visible Rate & Review action; opening it
+  kept the book group collapsed, rendered the separate person editor, and
+  retained typed text and focus. Narrator targeting shares the tested contract.
+- Library controls rendered inside the gray rail in the requested grouping,
+  Status, rating, and text-filter order. At desktop size the main pane scrolled
+  independently while the navigation rail remained stationary; at 390 CSS px
+  normal document scrolling returned with no horizontal overflow.
+- The narrator view rendered unique normalized display headings,
+  collapsed with person-review actions. Repeated name-only
+  source occurrences remain distinct in the catalog but no longer create
+  duplicate display headings or duplicate books.
+- A rendered refresh restored grouping, sort direction, Status, search, and
+  private-tag filters from one tab-scoped session key. The private values did
+  not enter the URL or long-lived local storage.
+- The Series view rendered Rate & Review for known series
+  and no false target on Unknown series. Opening a review kept
+  the books collapsed and rendered the distinct series editor.
+- Rendered rating editors exposed exactly five circular whole-star radio
+  choices and no rating select or visible numbers. Clicking the third filled
+  exactly circles 1–3; native Right Arrow moved to 4 and filled circles 1–4;
+  exact spoken labels remained available.
+- Geordi's full rendered UI pass found and corrected mobile route focus
+  scrolling that had moved the initial view deep into the document, hiding the
+  LCARS header/navigation/controls. Main focus now uses `preventScroll`, with
+  mobile initial `scrollY = 0` at 390 and 320 CSS px.
+- Geordi also restored an explicit disclosure chevron removed by flex styling;
+  collapsed and expanded grouped rows now have a visible state affordance in
+  addition to native details/summary semantics.
+- Desktop 1200×768 verification kept header, footer, and fixed rail inside the
+  viewport while the main pane scrolled. Mobile 390/320 verification used
+  document flow without horizontal overflow or console/page errors.
+- `npm test`: **474 total / 473 pass / 0 fail / 1 skip**.
+- `npm run policy:check`: **PASS**, with the existing two unapproved
+  source-distribution provenance exceptions still blocking fresh connector
+  installation.
+- `git diff --check`: **PASS**.
+
+The browser run read private state but did not print title, account, feedback,
+or identifier content and did not invoke save, export, disconnect, or deletion.
+This evidence clears the immediate owner-only blank-page hold. It does not
+change the named-tester or distribution **NO-GO** decisions.
+
 ## Review basis and evidence provenance
 
 Authority: [product description](../../APP_DESCRIPTION.md), [charter](01-release-charter.md),
@@ -31,22 +125,23 @@ findings. This is a working-tree assessment, not a verdict on a published tag
 or an invented commit hash. Earlier diff sizes/test totals inside the reports
 are historical; the amendments and evidence below control.
 
-The following execution evidence was supplied by the Captain and amended
-review workstreams. **This documentation task did not rerun app tests, query
-the server, open the store or repeat a migration.** Static code inspection
+The following historical execution evidence was supplied by the Captain and
+amended review workstreams. **The original verdict task did not rerun app tests,
+query the server, open the store or repeat a migration.** The 2026-09-19
+automated rerun is separately recorded above and in 12. Static code inspection
 corroborates the relevant mechanisms, not independently the prior live event.
 Where a command/host/log reference is not supplied, it is not invented; final
 gate custody must retain those details before a release claim.
 
 | Evidence | Recorded result | Interpretation / limit |
 | --- | --- | --- |
-| Node suite (`npm test`) | **471 total / 470 pass / 0 fail / 1 skip** | Latest amended review result; skip remains excluded from passing controls, not rounded to 471 pass |
+| Node suite (`npm test`) | **474 total / 473 pass / 0 fail / 1 skip** | Independent final run after Geordi's full rendered UI corrections; skip remains excluded from passing controls |
 | Python suite | **98 total / 96 pass / 0 fail / 2 skip** | Supplied workstream result; not independently rerun by this task or the final Data/Geordi read-only pass |
 | Private-alpha policy | **PASS** | Reported control result; static inspection confirms private-only restrictions remain |
 | Packaging probe | **BLOCKED** | Expected security result, not a packaging defect to bypass; no packaging command run here |
 | Diff / secret scan | **CLEAN**, reported | No credentials/tokens/personal content reported in evidence. Fresh documentation diff/link/count checks are recorded separately below; no new secret-scan execution claimed |
-| Existing authenticated server | **Running/healthy**, reported | No restart, stop, connection change or endpoint request by this task; not a promise of future liveness |
-| Unauthenticated API probe | **401**, reported | Code distinguishes valid same-origin fetch metadata with no capability (401) from absent/rejected metadata (403). Both fail closed; a bare curl request is not necessarily a 401 reproduction |
+| Existing owner-only server | **Stopped**, reported 2026-09-18 | The owner stopped the server before authorizing removal of the local unlock |
+| Browser-session bootstrap | **Keyless by owner decision** | A same-origin browser obtains an in-memory session directly; requests without a valid session remain refused after bootstrap |
 | Existing real-store migration | **Transactional revision 3**, reported | Exact five-table schema, two migration receipts, opaque account anchor, rollback discharged; process/schema metadata only, no personal content queried |
 
 The two Python skips and one Node skip need their exact platform/control
@@ -61,7 +156,7 @@ security test 1–15.
 | [Data](implementation-reviews/data-final-review.md) | **APPROVE**, Amendment 1 supersedes the initial blocking verdict/gate table | Owner-only data model, sync, persistence, migration, feedback and account isolation; original F-1–F-4 closures corroborated in current code. No independent gate/audience grant |
 | [Geordi](implementation-reviews/geordi-final-review.md) | **FULL APPROVE — UI/accessibility implementation scope** | Post-review focus/reset/profile fixes accepted; no physical iPhone rendered/touch/VoiceOver clearance and no tester conveyance approval |
 | [Wesley](implementation-reviews/wesley-final-review.md) | **PASS / approved for private evaluation** | Useful private journal, real-data fail-closed UX, Genre removal, book-level feedback and bounded future direction; broad completion claims constrained below |
-| [Worf](implementation-reviews/worf-final-review.md) | **APPROVE WITH CONDITIONS — owner-only** | Current owner's existing installation only; supply-chain, bootstrap live-proof, event evidence and legal/audience limits remain |
+| [Worf](implementation-reviews/worf-final-review.md) | **APPROVE WITH CONDITIONS — owner-only** | Historical review of the existing installation; supply-chain, event evidence and legal/audience limits remain; the later owner-accepted local-process trust deviation is not a new Worf sign-off |
 | Riker | **Owner-only conditional GO; release gates remain incomplete** | Usable implementation acknowledged without calling the entire 112-point inventory DONE or clearing named/public release |
 
 ### Claims narrowed rather than silently accepted
@@ -155,7 +250,7 @@ Full `DONE` still requires the canonical DoD and all applicable evidence.
 | Story / package | Current disposition | Evidence / remaining boundary |
 | --- | --- | --- |
 | S014 / WP014 | IN_REVIEW | Source/data contracts and review decisions materialized; CP approvals, residual/retention/evidence reconciliation not all closed |
-| S015 / WP015 | IMPLEMENTED | Capability/session/nonce/route controls and unlock handshake; CP-02 full live observations still pending |
+| S015 / WP015 | OWNER-ACCEPTED DEVIATION | Manual capability removed for the dedicated prototype; loopback/session/CSRF/origin/nonce controls retained; not acceptable for testers or release |
 | S016 / WP016 | IMPLEMENTED | Trusted paths, minimized environment, ACL proof-before-open and custody interlock; platform/operating residuals retained |
 | S017 / WP017 | IMPLEMENTED | Provider-origin/owned-browser boundary represented in amended security review; no new provider route or blanket live credential-boundary proof |
 | S018 / WP018 | BLOCKED — controls implemented | Manifest/pins/install refusals work; source-only artifact acceptance, downloaded-byte verification and pip-audit/SBOM absent |
@@ -187,7 +282,9 @@ Full `DONE` still requires the canonical DoD and all applicable evidence.
 
 Inventory stays **4 themes / 8 epics / 30 features / 30 stories / 112 points**,
 with unchanged WSJF/dependencies/waves. Current status accounting is
-**23 IMPLEMENTED / 4 IN_REVIEW / 3 BLOCKED / 0 full-DoD DONE**. This deliberately
+**22 IMPLEMENTED / 1 OWNER-ACCEPTED DEVIATION / 4 IN_REVIEW / 3 BLOCKED /
+0 full-DoD DONE**. S015's deviation is not completion of its original
+local-client authentication criterion. This deliberately
 does not equate useful code with completion of a gated release story.
 Neither S040 nor S041 is marked STOPPED-with-proof when even that final
 investigation disposition is not supplied. A later lawful STOPPED/no-go report
@@ -204,8 +301,10 @@ shutdown when idle. **This document does not perform or order an app stop.**
 Same-user malware, extensions, live plaintext, dumps/pagefile, backups/shadow
 copies and user-held exports remain outside DPAPI's protection.
 
-Do not mark `liveProof` true from a test or status request. Complete the
-witnessed launch/accessibility/teardown proof before expanding the audience.
+The removed CP-02 delivery/`liveProof` mechanism is historical, not a current
+configuration to mark true. Establish a reviewed replacement local-client
+boundary and witnessed launch/accessibility/teardown evidence before expanding
+the audience.
 Keep RC-08 explicitly open; this conditional owner decision is not acceptance
 of a durable audit trail that does not exist. Retain truthful purpose-header,
 401/403, migration and inventory wording. Do not claim cryptographic erasure.
@@ -230,7 +329,7 @@ Before any handover, including private source, resolve at least:
 | Source-only `pbkdf2==1.3` and `pyaes==1.6.1` exceptions remain `accepted: false` | Worf/Data approved artifact/build decision; preserve installer fail-closed refusal rather than bypassing binary-only policy |
 | Digests are index-attested, not byte-level downloaded-artifact verification | Hash-verified isolated acquisition/install receipt; current owner environment does not establish this |
 | Missing pip-audit and complete dependency/SBOM evidence | Dated approved audit, actual lock/artifact coverage, vulnerability/license disposition; OSV/index checks alone are not equivalent |
-| CP-02 full live proof incomplete (`liveProof: false`) | Worf/Geordi witnessed trusted-display, accessible entry, lifecycle/teardown observations and sanitized receipt; do not infer from server readiness |
+| Same-user local processes are trusted by the prototype | Owner accepted on 2026-09-18 for the dedicated test computer only; stop while idle and restore a platform-appropriate client boundary before any tester or release use |
 | RC-08 event durability/startup/migration gaps | Worf-approved bounded privacy-safe recording and incident evidence or explicit reviewed change control; no blanket completed-event claim |
 | Physical iPhone Air / approved equivalent rendered evidence absent | Geordi/Worf-approved isolated synthetic environment, touch/keyboard/safe-area/AT journeys and rendered receipt; no private-server network workaround |
 | Source, architecture, legal and final audience gates remain open | S040/S041 genuine permitted proof or honest STOPPED, G3/G4 disposition, named legal/GPL/AGPL/Audible terms review, full officer readiness and Captain G6 |
@@ -269,9 +368,11 @@ No original gate definition or residual RPN threshold is lowered. The existing
 owner evaluation is recorded separately from a proposed reduced-domain release;
 it does not pass G3/G4 by omission. Archived 0.0.1 remains HOLD/FAIL.
 
-## Documentation validation and staging
+## Historical documentation validation and staging — 2026-09-17
 
-Only repository Markdown/link/count/diff validation is executed for this task.
+This subsection preserves the original verdict task's receipts, not the
+2026-09-19 audit's actions. Only repository Markdown/link/count/diff validation
+was executed for that task.
 No app, provider, packaging, live security, migration or personal-data operation
 is rerun.
 
@@ -291,11 +392,20 @@ is rerun.
   whitespace checks and Markdown-only index verification passed; runtime/code
   changes remain untouched and unstaged by this task.
 
+### Current documentation audit — 2026-09-19
+
+The current audit changes Markdown only, preserves historical officer reports,
+and does not stage, commit or push. Fresh automated results and their limits are
+recorded in 12. The current story totals include S015's accepted deviation,
+unlike the original 23-implemented historical receipt above. Documentation
+consistency and whitespace checks are reported separately at handoff.
+
 ## Final command recommendation
 
 **Use the existing build for the owner's private hands-on evaluation under
 Worf's conditions. Do not hand it to named testers or publish it.**
 The library/feedback implementation is useful and reviewed; full release
-readiness is not established. Close supply-chain, CP-02, device and remaining
+readiness is not established. Close supply-chain, native client-authentication,
+device and remaining
 evidence obligations, investigate source domains only with authority, and
 return with the complete gate packet before changing the audience.

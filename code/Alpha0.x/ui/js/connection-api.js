@@ -1,6 +1,3 @@
-import { requestLocalCapability } from './security/local-unlock.js';
-
-const SCHEME = 'ATnR-Capability';
 const REQUIRED_DATA_SOURCE = 'local-encrypted';
 
 export class ConnectionApiError extends Error {
@@ -33,15 +30,12 @@ function feedbackPath(bookId) {
 }
 
 export class ConnectionApi {
-  #capability;
   #sessionId;
   #csrfToken;
 
-  constructor({ capability, sessionId, csrfToken, requestCapability }) {
-    this.#capability = capability;
+  constructor({ sessionId, csrfToken }) {
     this.#sessionId = sessionId;
     this.#csrfToken = csrfToken;
-    this.requestCapability = requestCapability;
     /**
      * True once a lifecycle transition has invalidated this session's
      * bindings. The owner is told the truth — their session ended because of
@@ -50,43 +44,22 @@ export class ConnectionApi {
     this.bindingsInvalidated = false;
   }
 
-  static async discover({ requestCapability = requestLocalCapability, maxAttempts = 3 } = {}) {
-    const probe = await fetch('/api/v1/session', {
+  static async discover() {
+    const response = await fetch('/api/v1/session', {
       method: 'GET',
       headers: { Accept: 'application/json' },
       credentials: 'same-origin',
     });
-    if (probe.status === 404) throw new ConnectionApiError('private-alpha-runtime-unavailable');
-    if (probe.status !== 401 && probe.status !== 403) throw new ConnectionApiError('local-api-bootstrap-unauthenticated');
-
-    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const entered = await requestCapability({ purpose: 'unlock' });
-      if (entered === null || entered === undefined) throw new ConnectionApiError('local-api-unlock-cancelled');
-      const response = await fetch('/api/v1/session', {
-        method: 'GET',
-        headers: { Accept: 'application/json', Authorization: `${SCHEME} ${entered}` },
-        credentials: 'same-origin',
-      });
-      if (response.ok) {
-        const value = await parseResponse(response);
-        const session = value.session ?? {};
-        if (typeof session.sessionId !== 'string' || typeof session.csrfToken !== 'string' || session.csrfToken.length < 32) {
-          throw new ConnectionApiError('local-api-session-invalid');
-        }
-        if (session.runtime?.dataSource !== REQUIRED_DATA_SOURCE || session.runtime?.synthetic !== false) {
-          throw new ConnectionApiError('private-alpha-runtime-source-refused');
-        }
-        return new ConnectionApi({ capability: entered, sessionId: session.sessionId, csrfToken: session.csrfToken, requestCapability });
-      }
-      let code = 'local-api-operation-failed';
-      try {
-        code = safeCode((await response.json())?.error?.code, code);
-      } catch {
-        code = 'local-api-response-invalid';
-      }
-      if (code !== 'local-api-capability-invalid') throw new ConnectionApiError(code);
+    if (response.status === 404) throw new ConnectionApiError('private-alpha-runtime-unavailable');
+    const value = await parseResponse(response);
+    const session = value.session ?? {};
+    if (typeof session.sessionId !== 'string' || typeof session.csrfToken !== 'string' || session.csrfToken.length < 32) {
+      throw new ConnectionApiError('local-api-session-invalid');
     }
-    throw new ConnectionApiError('local-api-capability-invalid');
+    if (session.runtime?.dataSource !== REQUIRED_DATA_SOURCE || session.runtime?.synthetic !== false) {
+      throw new ConnectionApiError('private-alpha-runtime-source-refused');
+    }
+    return new ConnectionApi({ sessionId: session.sessionId, csrfToken: session.csrfToken });
   }
 
   async status() { return (await this.#request('GET', '/api/v1/status')).result; }
@@ -99,13 +72,14 @@ export class ConnectionApi {
   async deletionInventory() { return (await this.#request('GET', '/api/v1/inventory')).result; }
   async connect(accountAlias) { return (await this.#request('POST', '/api/v1/connect', { accountAlias })).result; }
   async sync() { return (await this.#request('POST', '/api/v1/sync', {})).result; }
+  async feedbackList() { return (await this.#request('GET', '/api/v1/feedback')).result; }
   async feedbackGet(bookId) { return (await this.#request('GET', feedbackPath(bookId))).result; }
   async feedbackSave(bookId, payload, expectedRevision) { return (await this.#request('PUT', feedbackPath(bookId), { payload, expectedRevision })).result; }
 
   /**
-   * Erasing a review is destructive: it takes an explicit confirmation, a
-   * re-entered capability on both legs, and a nonce bound to this record and
-   * revision. A stale or redirected nonce cannot erase anything.
+   * Erasing a review is destructive: it takes an explicit UI confirmation and
+   * a nonce bound to this record and revision. A stale or redirected nonce
+   * cannot erase anything.
    */
   async feedbackDelete(bookId, expectedRevision) {
     return this.#confirmed('delete-feedback', 'DELETE', feedbackPath(bookId), {
@@ -128,36 +102,25 @@ export class ConnectionApi {
   /**
    * Export the owner's own data. Specified at destructive strength: an export
    * is a complete copy of private history leaving the protected store, so it
-   * takes the same re-entered capability and single-use nonce as a deletion.
-   * It is only ever called from an explicit user action; nothing exports on a
-   * timer, on startup, or as a side effect of another operation.
+   * takes the same single-use nonce as a deletion. It is only ever called from
+   * an explicit user action; nothing exports on a timer, on startup, or as a
+   * side effect of another operation.
    */
   async exportAll() { return this.#confirmed('export', 'POST', '/api/v1/export'); }
 
   /**
-   * Two-leg destructive flow. The re-entered capability authenticates BOTH the
-   * nonce issuance and the destructive request itself — the server requires it
-   * on each — so it is held only for the span of this call and the reference is
-   * dropped in `finally`, whether the action succeeded, failed or threw.
+   * Two-leg destructive flow. The confirmation endpoint issues a short-lived,
+   * single-use nonce bound to this session, action, resource, and generation.
    */
   async #confirmed(action, method, url, { resource = null, body = {} } = {}) {
-    const entered = await this.requestCapability({ purpose: 'confirm' });
-    if (entered === null || entered === undefined) throw new ConnectionApiError('local-api-confirmation-cancelled');
-    const held = { capability: entered };
-    try {
-      const reauth = { 'X-ATnR-Reauth': held.capability };
-      const issued = await this.#request(
-        'POST',
-        '/api/v1/confirmation',
-        resource === null ? { action } : { action, resource },
-        reauth,
-      );
-      const nonce = issued.result?.confirmation;
-      if (typeof nonce !== 'string') throw new ConnectionApiError('confirmation-invalid');
-      return (await this.#request(method, url, { ...body, confirmation: nonce }, reauth)).result;
-    } finally {
-      held.capability = '';
-    }
+    const issued = await this.#request(
+      'POST',
+      '/api/v1/confirmation',
+      resource === null ? { action } : { action, resource },
+    );
+    const nonce = issued.result?.confirmation;
+    if (typeof nonce !== 'string') throw new ConnectionApiError('confirmation-invalid');
+    return (await this.#request(method, url, { ...body, confirmation: nonce })).result;
   }
 
   /**
@@ -174,7 +137,6 @@ export class ConnectionApi {
   #headers(extra = {}) {
     return {
       Accept: 'application/json',
-      Authorization: `${SCHEME} ${this.#capability}`,
       'X-ATnR-Session': this.#sessionId,
       ...extra,
     };

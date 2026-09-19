@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/ui/css/base.css">
   <link rel="stylesheet" href="/ui/css/layout.css">
   <link rel="stylesheet" href="/ui/css/components.css">
+  <link rel="stylesheet" href="/ui/css/theme-liquid-glass.css">
 </head>
 <body>
   <a class="lcars-skip-link" href="#main-content">Skip to main content</a>
@@ -19,24 +20,30 @@
       <div class="lcars-header-bar">
         <h1 class="lcars-title">Audible Track and Recommend</h1>
         <p id="runtime-status" class="lcars-status-pill">Loading the active runtime mode…</p>
+        <a class="lcars-icon-btn" href="#/settings" data-route="settings" aria-label="Settings">
+          <span class="lcars-icon-gear" aria-hidden="true"></span>
+        </a>
       </div>
     </header>
 
     <div class="lcars-body">
-      <nav class="lcars-sidebar" aria-label="Application destinations">
-        <div class="lcars-sidebar-group" aria-label="Primary">
+      <aside class="lcars-sidebar" aria-label="Application navigation and library controls">
+        <nav class="lcars-sidebar-group" aria-label="Primary">
           <ul>
             <li><a href="#/library" data-route="library">Library</a></li>
           </ul>
+        </nav>
+        <div class="lcars-sidebar-filler">
+          <div id="library-sidebar-controls"></div>
         </div>
-        <div class="lcars-sidebar-filler" aria-hidden="true"></div>
-        <div class="lcars-sidebar-group" aria-label="Diagnostics and lifecycle">
+        <nav class="lcars-sidebar-group" aria-label="Diagnostics and lifecycle">
           <ul>
             <li><a href="#/feasibility" data-route="feasibility">Feasibility &amp; trace</a></li>
             <li><a href="#/data" data-route="data">Data &amp; lifecycle</a></li>
+            <li><a href="#/settings" data-route="settings">Settings</a></li>
           </ul>
-        </div>
-      </nav>
+        </nav>
+      </aside>
 
       <main id="main-content" class="lcars-main" tabindex="-1">
         <div id="view-root"></div>

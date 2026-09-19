@@ -6,7 +6,7 @@
 
 The current planned release is **alpha 0.0.2**, a private, single-user increment
 covering release-blocker remediation, LCARS UI optimization, and private
-per-book ratings and feedback collection/storage. Its initial scope, hierarchy,
+book, author, narrator, and series ratings and feedback collection/storage. Its initial scope, hierarchy,
 stories, dependencies, and gates are maintained in
 [the alpha 0.0.2 plan](planning/0.0.2/README.md).
 
@@ -22,6 +22,37 @@ clearance. Commercial/public distribution remains **NO-GO**.
 
 Planning a version does not mean it is implemented or approved for release.
 Changes to scope, trust rules, or release gates require explicit change control.
+
+### Accumulated Alpha 0.0.2 implementation — 2026-09-19
+
+The [working-tree implementation record](planning/0.0.2/12-accumulated-implementation.md)
+and [changelog](CHANGELOG.md) distinguish delivered prototype behavior from the
+broader product goals below:
+
+- Retained provider-hosted external-browser device registration and real
+  encrypted library/progress data; no supported public API, history or
+  non-owned catalog proof is inferred.
+- Removed the prototype local unlock key, **not Audible authorization**.
+  Loopback/session/CSRF/origin/confirmation controls remain, but same-user local
+  processes are trusted under the dedicated-computer owner exception only.
+- Fixed browser/Node module separation, one-request feedback hydration and
+  visible startup refusal; implemented separate collapsed-group Author,
+  Narrator and Series feedback alongside book feedback.
+- Normalized-name contributor display grouping retains source identities;
+  it is not canonical person resolution. Sidebar filters, independent desktop
+  rail/content scrolling and tab-scoped filter persistence are implemented.
+  Search/tag state in session storage is not encrypted custody or secure erasure.
+- Progressive whole-star controls preserve legacy half-star data. Focus,
+  disclosure, wrapping, target-size and reflow fixes have regression coverage,
+  not blanket WCAG or physical-device certification.
+- Settings offers persistent LCARS (default) and Liquid Glass themes. Only
+  the theme identifier uses durable browser storage. Apple's iOS 27/iPadOS 27
+  design-resource listing and Materials guidance are verified references, not
+  a native SDK/asset dependency or architecture approval.
+
+The evidence record gives executed test/policy results and remaining gates.
+Recommendations, LLMs, genre feedback and native implementation remain outside
+this alpha. No release, tester conveyance or public/commercial approval follows.
 
 ## Product Summary
 
@@ -284,16 +315,21 @@ Examples include:
 
 Facet feedback should support:
 
-- A five-star rating with half-star values.
+- A compact five-choice whole-star control.
 - A private free-form comment.
 - Like, dislike, and favorite signals where appropriate.
 - Optional personal tags.
 - A source indicator showing whether the preference was explicitly entered or
   inferred from book-level behavior.
 
-The initial rating scale should be five stars with half-star values. This is
-familiar, expressive enough for recommendations, and easy to change later if
-user testing indicates a better option.
+The initial rating UI uses five whole-star radio choices. Selecting the third
+choice means exactly three stars; Clear returns the target to Unrated. The
+storage contract may continue reading legacy half-star values without changing
+them, but new interactive choices are whole stars.
+
+In the current alpha, facet feedback is limited to explicit author, narrator
+and known-series group records. Genre, inferred affinity and favorite signals
+above are product goals, not implemented feedback features.
 
 Explicit facet ratings must take precedence over inferred affinities. For
 example, a five-star author rating is stronger and less ambiguous than merely
@@ -698,6 +734,13 @@ recommendation evaluation.
 - Follow Audible, Amazon, catalog-provider, AI-provider, and app-store terms.
 
 ## Accessibility and User Experience
+
+For the web alpha, Settings offers LCARS and an opt-in Liquid Glass
+interpretation. Both require accessible focus, legibility, reflow and reduced
+motion/transparency behavior. System-font/CSS approximations are not native
+Dynamic Type, native materials or physical iPhone evidence; see
+[provenance and limits](planning/0.0.2/12-accumulated-implementation.md#apple-design-resource-provenance-and-native-limits).
+The following are product requirements, not a conformance certificate.
 
 - Support keyboard and assistive-technology navigation where applicable.
 - Meet WCAG 2.2 AA for a web interface.

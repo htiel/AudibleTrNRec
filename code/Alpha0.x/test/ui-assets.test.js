@@ -150,7 +150,13 @@ test('the router and navigation expose only the charter-scoped routes', async ()
   assert.match(html, /data-route="library"/);
   assert.match(html, /data-route="feasibility"/);
   assert.match(html, /data-route="data"/);
+  assert.match(html, /data-route="settings"/);
   assert.doesNotMatch(html, /data-route="recommendations"/);
+});
+
+test('a settings gear control is reachable from the header with an accessible name', async () => {
+  const html = await readFile(path.join(UI_ROOT, 'index.html'), 'utf8');
+  assert.match(html, /class="lcars-icon-btn"[^>]+href="#\/settings"[^>]+data-route="settings"[^>]+aria-label="Settings"/);
 });
 
 test('index.html declares a content security policy with no remote origins', async () => {

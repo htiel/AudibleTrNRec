@@ -1,0 +1,326 @@
+/**
+ * Liquid Glass (Apple HIG-informed) theme.
+ *
+ * This is this project's own semantic HTML/CSS/JS interpretation of the
+ * "Liquid Glass" material Apple introduced at WWDC 2025 for iOS 26 /
+ * iPadOS 26 / macOS Tahoe 26. Per Apple's current Human Interface
+ * Guidelines (`developer.apple.com/design/human-interface-guidelines/
+ * materials`) and its published "iOS 27 and iPadOS 27" UI Kit design
+ * resources (`developer.apple.com/design/resources/`), Liquid Glass remains
+ * the shipping iOS design language today, described there as "a dynamic
+ * material that unifies the design language across Apple platforms,"
+ * offered in `regular` and `clear` variants, whose appearance "can differ
+ * in response to certain system settings ... [or] accessibility settings
+ * that reduce transparency or increase contrast." This file targets only
+ * that documented, cited HIG guidance (translucency, blur, continuous
+ * corner radii, 44x44pt standard control sizing, system font, and the
+ * Reduce Transparency / Increase Contrast / Reduce Motion accommodations
+ * above) — it does not use, embed, or claim any private/undocumented Apple
+ * API, SDK, or copied template artwork, and it cannot reproduce
+ * native-only rendering (true real-time specular/refractive glass, or the
+ * OS's own accessibility toggles — those are approximated here with the
+ * equivalent standard `prefers-reduced-transparency` / `prefers-contrast` /
+ * `prefers-reduced-motion` CSS media features, which are as close as a
+ * browser gets to reading the same system settings).
+ *
+ * Scope and constraints (see also `test/ui-assets.test.js`):
+ *  - No gradients, box-shadows, text-shadows, or drop-shadow filters
+ *    anywhere in this file — depth reads through translucency and a
+ *    hairline border only, never a fake bevel or glow.
+ *  - The theme is opt-in and scoped entirely under
+ *    `:root[data-theme="liquid-glass"]`; with the attribute absent (or set
+ *    to `lcars`), every rule here is inert and the original LCARS theme in
+ *    `tokens.css`/`base.css`/`layout.css`/`components.css` is unchanged.
+ *  - Every rule respects `prefers-reduced-transparency`, `prefers-contrast`,
+ *    and (already handled globally in `base.css`) `prefers-reduced-motion`.
+ *    A user who has asked their system for less transparency or more
+ *    contrast never gets translucent "fake glass" text that is harder to
+ *    read than the LCARS theme.
+ *  - Layout structure (elbow → sidebar → content → footer), routes, and
+ *    every interactive element's semantics are unchanged; only appearance
+ *    is re-skinned.
+ */
+
+:root[data-theme="liquid-glass"] {
+  /* System font stack: Apple platforms resolve this to San Francisco;
+     everywhere else it resolves to that OS's own UI font. No font file is
+     ever fetched, bundled, or referenced by name-as-a-download. */
+  --lcars-font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui,
+    'Segoe UI', Roboto, sans-serif;
+
+  --glass-radius: 1.1rem;
+  --glass-radius-lg: 1.5rem;
+  --glass-fill: rgba(255, 255, 255, 0.14);
+  --glass-fill-strong: rgba(255, 255, 255, 0.22);
+  --glass-border: rgba(255, 255, 255, 0.38);
+  --glass-blur: blur(20px) saturate(150%);
+}
+
+/* --- Typography: Apple HIG uses sentence/mixed case with Dynamic Type,
+   not the LCARS all-caps display convention. This overrides the base.css
+   uppercase list only for this theme, and only where `html[data-theme=...]`
+   gives it the higher specificity to win outright. --- */
+html[data-theme="liquid-glass"] .lcars-label-case,
+html[data-theme="liquid-glass"] .lcars-title,
+html[data-theme="liquid-glass"] .lcars-status-pill,
+html[data-theme="liquid-glass"] .lcars-sidebar a,
+html[data-theme="liquid-glass"] .lcars-field-label,
+html[data-theme="liquid-glass"] .lcars-btn,
+html[data-theme="liquid-glass"] legend,
+html[data-theme="liquid-glass"] .lcars-group-heading,
+html[data-theme="liquid-glass"] h2,
+html[data-theme="liquid-glass"] h3,
+html[data-theme="liquid-glass"] h4,
+html[data-theme="liquid-glass"] summary {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Elbows are purely decorative (`aria-hidden="true"`) and have no iOS
+   analogue; removing them loses no information. */
+html[data-theme="liquid-glass"] .lcars-elbow {
+  display: none;
+}
+
+/* --- Header / footer: from swept LCARS bars to a translucent iOS-style
+   navigation/tab bar. --- */
+html[data-theme="liquid-glass"] .lcars-header-bar,
+html[data-theme="liquid-glass"] .lcars-footer-bar {
+  background: var(--glass-fill);
+  color: var(--lcars-fg);
+  border-radius: 0;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+html[data-theme="liquid-glass"] .lcars-footer-bar {
+  border-bottom: 0;
+  border-top: 1px solid var(--glass-border);
+}
+
+html[data-theme="liquid-glass"] .lcars-status-pill {
+  background: var(--glass-fill-strong);
+  color: var(--lcars-fg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+}
+
+/* --- Sidebar: pill nav rows become full-width rounded-rect rows, and the
+   filler panel becomes a glass card instead of a flat grey slab. --- */
+html[data-theme="liquid-glass"] .lcars-sidebar a {
+  background: var(--glass-fill);
+  color: var(--lcars-fg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+}
+
+html[data-theme="liquid-glass"] .lcars-sidebar a[aria-current="page"] {
+  background: var(--glass-fill-strong);
+  border-color: var(--lcars-accent-secondary);
+}
+
+html[data-theme="liquid-glass"] .lcars-sidebar-filler {
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius-lg);
+}
+
+/* --- Buttons, dialogs, cards, tables, fieldsets, forms: continuous
+   corners plus the same glass fill/border pair. --- */
+html[data-theme="liquid-glass"] .lcars-btn,
+html[data-theme="liquid-glass"] .lcars-icon-btn {
+  background: var(--glass-fill);
+  color: var(--lcars-fg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+}
+
+html[data-theme="liquid-glass"] .lcars-btn-primary,
+html[data-theme="liquid-glass"] .lcars-btn:active,
+html[data-theme="liquid-glass"] .lcars-icon-btn[aria-current="page"] {
+  background: var(--glass-fill-strong);
+  border-color: var(--lcars-accent-secondary);
+  color: var(--lcars-fg);
+}
+
+html[data-theme="liquid-glass"] .lcars-btn-danger {
+  background: rgba(255, 85, 85, 0.28);
+  border-color: var(--lcars-accent-danger);
+  color: var(--lcars-fg);
+}
+
+html[data-theme="liquid-glass"] .lcars-btn:disabled {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--lcars-fg);
+}
+
+html[data-theme="liquid-glass"] select,
+html[data-theme="liquid-glass"] input[type="text"],
+html[data-theme="liquid-glass"] input[type="search"],
+html[data-theme="liquid-glass"] input[type="number"],
+html[data-theme="liquid-glass"] textarea {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+}
+
+/* Native radio/checkbox inputs (theme picker, rating/status filters): the
+ * LCARS theme's plain `accent-color` dot reads as a native browser widget,
+ * not an iOS list-row selection control. HIG has no bare "radio button" —
+ * single-select rows in a grouped list use a plain circle that fills with
+ * a checkmark/dot on selection — so this reproduces that reading with
+ * ordinary CSS (`appearance: none` + a generated indicator), while keeping
+ * the same underlying <input type="radio|checkbox"> for native semantics,
+ * keyboard operability, and the shared `:focus-visible` outline. No image
+ * asset, icon font, or box-shadow is used; the checkmark is a text glyph. */
+html[data-theme="liquid-glass"] input[type="radio"],
+html[data-theme="liquid-glass"] input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+  border: 2px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.06);
+  display: inline-grid;
+  place-content: center;
+  flex-shrink: 0;
+  margin: 0;
+}
+
+html[data-theme="liquid-glass"] input[type="radio"] {
+  border-radius: 50%;
+}
+
+html[data-theme="liquid-glass"] input[type="checkbox"] {
+  border-radius: 0.35rem;
+}
+
+html[data-theme="liquid-glass"] input[type="radio"]:checked,
+html[data-theme="liquid-glass"] input[type="checkbox"]:checked {
+  border-color: var(--lcars-accent-secondary);
+  background: var(--glass-fill-strong);
+}
+
+html[data-theme="liquid-glass"] input[type="radio"]:checked::after {
+  content: '';
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: var(--lcars-accent-secondary);
+}
+
+html[data-theme="liquid-glass"] input[type="checkbox"]:checked::after {
+  content: '\2713';
+  color: var(--lcars-accent-secondary);
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: bold;
+}
+
+html[data-theme="liquid-glass"] input[type="radio"]:disabled,
+html[data-theme="liquid-glass"] input[type="checkbox"]:disabled {
+  opacity: 0.45;
+}
+
+html[data-theme="liquid-glass"] fieldset.lcars-fieldset,
+html[data-theme="liquid-glass"] .lcars-rating-fieldset,
+html[data-theme="liquid-glass"] .lcars-trace-edge,
+html[data-theme="liquid-glass"] .lcars-library-card {
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius-lg);
+}
+
+html[data-theme="liquid-glass"] .lcars-table th {
+  background: var(--glass-fill-strong);
+  color: var(--lcars-fg);
+}
+
+html[data-theme="liquid-glass"] .lcars-table td,
+html[data-theme="liquid-glass"] .lcars-table th {
+  border-bottom: 1px solid var(--glass-border);
+}
+
+html[data-theme="liquid-glass"] dialog.lcars-dialog {
+  background: var(--glass-fill-strong);
+  color: var(--lcars-fg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius-lg);
+}
+
+/* Actual translucency + blur, gated behind the reduced-transparency and
+   backdrop-filter feature checks below. Kept in its own rule so the solid
+   fallback colors above always apply first, everywhere. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  @media (prefers-reduced-transparency: no-preference) {
+    html[data-theme="liquid-glass"] .lcars-header-bar,
+    html[data-theme="liquid-glass"] .lcars-footer-bar,
+    html[data-theme="liquid-glass"] .lcars-status-pill,
+    html[data-theme="liquid-glass"] .lcars-sidebar a,
+    html[data-theme="liquid-glass"] .lcars-sidebar-filler,
+    html[data-theme="liquid-glass"] .lcars-btn,
+    html[data-theme="liquid-glass"] .lcars-icon-btn,
+    html[data-theme="liquid-glass"] fieldset.lcars-fieldset,
+    html[data-theme="liquid-glass"] .lcars-rating-fieldset,
+    html[data-theme="liquid-glass"] .lcars-trace-edge,
+    html[data-theme="liquid-glass"] .lcars-library-card,
+    html[data-theme="liquid-glass"] dialog.lcars-dialog {
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+    }
+  }
+}
+
+/* Increased-contrast preference: drop translucency for solid, higher-contrast
+   fills and thicker borders rather than trying to keep "glass" readable. */
+@media (prefers-contrast: more) {
+  html[data-theme="liquid-glass"] input[type="radio"],
+  html[data-theme="liquid-glass"] input[type="checkbox"] {
+    border-width: 3px;
+    border-color: var(--lcars-fg);
+    background: var(--lcars-black);
+  }
+
+  html[data-theme="liquid-glass"] .lcars-header-bar,
+  html[data-theme="liquid-glass"] .lcars-footer-bar,
+  html[data-theme="liquid-glass"] .lcars-status-pill,
+  html[data-theme="liquid-glass"] .lcars-sidebar a,
+  html[data-theme="liquid-glass"] .lcars-sidebar-filler,
+  html[data-theme="liquid-glass"] .lcars-btn,
+  html[data-theme="liquid-glass"] .lcars-icon-btn,
+  html[data-theme="liquid-glass"] fieldset.lcars-fieldset,
+  html[data-theme="liquid-glass"] .lcars-rating-fieldset,
+  html[data-theme="liquid-glass"] .lcars-trace-edge,
+  html[data-theme="liquid-glass"] .lcars-library-card,
+  html[data-theme="liquid-glass"] dialog.lcars-dialog {
+    background: var(--lcars-black);
+    border-width: 2px;
+    border-color: var(--lcars-fg);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* prefers-reduced-transparency: reduce is also handled without relying on
+   the @supports/@media gate above ever matching, by simply never adding
+   backdrop-filter unless the no-preference case explicitly matched. This
+   rule additionally strengthens the fallback fills so a "reduce" choice
+   reads as clearly solid, not merely un-blurred. */
+@media (prefers-reduced-transparency: reduce) {
+  html[data-theme="liquid-glass"] .lcars-header-bar,
+  html[data-theme="liquid-glass"] .lcars-footer-bar,
+  html[data-theme="liquid-glass"] .lcars-status-pill,
+  html[data-theme="liquid-glass"] .lcars-sidebar a,
+  html[data-theme="liquid-glass"] .lcars-sidebar-filler,
+  html[data-theme="liquid-glass"] .lcars-btn,
+  html[data-theme="liquid-glass"] .lcars-icon-btn,
+  html[data-theme="liquid-glass"] fieldset.lcars-fieldset,
+  html[data-theme="liquid-glass"] .lcars-rating-fieldset,
+  html[data-theme="liquid-glass"] .lcars-trace-edge,
+  html[data-theme="liquid-glass"] .lcars-library-card,
+  html[data-theme="liquid-glass"] dialog.lcars-dialog {
+    background: rgba(20, 20, 24, 0.98);
+  }
+}

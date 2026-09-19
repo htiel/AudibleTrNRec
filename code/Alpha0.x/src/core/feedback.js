@@ -11,7 +11,7 @@
  *    inferred from another dimension or from listening progress;
  *  - text is inert data. Unsupported controls are rejected explicitly, never
  *    silently stripped or truncated, so a draft is never quietly damaged;
- *  - one active record per account/canonical book, with an immutable
+ *  - one active record per account/canonical feedback target, with an immutable
  *    `createdAt`, an `updatedAt` that only moves on a committed edit, and a
  *    revision token that makes a stale write a conflict rather than an
  *    overwrite.
@@ -35,6 +35,9 @@ export const FEEDBACK_LIMITS = deepFreeze({
 export const RATING_FIELDS = Object.freeze(['overallRating', 'storyRating', 'narrationRating']);
 
 export const FEEDBACK_INPUT_FIELDS = Object.freeze([...RATING_FIELDS, 'comment', 'tags']);
+
+/** Revision token for a book that has no stored feedback record. */
+export const ABSENT_REVISION = 'rev-0-absent';
 
 /** Closed error vocabulary. Never contains user text or a source value. */
 export const FEEDBACK_ERROR_CODES = Object.freeze([

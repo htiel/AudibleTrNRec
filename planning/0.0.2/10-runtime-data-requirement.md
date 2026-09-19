@@ -78,6 +78,14 @@ synthetic-seeded AppStore. Bootstrap verifies the real local source and
 renders an explicit, focusable refusal on unavailable/unverified/unauthenticated
 state. A private failure cannot fall back to fixtures.
 
+The accumulated working tree fixes the browser/Node module-boundary failure:
+feedback sentinels come from the browser-safe core, routing precedes one bulk
+feedback-list request, and hydration failure renders a visible refusal.
+Local unlock has been removed, not Audible registration; bootstrap now uses
+browser-metadata admission and a keyless session under the owner-only local
+trust exception. Settings/theme loading cannot substitute a synthetic store or
+change the source contract. See [12](12-accumulated-implementation.md).
+
 The legacy fixture store is test/demo infrastructure only, not the owner's
 user-facing runtime or an acceptable fallback. No new demo/runtime entry is
 authorized by this documentation update.
@@ -92,7 +100,8 @@ the evidence. Scope is process/schema metadata only.
 **Outstanding evidence:** RC-08 is not closed merely because event categories
 exist: current events are memory-only and startup/custody/migration decisions
 precede log construction. No durable startup/migration event receipt is claimed.
-CP-02 full live proof, supply-chain acceptance and rendered iPhone evidence
+Replacement of the accepted same-user-process trust boundary before expansion,
+supply-chain acceptance and rendered iPhone evidence
 also remain subject to 11's owner-versus-tester boundary.
 
 ## Verification expectations

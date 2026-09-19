@@ -7,12 +7,21 @@ and Worf APPROVE WITH CONDITIONS support the existing owner's usable build.
 This is not a passed full release-gate packet. See
 [11 — final verdict](11-implementation-release-verdict.md) for exact limits.
 
-Current evidence: Node **471 total / 470 pass / 1 skip**; Python **98 total /
-96 pass / 2 skip**; policy PASS, packaging BLOCKED, diff/secret scan CLEAN.
+Current automated evidence (executed 2026-09-19): Node **487 total / 486 pass /
+1 skip**; Python **98 total / 96 pass / 2 skip**; zero failures; policy PASS.
+Packaging BLOCKED and earlier secret-scan results are historical, not rerun.
 Reported authenticated server and process-only real-store migration evidence
 show revision 3, exact five-table schema, two receipts, opaque anchor and
 rollback discharge. No personal content was queried for this verdict.
-These runtime results are supplied evidence, not rerun by the documentation task.
+The migration/runtime results are supplied historical evidence, not rerun by
+this documentation audit. The tests above used synthetic/disposable state.
+
+The [accumulated implementation record](12-accumulated-implementation.md)
+covers retained external-browser registration/real data, removed local unlock,
+blank-page/bulk-feedback fixes, Author/Narrator/Series feedback, narrator display
+grouping, sidebar rail, session filters, whole-star controls, accessibility
+follow-ups and Settings with persistent LCARS/Liquid Glass selection. It also
+records verified Apple iOS 27 design references and web/native limitations.
 
 **Inventory: 4 themes / 8 epics / 30 features / 30 stories / 112 estimated
 points.** This is release-scope inventory, not a single-PI commitment.
@@ -34,19 +43,22 @@ camera ingestion and Audible handoff are outside the 112 points.
 | [10 — Runtime data requirement](10-runtime-data-requirement.md) | Binding real-encrypted-data-only private runtime, fail-closed bootstrap and custody-bounded migration; landed wiring update |
 | [11 — Implementation/release verdict](11-implementation-release-verdict.md) | Owner-only conditional GO versus named/public NO-GO; implemented package matrix, evidence, residuals and formal gates |
 | [Implementation reviews — index](implementation-reviews/README.md) | Current amended Data, Geordi, Wesley and Worf verdicts; distinct from earlier planning reviews |
+| [12 — Accumulated implementation](12-accumulated-implementation.md) | Audited uncommitted implementation, current validation, browser-state privacy, theme provenance and remaining restrictions |
 
 **Remaining release blockers:** unapproved source-only pbkdf2/pyaes artifacts,
-downloaded-byte hash verification and pip-audit/SBOM, full CP-02 live proof,
+downloaded-byte hash verification and pip-audit/SBOM, a reviewed replacement for
+the owner-accepted same-user-process trust boundary before expansion,
 durable/startup security-event evidence and physical iPhone/equivalent rendered
 proof. History/non-owned catalog, source-led architecture, legal and final
-audience gates also remain open. The backlog records 23 IMPLEMENTED,
-4 IN_REVIEW, 3 BLOCKED and no full-DoD DONE; no unavailable feasibility is
+audience gates also remain open. The backlog records 22 IMPLEMENTED,
+1 OWNER-ACCEPTED DEVIATION, 4 IN_REVIEW, 3 BLOCKED and no full-DoD DONE; no unavailable feasibility is
 marked successful.
 
 ## What belongs beyond UI and ratings?
 
 1. Close inherited security and data-integrity blockers **before named-tester
-   clearance** and before exposing private-feedback write APIs.
+   clearance**. Owner-only feedback writes exist under the recorded S015
+   exception; that does not satisfy the original release authentication gate.
 2. Make synchronization complete, recoverable, account-safe and durable;
    preserve removed books and their local data without pretending they are
    still in the current source.
@@ -82,6 +94,7 @@ and public/cloud/multi-user/commercial distribution are excluded.
 | 2026-09-17 | Set native iPhone as the intended product destination; defer camera/barcode ingestion and Audible title handoff | OF-007; direction mapped to existing S014 and S042/A2-G4; no inventory increase |
 | 2026-09-17 | Reconcile full four-officer planning review; preserve inventory and add mandatory correction/test traceability | Riker consensus; A2-G0 BLOCKED pending CP/Captain concurrence; no runtime or release authorization |
 | 2026-09-17 | Issue final owner-only implementation verdict after amended reports/current diff; acknowledge real-data runtime and revision-3 migration evidence | 11; owner evaluation conditional GO only, named/public NO-GO, no full release-gate pass |
+| 2026-09-19 | Reconcile complete accumulated working tree, current tests, browser preferences and Apple theme references | 12; documentation audit, not renewed officer approval or release clearance |
 
 See [planning conventions](../README.md) and
 [product authority](../../APP_DESCRIPTION.md). Native iPhone is the intended

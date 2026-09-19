@@ -13,9 +13,9 @@
  *    identifier, call, module-specifier, or CLI/URI shape. The UI legitimately
  *    *says* "no credential of any kind is stored or requested"; saying it must
  *    never be confused with doing it.
- * 2. There is exactly one allowance — `scripts/serve.js` may import
- *    `node:http` to *listen*. It is asserted narrowly: server-shaped use only,
- *    no client-shaped use, and no other file may import it.
+ * 2. Every allowance is path- and rule-specific and asserted below. The
+ *    filter-state module may use tab-scoped session storage, but no durable
+ *    local storage, cookies or database API.
  *
  * This is a source-shape scan. It is evidence about the code as written, not
  * packet-level proof of zero egress (see README "Remaining gaps").
@@ -43,10 +43,10 @@ const ALLOWANCES = Object.freeze({
   'node-http': Object.freeze(['scripts/serve.js']),
   fetch: Object.freeze(['ui/js/connection-api.js']),
   'child-process': Object.freeze([
-    'scripts/local-capability-bootstrap.js',
     'scripts/setup-connector.js',
     'src/adapters/connector-process.js',
   ]),
+  'web-storage': Object.freeze(['ui/js/library-filter-persistence.js', 'ui/js/theme-preference.js']),
 });
 
 function toPosix(p) {
@@ -152,14 +152,14 @@ test('no shipped code contains an outbound client, credential, clipboard, or pas
 
 test('allowances are exact and retain their narrow security shape', () => {
   // The allowlist itself is asserted, so it cannot widen without a test change.
-  assert.deepEqual(Object.keys(ALLOWANCES), ['node-http', 'fetch', 'child-process']);
+  assert.deepEqual(Object.keys(ALLOWANCES), ['node-http', 'fetch', 'child-process', 'web-storage']);
   assert.deepEqual(ALLOWANCES['node-http'], ['scripts/serve.js']);
   assert.deepEqual(ALLOWANCES.fetch, ['ui/js/connection-api.js']);
   assert.deepEqual(ALLOWANCES['child-process'], [
-    'scripts/local-capability-bootstrap.js',
     'scripts/setup-connector.js',
     'src/adapters/connector-process.js',
   ]);
+  assert.deepEqual(ALLOWANCES['web-storage'], ['ui/js/library-filter-persistence.js', 'ui/js/theme-preference.js']);
 
   const serve = stripComments(readFileSync(join(root, 'scripts', 'serve.js'), 'utf8'));
   assert.match(serve, /http\s*\.\s*createServer\s*\(/, 'serve.js must use node:http as a server');
@@ -198,8 +198,10 @@ test('allowances are exact and retain their narrow security shape', () => {
   assert.match(setup, /--no-deps/);
   assert.doesNotMatch(setup, /\bshell\s*:\s*true\b/);
 
-  const bootstrap = stripComments(readFileSync(join(root, 'scripts', 'local-capability-bootstrap.js'), 'utf8'));
-  assert.doesNotMatch(bootstrap, /\bshell\s*:\s*true\b/);
+  const filterPersistence = stripComments(readFileSync(join(root, 'ui', 'js', 'library-filter-persistence.js'), 'utf8'));
+  assert.match(filterPersistence, /\bsessionStorage\b/);
+  assert.doesNotMatch(filterPersistence, /\b(?:localStorage|indexedDB|openDatabase|cookieStore)\b|\bdocument\s*\.\s*cookie\b/);
+  assert.doesNotMatch(filterPersistence, /\b(?:removeItem|clear)\s*\(/, 'filter persistence must not erase unrelated browser state');
 });
 
 test('every rule is live: each detector flags its own positive-control sample', () => {

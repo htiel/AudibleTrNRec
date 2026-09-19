@@ -9,7 +9,11 @@ release gate has passed. Canonical delivery status remains in
 observations and intake statuses. Current code acceptance is recorded in
 [11](11-implementation-release-verdict.md): OF-001–005 have implemented
 behavior, OF-006 has approved UI code but missing physical/rendered evidence,
-and OF-007 is future direction only. “Not started” in an intake entry is
+and OF-007 is future direction only. OF-008/009 are implemented in the
+accumulated working tree. [12](12-accumulated-implementation.md) records all
+later follow-ups, Settings/theme behavior and fresh automated evidence without
+inventing an additional owner approval or physical-device sign-off.
+“Not started” in an intake entry is
 historical, not the current package status.
 
 The [review consensus](09-review-consensus.md) clarifies acceptance without
@@ -20,7 +24,7 @@ text only in the single active book editor. OF-005 preserves labeled primary/
 lifecycle/diagnostic groups at mobile reflow. OF-006 includes enumerated 44px
 controls, text spacing and keyboard-open reachability with an isolated synthetic
 device setup; no approved setup means HOLD, not waived device evidence.
-These are pending implementation criteria, not completed owner requests.
+These are original acceptance criteria, not proof of full release-gate closure.
 
 ## OF-001 — Scrub obsolete synthetic-data wording
 
@@ -113,10 +117,18 @@ These are pending implementation criteria, not completed owner requests.
 - **Intent:** Let the listener choose a supported grouping and sort order,
   expand or collapse group sections, and add or edit private feedback from the
   grouped library without losing browsing context.
-- **Feedback authority:** Ratings and comments remain attached to the individual
-  book. Author, narrator, series, status and any retained genre/category are
-  navigation groups, not separately rated entities. Each compact book item may
-  expose an inline disclosure/editor or a clearly associated edit action.
+- **Feedback authority:** Book ratings and comments remain attached to the
+  individual book. By owner change control on 2026-09-18, Author and
+  Narrator display groups and known Series groups also expose their own private overall rating, comment, and
+  tags while collapsed. Person feedback is a distinct target and is never
+  copied to the books in that group. Status, Unknown series, and any retained
+  genre/category remain navigation-only groups.
+- **Name-only source identities:** Audible may repeat the same narrator name
+  without a stable provider person ID. Ingestion retains those as separate
+  source occurrences rather than asserting they are one canonical person. The
+  Library combines identical normalized labels into one display group, retains
+  all underlying IDs, removes duplicate book appearances, and discloses when
+  feedback is attached to that combined display group.
 - **Grouping behavior:** Provide accessible expand/collapse controls on each
   group plus clear Expand all and Collapse all actions when multiple groups
   exist. Sorting within groups is deterministic and uses the selected direction;
@@ -131,8 +143,10 @@ These are pending implementation criteria, not completed owner requests.
 - **Acceptance evidence:** Rendered desktop/narrow and keyboard/screen-reader
   journeys cover grouping, collapse/expand, inline create/edit/clear/delete,
   validation failure, save failure and successful save without context loss.
-  Tests prove feedback persists against the correct book and never against the
-  group heading.
+  Tests prove book feedback persists against the correct book and person
+  feedback against the separate source-ID or display-hash group target without
+  cross-target overwrite. Equal display labels do not establish canonical
+  identity; old person feedback is not automatically migrated when membership changes.
 - **Backlog mapping:** [ATR-S033 — Accessible feedback editing](03-backlog.md#atr-s033--accessible-feedback-editing), [ATR-S037 — User-controlled facets](03-backlog.md#atr-s037--user-controlled-facets), and [ATR-S038 — Filter state and feedback-aware views](03-backlog.md#atr-s038--filter-state-and-feedback-aware-views)
 - **Status:** Captured for interaction design; not started.
 
@@ -151,18 +165,24 @@ These are pending implementation criteria, not completed owner requests.
   in the bottom utility group. Connection, synchronization, export, disconnect
   and deletion controls remain discoverable according to their user lifecycle
   importance rather than being mislabeled as developer-only diagnostics.
-- **Filler block:** A neutral gray LCARS segment visually fills the flexible
-  space between groups. It is decorative, contains no hidden action or status,
-  is excluded from the accessibility tree and tab order, and does not obscure
-  content at narrow widths or 200% zoom.
+- **Control rail change — 2026-09-18:** The owner replaced the decorative-only
+  filler requirement. The neutral gray LCARS segment now contains the Library
+  controls in this order: grouping/sort controls, Status, rating controls, and
+  text filters. Controls remain labeled, keyboard accessible, and visible only
+  for the Library route.
+- **Desktop scrolling change — 2026-09-18:** The navigation/control rail stays
+  fixed within the rendered viewport while the main content pane scrolls
+  independently. If the control set exceeds available rail space, only the
+  gray control segment scrolls; primary and diagnostic navigation stay put.
 - **Responsive behavior:** On layouts where a vertical rail is not viable, the
-  same primary-before-utility hierarchy remains clear without relying on empty
-  fixed-height space.
+  controls reflow to full width and normal document scrolling returns. The same
+  primary-before-utility hierarchy remains clear without horizontal overflow.
 - **Acceptance evidence:** Approved navigation inventory plus rendered desktop,
   320 CSS px and 200% zoom checks prove primary items remain first, diagnostic
-  items remain last, the gray segment fills only available space, active/focus
-  states remain visible, landmarks/names are clear, and keyboard order matches
-  the visual and semantic order.
+  items remain last, the gray controls appear in the requested order,
+  active/focus states remain visible, landmarks/names are clear, desktop main
+  scrolling does not move the rail, and keyboard order matches the visual and
+  semantic order.
 - **Backlog mapping:** [ATR-S034 — LCARS responsive accessibility](03-backlog.md#atr-s034--lcars-responsive-accessibility) and [ATR-S035 — Truthful evidence and error states](03-backlog.md#atr-s035--truthful-evidence-and-error-states)
 - **Status:** Captured for navigation design; not started.
 
@@ -198,6 +218,41 @@ These are pending implementation criteria, not completed owner requests.
 - **Status:** Captured as the primary mobile design target; exact measured CSS
   viewport evidence pending.
 
+## OF-009 — Use five whole-star radio choices
+
+- **Date:** 2026-09-18
+- **Owner observation:** The 0.5–5.0 rating dropdown is awkward, visually
+  dominates the inline editor, and makes an ordinary three-star choice harder
+  than necessary.
+- **Interaction:** Replace each rating select with five visible circles backed
+  by native radio choices. Selecting the third circle means exactly 3 stars
+  and fills circles 1–3; circles 4–5 remain empty. Clear remains the explicit
+  path back to Unrated.
+- **Compatibility:** New UI choices are whole stars. Existing saved half-star
+  values remain readable and are never rounded or rewritten automatically; the
+  editor identifies a legacy half value until the owner chooses a replacement.
+- **Accessibility:** The fieldset and legend name each rating dimension, every
+  visually numberless circle has an exact spoken star label, native keyboard
+  arrow behavior works, and focus has a visible outline independent of fill.
+
+## OF-008 — Preserve the last Library filter state on refresh
+
+- **Date:** 2026-09-18
+- **Owner direction:** Refreshing the browser must restore the last known
+  Library grouping, sort, Status, rating, text/tag filters, and collapsed
+  groups.
+- **Privacy disposition:** Do not encode private search or tag text in the URL.
+  Use a versioned, bounded, validated tab-scoped session-storage envelope.
+  Persist control state only; never persist an open editor, unsaved feedback,
+  focus target, or scroll position. State is tab/session-scoped; browser session
+  restoration may retain it, so tab closure is not a secure-erasure guarantee.
+- **Failure behavior:** Invalid, widened, oversized, unknown-version, or
+  inaccessible storage fails visibly to documented defaults. It never changes
+  a filter silently or blocks access to the real local library.
+- **Acceptance evidence:** A rendered browser journey sets grouping, sort,
+  Status, text, and tag values, refreshes, and observes the same controls while
+  confirming that the values did not enter the URL or long-lived local storage.
+
 ## OF-007 — Native iPhone destination and future capture/handoff
 
 - **Date:** 2026-09-17
@@ -232,3 +287,27 @@ These are pending implementation criteria, not completed owner requests.
   gates remain intact.
 - **Status:** Captured for planning; native architecture, future capability
   designs and all deployment approvals remain pending.
+
+## Accumulated implementation follow-ups — audited 2026-09-19
+
+This is implementation traceability, not a newly invented owner-feedback ID or
+new approval. The current working tree includes:
+
+- The owner-directed removal of local unlock, with Audible device registration
+  retained and same-user local-process exposure explicitly accepted only for
+  the dedicated prototype computer.
+- Browser-safe feedback imports, early routing, one bulk hydration request and
+  visible startup errors instead of a blank page.
+- Separate Author/Narrator/Series group feedback, available while books remain
+  collapsed; normalized-name narrator/author display grouping preserves source
+  identities rather than claiming a canonical person merge.
+- Sidebar filter placement, fixed desktop rail/independent scrolling,
+  tab-scoped filters (OF-008), progressive whole-star radios (OF-009), focus and
+  disclosure/reflow fixes.
+- Settings through header gear and sidebar, immediate LCARS/Liquid Glass
+  selection and persistent theme-only `localStorage`. Apple design references
+  and web/native limitations are recorded in 12; no native platform is delivered.
+
+Earlier Chromium observations remain reported evidence in 11. Current
+automated checks do not newly witness physical iPhone/VoiceOver, rendered theme
+contrast or all degraded-storage UI paths. Release restrictions are unchanged.

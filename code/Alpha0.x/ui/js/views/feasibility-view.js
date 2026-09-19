@@ -24,20 +24,24 @@ function buildTrace(trace) {
 export function renderFeasibilityView(root, store) {
   clear(root);
   if (store.runtimeMode === 'private-alpha') {
-    mount(root, h('section', { 'aria-labelledby': 'feasibility-heading' }, [
-      h('h2', { id: 'feasibility-heading', text: 'Feasibility & synthetic-only trace' }),
+    const section = h('section', { 'aria-labelledby': 'feasibility-heading' }, [
+      h('h2', { id: 'feasibility-heading', tabindex: '-1', text: 'Feasibility & synthetic-only trace' }),
       h('p', { class: 'lcars-status-statement', text: 'This diagnostic is intentionally synthetic-only. It does not run against the private Audible snapshot, so the private-alpha runtime hides it rather than mixing bundled fixtures into a live session.' }),
       h('p', { class: 'lcars-note', text: 'Genre remains diagnostic-only here because no approved private source proof exists. Return to the Library or Data & lifecycle view for private-alpha work.' }),
-    ]));
+    ]);
+    mount(root, section);
+    section.querySelector('h2')?.focus?.();
     return;
   }
-  mount(root, h('section', { 'aria-labelledby': 'feasibility-heading' }, [
-    h('h2', { id: 'feasibility-heading', text: 'Feasibility & synthetic-only trace' }),
+  const section = h('section', { 'aria-labelledby': 'feasibility-heading' }, [
+    h('h2', { id: 'feasibility-heading', tabindex: '-1', text: 'Feasibility & synthetic-only trace' }),
     h('h3', { id: 'feasibility-card-heading', text: 'Metadata feasibility card' }),
     h('p', { class: 'lcars-view-intro', text: 'Read-only measurement of how much narrator, series, genre, category, and other metadata the bundled synthetic fixture catalog actually carries. This is a feasibility measurement, not a quality judgment.' }),
     buildFeasibilityCard(store.feasibility()),
     h('h3', { id: 'trace-heading', text: 'Synthetic-only structural trace' }),
     h('p', { class: 'lcars-status-statement', text: 'This trace is entirely synthetic. It is a factual listing of which invented titles share a catalog attribute. It is not a recommendation, it does not rank titles, and it never mixes in any participant preference or listening record.' }),
     buildTrace(store.sharedFacetTrace()),
-  ]));
+  ]);
+  mount(root, section);
+  section.querySelector('h2')?.focus?.();
 }
