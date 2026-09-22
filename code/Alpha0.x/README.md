@@ -27,8 +27,12 @@ controls retain native radio semantics and exact spoken labels. Clear restores
 Unrated. Legacy stored half-star values remain readable and unchanged until
 the owner deliberately selects a new whole-star value.
 
-The Library's last valid grouping, sort, Status, rating, text/tag filters, and
-collapsed groups survive a page refresh in tab-scoped `sessionStorage`. Search
+The Library's last valid grouping, sort, Status, rating, text/tag filters,
+collapsed groups and page positions survive a page refresh in validated
+version-2 tab-scoped `sessionStorage`. The key is schema-only
+(`atnr:private-library-filters:v2`), not release-scoped. Valid legacy release
+keys are copied only when the canonical key is absent; canonical state wins.
+No legacy/unrelated state is deleted, and migration errors remain visible. Search
 and tag text never enters the URL or long-lived `localStorage`, and the saved
 control state is scoped to that browser tab/session. Browser session restoration
 can retain it; tab closure is not secure erasure. This storage can contain private
@@ -38,18 +42,71 @@ and scroll position are never serialized.
 Author/narrator display groups combine normalized equal names and deduplicate
 books while retaining all source person IDs. This is presentation grouping, not
 proof of a shared canonical identity; multi-source groups disclose that fact.
-Series grouping remains ID-based. Display-hash group targets do not
-automatically migrate older person-target feedback when group membership changes.
+Series grouping remains ID-based. Person targets always use the normalized-label
+hash, independent of member count. Legacy source-ID aliases remain readable;
+canonical feedback wins. On successful canonical save, a single legacy alias
+is retired using its own revision; retirement failure preserves both copies
+and reports the outcome. Multiple populated aliases are flagged as ambiguous,
+not automatically migrated or deleted.
 
-Library filters live in the sidebar. Above 640 CSS px the desktop frame keeps
-the navigation rail/header/footer stationary while main content and filter
-contents scroll independently; narrower screens return to document flow.
-Native disclosure semantics, explicit chevrons, focus-without-scroll, wrapping,
-safe-area and primary target-size fixes have automated regression guards.
+Library search and tag fields precede advanced filters, which default closed
+on mobile. Text filtering updates results without replacing the active inputs.
+LCARS keeps its independently scrolling desktop rail/main pane above 640 CSS
+px and document flow on narrower screens; Apple mode has its own toolbar and
+responsive content column. Disclosure, overflow-cue, footer-clearance, focus,
+wrapping and CSS target-size changes have regression guards, not blanket
+rendered accessibility certification.
+
+Pages cap at **50 book rows** ungrouped, or **five groups × ten child rows**
+when grouped. Full-library/filter/group counts remain accurate; collapsed
+groups render no children. There is no "Show all". Listing changes reset page
+positions. Previous/Next controls reach ungrouped, group and child pages;
+dirty drafts block paging with an announcement/editor focus until saved or
+discarded. See [data contracts](docs/data-contracts.md).
+
+Provider synopsis markup is converted to bounded inert text with paragraph
+separation. Missing series evidence displays **Series unknown**; the reserved
+confirmed-standalone state has no current ingestion producer.
+
+### Delayed Data-audit presentation fixes
+
+Completion status and partial percentage are independent evidence, not one
+undifferentiated fact. The core retains both values with separate attribution/
+position labels; current Library/Detail presentation suppresses a bare historical
+percentage next to Completed unless a separate current position is supplied
+and explicitly labeled. No completion/position value is inferred or rewritten.
+Provenance has closed owner-readable labels and an Unknown fallback rather
+than exposing arbitrary internal source tokens.
+
+Private Feasibility is absent from primary navigation in both shells but stays
+context-linked from Data; synthetic/direct diagnostic routing remains.
+The filter fieldset has a single Status label. Book Detail has one actionable
+feedback-guidance link to the Library editor, using return focus rather than
+duplicating instructions or creating another editor.
+
+Data's inventory is non-destructive: title/feedback/import counts distinguish
+known evidence from Unknown and are separate from the pre-deletion manifest.
+Reading it triggers no sync, export, deletion or confirmation nonce.
+
+Actual completed-sync reconciliation is persisted in `last-import-counts.json`
+in the protected custody root: a versioned, non-sensitive sidecar containing
+measured counts, timestamps, snapshot generation and a one-way account binding,
+not titles, book identifiers, account key, marketplace or private text.
+`status().local.lastImport` withholds the binding and adds no provider probe.
+Valid account/generation-bound evidence survives reload; current in-session
+measurement wins. Invalid, missing or quarantined evidence stays Unknown.
+Unmeasured unchanged/rejected counts are null, not zero.
+
+Parsing the retained snapshot remains **Unknown / not an import**. It cannot
+produce a known last-import claim; only actual sync reconciliation or its
+validated persisted receipt can. Snapshot/local-data deletion removes the
+sidecar, while disconnect retains it with the snapshot. A receipt write failure
+does not undo a completed sync or invent reload evidence. No source/storage
+schema revision changed. See [data contracts](docs/data-contracts.md).
 
 ### Settings and appearance
 
-Open **Settings** (`#/settings`) from the header gear or sidebar. Both modes
+Open **Settings** (`#/settings`) from LCARS navigation or the Apple tab bar. Both modes
 offer default **LCARS** and opt-in **Liquid Glass**. Selection applies immediately
 and stores only `lcars` or `liquid-glass` in `localStorage` at
 `atnr:ui-theme:v1`, surviving restart for the same browser origin/profile.
@@ -59,24 +116,85 @@ Missing preference defaults to LCARS; invalid/unavailable storage fails to the
 default on load. If saving fails, Settings reports that the appearance changed
 for this visit but could not be remembered.
 
-The web theme uses this project's CSS translucency, backdrop blur, rounded
+`app.js` mounts exactly one independent shell: `shells/lcars-shell.js` or
+`shells/apple-shell.js`. Apple mode constructs a compact navigation bar,
+Library/Data/Settings tabs and contextual back navigation; Feasibility is
+reachable from Data. It never constructs hidden LCARS elbows/sidebar/filler.
+Both shells share route/store state and neutral `atnr-*` view components;
+switching shells retains the store rather than reconnecting to Audible.
+
+Apple styling no longer references `--lcars-*`; shared tokens are `--atnr-*`.
+`applyTheme()` actively enables/disables scoped links: Apple mode disables
+`layout.css` and `theme-lcars.css`, while LCARS disables
+`theme-liquid-glass.css`. Neutral sheets remain enabled. A monotonic activation
+generation prevents stale shell imports from overwriting the latest choice.
+
+The web material uses original CSS translucency, backdrop blur, rounded
 surfaces and local system fonts. Apple's iOS 27/iPadOS 27 resource listing and
 Materials guidance are the [verified design references](../../planning/0.0.2/12-accumulated-implementation.md#apple-design-resource-provenance-and-native-limits),
 not bundled artwork, SDKs or an endorsement. CSS cannot reproduce native
-refraction, Dynamic Type or direct OS accessibility integration.
+refraction, Dynamic Type or direct OS accessibility integration. Apple HIG,
+documented APIs and Design Resources are normative. Google image search is
+non-normative inspiration only: no copying, tracing, bundling or hotlinking
+third-party imagery/UI assets, and no uploading private screenshots or data.
+No UIKit/SwiftUI equivalence or physical iPhone validation is claimed.
 
 #### Residual limitations
 
 - A brief LCARS flash is possible before the theme module executes.
 - CSS reduced-transparency/contrast features depend on browser support.
-  Source/fake-DOM tests are not measured contrast, physical Safari/VoiceOver or
-  rendered keyboard/touch evidence for either theme.
+  Source/fake-DOM tests are not measured contrast or keyboard/touch evidence.
+  Chromium regression coverage plus the supplied live private matrix verify
+  shell/page/switch behavior; they are not physical-device/VoiceOver validation
+  or blanket contrast/zoom/AT certification.
 - Browser preferences are separate from encrypted library/feedback custody;
   local data deletion is not a claim to purge browser storage or restored tabs.
 
 This remains an architecture experiment, not a final platform decision. The
 connector is unofficial and reverse-engineered. Commercial/public shipping,
 hosting, package publication, installers, and app-store submission are blocked.
+
+### Connection evidence
+
+Health is the closed `connectionState`: `disconnected`, `unverified`,
+`verified` or `authorization-failed`. The legacy connector `connected` flag
+means credentials are held, **not** that Audible currently accepts them.
+Successful registration/library-sync evidence supports verification for
+24 hours; a newer refusal takes precedence. Status reads perform no provider
+probe. This is not continuous revocation detection or a successful durable-sync
+claim. Local snapshot/feedback and account-quarantine controls remain separate.
+Failed sync rereads recorded connector evidence (no new provider probe) and
+refreshes the Data disclosure/header. New refusal evidence outranks verification;
+if refresh is unreachable, the screen is custody-only/stale, not falsely
+verified or automatically labeled revoked. Local data and drafts are retained.
+Recovery copy directs the owner to Data; no new credential-replacement flow
+was added, and failed deregistration can still block reconnection.
+
+### Privacy-safe visual capture
+
+Run `node scripts/capture-ui.js --theme all` only with a separately reviewed local browser
+driver. The default starts a separate synthetic loopback server, uses production
+shells/views, and writes page-only images plus a neutral manifest to the ignored
+`.capture-out/synthetic/` directory. It opens no private store. Both themes are
+selected by default; `--theme all` is explicit, or select one with
+`--theme lcars` / `--theme liquid-glass`. The runner uses production Settings
+controls and verifies theme selection in the live DOM before capture.
+The final supplied actual run produced **12 neutral PNGs plus manifest** and
+then verified purge. These screenshots are synthetic, separate from the live
+private matrix, and are not the complete private-style regression matrix.
+
+[The capture procedure](docs/visual-capture.md) requires per-run consent,
+acknowledgements, an external non-synced output location and a 1–24-hour
+retention deadline for real data. Treat protected custody as an owner
+obligation, not encryption supplied by the runner. Purge verifies file removal,
+not forensic erasure. Never commit or attach real-data images/manifests.
+The runner disables additional recordings and blocks non-origin requests.
+
+Playwright is dynamically loaded, **undeclared and unpinned**, with no lockfile.
+Missing tooling refuses capture; rendered tests can skip when its import is
+unavailable. Reproducible browser-tool provenance remains a release-evidence
+gap. There are no `test:browser` or `capture:synthetic` npm scripts; the rendered
+tests are part of `npm test`, and capture uses the direct command above.
 
 ## Run
 
@@ -200,6 +318,11 @@ and registers the device, while **Sync now** uses that encrypted authorization.
   startup, on a timer, or as a side effect of a read or a sync. The document
   excludes credentials, tokens, the identity seed, the account key and file
   paths *by construction*, not by filtering afterwards.
+- A visible warning and confirmation precede private and synthetic exports,
+  naming titles, progress, ratings, comments, tags and the unencrypted file's
+  loss of ATnR protection. Only an explicit true confirmation requests export.
+  Cancel/dismiss makes no request, obtains/spends no nonce and creates no file.
+  Later local deletion cannot recall the saved copy.
 - The response is served as a bounded download — `attachment` with a fixed
   ASCII filename that stored content cannot steer, `nosniff`, and `no-store` —
   so the browser cannot render it as markup or cache it to disk. Over the
@@ -459,14 +582,21 @@ Still required:
 
 ## Current verification
 
-**Latest executed working-tree checks — 2026-09-19:** Node v24.18.0:
-`npm test` **487 total / 486 pass / 0 fail / 1 skip**; Python 3.13.15 in the
-existing venv: `npm run connector:test` **98 total / 96 pass / 0 fail / 2 skip**;
+**Definitive post-delayed-audit results supplied by the Captain — 2026-09-21:**
+`npm test` **685 total / 684 pass / 0 fail / 1 environment symlink skip**,
+**87.7 seconds**; `npm run connector:test`
+**128 total / 126 pass / 0 fail / 2 skips**;
 `npm run policy:check` **PASS**, with both unapproved source artifacts still
 blocking fresh installation. Skips are symlink controls, not passing evidence.
-No live account, private-state operation or new rendered-browser run was used.
+Actual `node scripts/capture-ui.js --theme all` verified both themes in the
+live DOM, wrote 12 neutral PNGs plus manifest, and purge verified.
+Previously supplied live private evidence: initial Apple has zero LCARS classes, 50 rows and
+`Showing 1–50 of 180 (page 1 of 4)`; Next reaches 51–100. Rapid Apple→LCARS
+ends LCARS with Apple CSS disabled and both LCARS sheets enabled, no errors.
+These operations were not rerun by this documentation task. Physical-device/
+VoiceOver and current provider-revocation evidence remain open.
 The [evidence record](../../planning/0.0.2/12-accumulated-implementation.md#executed-evidence-and-limitations)
-distinguishes current checks from earlier supplied results below.
+distinguishes definitive supplied results from historical evidence below.
 
 The blank-page regression is fixed by importing the feedback sentinel from the
 browser-safe core instead of Node persistence. Routing starts before a single

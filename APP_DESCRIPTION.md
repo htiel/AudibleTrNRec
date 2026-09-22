@@ -5,7 +5,7 @@
 ## Current Planned Release
 
 The current planned release is **alpha 0.0.2**, a private, single-user increment
-covering release-blocker remediation, LCARS UI optimization, and private
+covering release-blocker remediation, independent Apple-style/LCARS web shells, and private
 book, author, narrator, and series ratings and feedback collection/storage. Its initial scope, hierarchy,
 stories, dependencies, and gates are maintained in
 [the alpha 0.0.2 plan](planning/0.0.2/README.md).
@@ -23,7 +23,7 @@ clearance. Commercial/public distribution remains **NO-GO**.
 Planning a version does not mean it is implemented or approved for release.
 Changes to scope, trust rules, or release gates require explicit change control.
 
-### Accumulated Alpha 0.0.2 implementation — 2026-09-19
+### Post-audit Alpha 0.0.2 remediation reconciliation — 2026-09-21
 
 The [working-tree implementation record](planning/0.0.2/12-accumulated-implementation.md)
 and [changelog](CHANGELOG.md) distinguish delivered prototype behavior from the
@@ -39,18 +39,68 @@ broader product goals below:
   visible startup refusal; implemented separate collapsed-group Author,
   Narrator and Series feedback alongside book feedback.
 - Normalized-name contributor display grouping retains source identities;
-  it is not canonical person resolution. Sidebar filters, independent desktop
-  rail/content scrolling and tab-scoped filter persistence are implemented.
+  it is not canonical person resolution. Search-first mobile controls, bounded
+  result pages and tab-scoped filter/page persistence are implemented; LCARS
+  retains independent desktop rail/content scrolling.
   Search/tag state in session storage is not encrypted custody or secure erasure.
 - Progressive whole-star controls preserve legacy half-star data. Focus,
   disclosure, wrapping, target-size and reflow fixes have regression coverage,
   not blanket WCAG or physical-device certification.
-- Settings offers persistent LCARS (default) and Liquid Glass themes. Only
-  the theme identifier uses durable browser storage. Apple's iOS 27/iPadOS 27
-  design-resource listing and Materials guidance are verified references, not
-  a native SDK/asset dependency or architecture approval.
+- Settings selects independently constructed LCARS (default) or Apple-style
+  Liquid Glass shell markup, not an Apple skin over hidden LCARS chrome.
+  Apple mode has Library/Data/Settings tabs, contextual back navigation and
+  a responsive reading column. Shared views use neutral `atnr-*` components.
+  Apple styling no longer references `--lcars-*`; shared tokens are neutral,
+  and LCARS-only stylesheets are disabled in Apple mode. Race-free activation
+  ensures the last selected theme owns the shell. Only the theme identifier
+  uses durable browser storage.
+- Remediation for GitHub issues #1–#14 is integrated: search focus, contrast/
+  reflow/overflow treatments, honest synopsis/series/connection presentation,
+  bounded pagination, pre-export consent and synthetic-default capture.
+  [The issue/evidence matrix](planning/0.0.2/12-accumulated-implementation.md#integrated-remediation-issues-114)
+  separates implemented changes from remaining acceptance evidence; issues
+  and release gates are not declared closed by this record.
+- Synopsis ingestion emits bounded inert text; missing series remains unknown.
+  Connection health uses recent provider-interaction evidence, not credential
+  presence. Library pages cap at 50 book rows (five groups × ten children when
+  grouped), with no unbounded "Show all".
+- Independent-review fixes make row/group/child pagination reachable, keep
+  person feedback IDs stable across display-group membership changes with
+  safe legacy-alias migration, guard asynchronous theme activation, and refresh
+  displayed connection evidence after failed sync. Dirty drafts block paging
+  until saved or discarded.
+- Delayed Data-audit fixes separate completion claims from partial position
+  evidence, use closed provenance labels, remove private Feasibility from
+  primary navigation while retaining its Data context link, and provide
+  non-destructive Data inventory. Filters use schema-only session persistence
+  with legacy-key migration; Status and Book-detail feedback guidance are
+  each presented once.
+- Actual sync reconciliation survives reload via the account/snapshot-bound,
+  non-sensitive `last-import-counts.json` sidecar. Snapshot parsing alone
+  remains Unknown / not an import; unmeasured counts are not invented.
+- Plaintext JSON export requires visible informed consent before the request.
+  Capture defaults to synthetic data; real-data capture needs per-run consent,
+  protected handling, a retention deadline and verified file removal, not a
+  secure-erasure promise. The optional capture driver remains unpinned.
+  Actual synthetic `--theme all` capture verified both themes in the live DOM,
+  wrote 12 neutral PNGs plus a manifest, then verified purge.
+
+Apple HIG, documented Apple APIs and Apple Design Resources are normative
+design references, not bundled SDKs/assets or architecture approval. Google
+image search may supply **non-normative inspiration only**: never copy, trace,
+bundle or hotlink third-party imagery or UI assets, and never upload private
+screenshots/data for inspiration. This is original semantic HTML/CSS/JS,
+not UIKit/SwiftUI equivalence, Apple endorsement or physical iPhone validation.
 
 The evidence record gives executed test/policy results and remaining gates.
+Definitive post-audit results supplied on 2026-09-21: **685 Node tests / 684 pass /
+0 fail / 1 environment symlink skip** (**87.7 seconds**), **128 connector tests /
+126 pass / 0 fail / 2 skips**, policy PASS. The previously supplied live private matrix
+confirms initial Apple has zero LCARS classes and 50 rows, Next reaches
+51–100 of 180, and rapid Apple→LCARS ends with the correct stylesheet states
+and no errors. These results were reconciled, not rerun by this documentation
+task. Physical-device/VoiceOver and current provider-revocation evidence remain
+open; Playwright is undeclared/unpinned. Skips are not passes.
 Recommendations, LLMs, genre feedback and native implementation remain outside
 this alpha. No release, tester conveyance or public/commercial approval follows.
 
@@ -735,8 +785,10 @@ recommendation evaluation.
 
 ## Accessibility and User Experience
 
-For the web alpha, Settings offers LCARS and an opt-in Liquid Glass
-interpretation. Both require accessible focus, legibility, reflow and reduced
+For the web alpha, Settings selects independent LCARS or opt-in Apple-style
+Liquid Glass shells with shared semantic views and neutral tokens. Apple uses
+no `--lcars-*` tokens and disables LCARS-only stylesheets. Both require accessible
+focus, legibility, reflow and reduced
 motion/transparency behavior. System-font/CSS approximations are not native
 Dynamic Type, native materials or physical iPhone evidence; see
 [provenance and limits](planning/0.0.2/12-accumulated-implementation.md#apple-design-resource-provenance-and-native-limits).

@@ -17,6 +17,7 @@ Three rules govern this module (ATR-S021, ATR-S023, ATR-S026):
 from __future__ import annotations
 
 import hashlib
+import html
 import math
 import re
 from datetime import UTC, datetime
@@ -32,6 +33,24 @@ from .contract import (
 
 MAX_TEXT = 4096
 CONTROL_CHARACTERS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+#: Maximum prose length kept for a synopsis. Over-limit prose is **omitted**,
+#: never truncated: a half sentence is a worse lie than an honest absence.
+MAX_SYNOPSIS = 2000
+
+#: Hard ceiling on the raw provider string the markup normalizer will even
+#: look at. Bounds the work performed on untrusted input; an over-size value
+#: is omitted, exactly like over-limit prose.
+MAX_MARKUP_INPUT = 64 * 1024
+
+#: Declared evidence for the series relationship of a title.
+#:
+#: ``unknown`` means the provider said nothing we can rely on. It is **not**
+#: proof that the title is standalone: this connector has no authoritative
+#: standalone signal, so it never emits ``confirmed-standalone``. The value
+#: exists in the contract so a future authoritative source can supply it
+#: without every downstream surface changing shape.
+SERIES_EVIDENCE = ("provider-supplied", "unknown", "confirmed-standalone")
 
 #: Closed diagnostic vocabulary. Mirrors the Node core categories so one
 #: rejection reads the same on both sides of the boundary.
@@ -105,6 +124,172 @@ def _number(value: Any, *, minimum: float = 0, maximum: float = 1_000_000) -> fl
     if not math.isfinite(result) or not minimum <= result <= maximum:
         return None
     return result
+
+
+#: Tags whose *content* is discarded along with the tag. These never carry
+#: reader-facing prose, and their bodies are exactly where executable or
+#: resource-bearing payloads live. The body is dropped without being parsed,
+#: interpreted, or reproduced anywhere.
+_DROP_CONTENT_TAGS = frozenset({
+    "script", "style", "noscript", "template", "iframe", "frame", "frameset",
+    "object", "embed", "applet", "svg", "math", "head", "title", "link", "meta", "base",
+})
+
+#: Tags that end a line of prose.
+_LINE_BREAK_TAGS = frozenset({"br"})
+
+#: Tags that end a paragraph of prose. A paragraph boundary is the only
+#: structure this normalizer preserves; nothing else about the markup survives.
+_PARAGRAPH_TAGS = frozenset({
+    "p", "div", "section", "article", "aside", "header", "footer", "main", "nav",
+    "address", "blockquote", "pre", "figure", "figcaption", "hr",
+    "h1", "h2", "h3", "h4", "h5", "h6",
+    "ul", "ol", "li", "dl", "dt", "dd",
+    "table", "thead", "tbody", "tfoot", "tr", "td", "th", "caption", "col", "colgroup",
+    "form", "fieldset", "legend", "details", "summary", "dialog", "hgroup", "search",
+})
+
+#: Inline tags that are removed while their text is kept.
+_INLINE_TAGS = frozenset({
+    "a", "abbr", "b", "bdi", "bdo", "cite", "code", "data", "del", "dfn", "em", "i",
+    "ins", "kbd", "mark", "q", "rp", "rt", "ruby", "s", "samp", "small", "span",
+    "strong", "sub", "sup", "time", "u", "var", "wbr", "font", "big", "strike", "tt",
+    "center", "nobr", "img", "picture", "source", "audio", "video", "track", "map", "area",
+    "button", "input", "label", "option", "select", "textarea", "optgroup", "output",
+    "progress", "meter", "slot", "body", "html",
+})
+
+#: The closed vocabulary this normalizer recognizes as markup. An angle
+#: bracket that does not open one of these names is *not* treated as a tag:
+#: it stays literal text, so plain prose such as "5 < 6" survives untouched
+#: instead of being silently eaten by a speculative parser.
+_KNOWN_TAGS = _DROP_CONTENT_TAGS | _LINE_BREAK_TAGS | _PARAGRAPH_TAGS | _INLINE_TAGS
+
+_TAG_RE = re.compile(r"<(?P<close>/?)(?P<name>[A-Za-z][A-Za-z0-9:-]{0,31})(?P<rest>[^>]*)>", re.S)
+_DECLARATION_RE = re.compile(r"<[!?][^>]*>", re.S)
+_INLINE_SPACE_RE = re.compile(r"[^\S\n]+")
+
+#: Invisible characters removed from prose: zero-width and byte-order marks,
+#: the replacement character produced by malformed escapes, and the bidi
+#: overrides that can make rendered text read differently from its content.
+#: None of them carry meaning for a reader; all of them can disguise one.
+_INVISIBLE_RE = re.compile(r"[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff\ufffd]")
+
+
+def _close_tag_end(value: str, name: str, start: int) -> int:
+    """Index just past ``</name...>``, or end-of-string when never closed.
+
+    An unclosed drop-content tag consumes the remainder. That is deliberate:
+    the alternative is emitting the inside of an unterminated ``<script>`` as
+    prose.
+    """
+
+    lowered = value.lower()
+    probe = start
+    needle = f"</{name}"
+    while True:
+        found = lowered.find(needle, probe)
+        if found == -1:
+            return len(value)
+        end = value.find(">", found)
+        if end == -1:
+            return len(value)
+        after = lowered[found + len(needle):end]
+        if after.strip() == "":
+            return end + 1
+        probe = end + 1
+
+
+def _strip_markup(value: str) -> str:
+    """Replace recognized markup with plain-text structure.
+
+    The scanner never builds a DOM, never resolves a URL, never evaluates an
+    attribute and never re-emits a tag. It performs a single left-to-right
+    pass and emits only text plus newline structure, so the result cannot
+    carry a script, an event handler or an embedded resource *as markup*.
+    """
+
+    out: list[str] = []
+    index = 0
+    length = len(value)
+    while index < length:
+        char = value[index]
+        if char != "<":
+            nxt = value.find("<", index)
+            if nxt == -1:
+                nxt = length
+            out.append(value[index:nxt])
+            index = nxt
+            continue
+        if value.startswith("<!--", index):
+            end = value.find("-->", index + 4)
+            index = length if end == -1 else end + 3
+            continue
+        declaration = _DECLARATION_RE.match(value, index)
+        if declaration:
+            index = declaration.end()
+            continue
+        match = _TAG_RE.match(value, index)
+        name = (match.group("name").lower() if match else "")
+        if not match or name not in _KNOWN_TAGS:
+            # Not markup from the closed vocabulary: a literal angle bracket.
+            out.append("<")
+            index += 1
+            continue
+        index = match.end()
+        closing = match.group("close") == "/"
+        if name in _DROP_CONTENT_TAGS:
+            if not closing:
+                index = _close_tag_end(value, name, index)
+            out.append("\n\n")
+        elif name in _LINE_BREAK_TAGS:
+            out.append("\n")
+        elif name in _PARAGRAPH_TAGS:
+            out.append("\n\n")
+    return "".join(out)
+
+
+def plain_text_from_markup(value: Any, *, maximum: int = MAX_SYNOPSIS) -> str | None:
+    """Normalize possibly-marked-up provider prose into bounded plain text.
+
+    Contract:
+
+    * markup is **removed**, never interpreted and never re-emitted, so the
+      result cannot execute a script, carry an event handler or reference an
+      embedded resource;
+    * character entities are decoded *after* tag removal, so an escaped
+      ``&lt;p&gt;`` stays the literal text the publisher wrote rather than
+      being promoted into structure;
+    * paragraph boundaries survive as a blank line; nothing else does;
+    * text that is already plain comes back unchanged apart from whitespace
+      collapsing;
+    * over-size input and over-length results are **omitted** (``None``),
+      never truncated mid-sentence.
+
+    Instruction-bearing prose ("ignore previous instructions...") is treated
+    exactly like any other prose: it is text, it is bounded, and nothing here
+    acts on it.
+    """
+
+    if not isinstance(value, str):
+        return None
+    if len(value) > MAX_MARKUP_INPUT:
+        return None
+    stripped = _strip_markup(value)
+    decoded = html.unescape(stripped)
+    # Entity decoding can reintroduce control characters; remove them after,
+    # keeping only the newline structure the scanner produced.
+    cleaned = CONTROL_CHARACTERS.sub("", decoded.replace("\r\n", "\n").replace("\r", "\n"))
+    cleaned = _INVISIBLE_RE.sub("", cleaned)
+    paragraphs = [
+        collapsed
+        for line in cleaned.split("\n")
+        if (collapsed := _INLINE_SPACE_RE.sub(" ", line).strip())
+    ]
+    text = "\n\n".join(paragraphs)
+    if not text or len(text) > maximum:
+        return None
+    return text
 
 
 def _identifier(kind: str, value: str) -> str:
@@ -237,12 +422,22 @@ def _series(
     *,
     book_key: str,
     facets: dict[str, dict[str, Any]],
-) -> tuple[str | None, float | None]:
+) -> tuple[str | None, float | None, str]:
+    """Resolve the series relationship **and the evidence behind it**.
+
+    Absence is not proof. An omitted, empty or unusable series list means the
+    provider told us nothing, so the evidence is ``unknown``. It is never
+    promoted to ``confirmed-standalone``: this source publishes no
+    authoritative standalone signal, and "no series field" is equally
+    consistent with a response-group gap, a catalog gap, or a genuine
+    standalone title.
+    """
+
     if not isinstance(raw_series, list) or not raw_series:
-        return None, None
+        return None, None, "unknown"
     raw = raw_series[0]
     if not isinstance(raw, dict):
-        return None, None
+        return None, None, "unknown"
     name = _text(raw.get("title") or raw.get("name"), required=True, maximum=200)
     provider_id = _text(raw.get("asin"), maximum=128)
     if provider_id:
@@ -256,7 +451,7 @@ def _series(
         {"facetId": facet_id, "type": "series", "name": name, "identityBasis": basis},
     )
     position = _number(raw.get("sequence"), minimum=0, maximum=999)
-    return facet_id, position
+    return facet_id, position, "provider-supplied"
 
 
 def _categories(
@@ -376,7 +571,7 @@ def normalize_library(items: list[Any], *, marketplace: str, observed_at: str) -
             record_index=record_index,
         )
         try:
-            series_id, series_position = _series(
+            series_id, series_position, series_evidence = _series(
                 raw.get("series"), book_key=book_key, facets=facets
             )
             genre_ids = _categories(
@@ -398,6 +593,7 @@ def normalize_library(items: list[Any], *, marketplace: str, observed_at: str) -
                 "narratorIds": sorted(set(narrator_ids)),
                 "seriesId": series_id,
                 "seriesPosition": series_position,
+                "seriesEvidence": series_evidence,
                 "genreIds": genre_ids,
                 "themeIds": [],
                 "topicId": None,
@@ -409,11 +605,11 @@ def normalize_library(items: list[Any], *, marketplace: str, observed_at: str) -
                     raw.get("release_date") or raw.get("publication_datetime")
                 ),
                 "coverRef": None,
-                "synopsis": _text(
+                "synopsis": plain_text_from_markup(
                     raw.get("publisher_summary")
                     or raw.get("merchandising_summary")
                     or raw.get("short_description"),
-                    maximum=2000,
+                    maximum=MAX_SYNOPSIS,
                 ),
                 "contentFlags": [],
                 "qualityScore": None,

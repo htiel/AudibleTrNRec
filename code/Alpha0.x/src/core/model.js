@@ -25,6 +25,41 @@ export const LISTENING_STATUSES = Object.freeze([
 export const FACET_TYPES = Object.freeze(['genre', 'category', 'theme', 'series']);
 export const PERSON_ROLES = Object.freeze(['author', 'narrator']);
 
+/**
+ * Declared evidence behind a title's series relationship.
+ *
+ *  - `provider-supplied`   the source named a series for this title.
+ *  - `unknown`             the source said nothing usable. This is an absence
+ *                          of evidence, never evidence of absence.
+ *  - `confirmed-standalone` an authoritative source stated the title is not
+ *                          part of a series.
+ *
+ * The third value exists so an authoritative claim has somewhere to live. No
+ * ingestion path in this repository currently produces it, and none may infer
+ * it from a missing `seriesId`: "we were not told" and "there is no series"
+ * are different facts, and only one of them can be printed as one.
+ */
+export const SERIES_EVIDENCE = Object.freeze([
+  'provider-supplied', 'unknown', 'confirmed-standalone',
+]);
+
+/**
+ * Resolve series evidence from a raw record, refusing to upgrade silence.
+ *
+ * A known `seriesId` is self-evidently provider-supplied. Everything else is
+ * `unknown` unless the record explicitly carries `confirmed-standalone`, which
+ * only a source that actually knows may assert.
+ */
+export function resolveSeriesEvidence(rawEvidence, seriesId) {
+  if (!isUnknown(seriesId)) return 'provider-supplied';
+  return rawEvidence === 'confirmed-standalone' ? 'confirmed-standalone' : 'unknown';
+}
+
+/** True when the series relationship of a row/book is simply not known. */
+export function isSeriesUnknown(record) {
+  return (record?.seriesEvidence ?? 'unknown') === 'unknown';
+}
+
 /** Imported, source-authoritative fields. Local edits never win here. */
 export const SOURCE_OWNED_FIELDS = Object.freeze([
   'status', 'percentComplete', 'positionSeconds', 'acquiredAt',
@@ -37,9 +72,63 @@ export const LOCAL_OWNED_FIELDS = Object.freeze([
   'favorite', 'abandonedReason', 'listenAgain', 'dismissed',
 ]);
 
-const PROVENANCE_SOURCES = Object.freeze([
+export const PROVENANCE_SOURCES = Object.freeze([
   'synthetic-fixture', 'audible-community-private-api', 'local-user', 'derived', 'unknown',
 ]);
+
+/**
+ * The closed presentation vocabulary for provenance (issue B3).
+ *
+ * A machine token is an internal identifier, not a sentence. Passing an
+ * unrecognized one through to the screen shows the owner a string they cannot
+ * evaluate and quietly implies we know where the fact came from. Every entry
+ * here therefore has a human label, and anything outside this table resolves
+ * to `unknown` — an admission, not a guess.
+ *
+ *  - `label`      full sentence-case description for a provenance line.
+ *  - `agent`      the actor, phrased to follow "by ...", for sentences such as
+ *                 "Marked finished by Audible".
+ *  - `live`       true when the source is a real provider account rather than
+ *                 a fixture or a local derivation.
+ */
+export const PROVENANCE_PRESENTATION = Object.freeze({
+  'synthetic-fixture': Object.freeze({
+    source: 'synthetic-fixture', known: true, live: false,
+    label: 'Imported (synthetic fixture)', agent: 'a synthetic fixture',
+  }),
+  'audible-community-private-api': Object.freeze({
+    source: 'audible-community-private-api', known: true, live: true,
+    label: 'Imported from Audible', agent: 'Audible',
+  }),
+  'local-user': Object.freeze({
+    source: 'local-user', known: true, live: false,
+    label: 'Local/synthetic annotation', agent: 'you',
+  }),
+  derived: Object.freeze({
+    source: 'derived', known: true, live: false,
+    label: 'Derived', agent: 'this app',
+  }),
+  unknown: Object.freeze({
+    source: 'unknown', known: false, live: false,
+    label: 'Unknown provenance', agent: 'an unknown source',
+  }),
+});
+
+/**
+ * The single authority for "what do we say about where this came from?".
+ *
+ * Unknown, absent, and malformed tokens all resolve to the `unknown` entry, so
+ * no surface can print a raw machine token and no surface has to invent a
+ * label of its own.
+ */
+export function provenancePresentation(source) {
+  // `Object.hasOwn`, not `??`: `PROVENANCE_PRESENTATION['constructor']` would
+  // otherwise resolve through the prototype and return a function where a
+  // label is expected.
+  return typeof source === 'string' && Object.hasOwn(PROVENANCE_PRESENTATION, source)
+    ? PROVENANCE_PRESENTATION[source]
+    : PROVENANCE_PRESENTATION.unknown;
+}
 
 function provenance({ source, observedAt, fields = {}, unknownFields = [], notes = [] }) {
   return {
@@ -157,12 +246,25 @@ export function normalizeBook(input, { source = 'synthetic-fixture', observedAt 
 
   if (book.narratorIds.length === 0) unknownFields.push('narratorIds');
 
+  // Series evidence is derived here, after `seriesId` is resolved, so an
+  // absent series can never be presented as a confirmed standalone title.
+  book.seriesEvidence = safeEnum(
+    resolveSeriesEvidence(raw.seriesEvidence, book.seriesId),
+    SERIES_EVIDENCE,
+    'book.seriesEvidence',
+    { required: true },
+  );
+
   book.provenance = provenance({
     source,
     observedAt,
     unknownFields,
     notes,
-    fields: Object.fromEntries(Object.keys(book).map((f) => [f, 'source'])),
+    fields: {
+      ...Object.fromEntries(Object.keys(book).map((f) => [f, 'source'])),
+      // Declared by this module from what the source did and did not supply.
+      seriesEvidence: 'derived',
+    },
   });
   assertCommercialFree(book, `book ${book.bookId}`);
   return deepFreeze(book);

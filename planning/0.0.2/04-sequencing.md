@@ -15,6 +15,47 @@ later owner-use UI/feedback/Settings follow-ups without changing wave estimates.
 The CP-02 unlock baseline below is historical: it was removed, not proven.
 Tester expansion still requires a reviewed replacement local-client boundary.
 
+## Final remediation integration checkpoint — 2026-09-21
+
+The three follow-up streams are now integrated: Geordi's independent shell/
+neutral-view navigation work, Data's normalization/state/bounded-paging
+contracts, and Worf's consent/capture controls. The current [issue/evidence
+matrix](12-accumulated-implementation.md#integrated-remediation-issues-114)
+replaces the proposed remediation order as the implementation record; it does
+not claim the original gate sequence was fully discharged.
+
+Dependencies now consumed: Library/Detail use shared series/paging contracts;
+Data uses evidence-derived connection presentation and neutral components;
+export consent precedes API confirmation; rendered tests use production
+shells/views with synthetic state. Shared-file ownership remains single-writer
+for further corrections: Geordi owns shell/components/Library/Detail/Settings,
+Data owns data/state/paging, Worf owns Data view/API consent/capture tooling,
+Riker owns current release documentation.
+
+The final independent-review fixes are integrated: reachable pagination and a
+dirty-draft guard, stable person feedback IDs with revision-safe legacy-alias
+migration, generation-guarded activation, actual scoped-stylesheet toggling and
+failed-sync status refresh. Apple uses neutral tokens; LCARS-only sheets are
+disabled in Apple mode. Supplied both-theme capture/purge and live private
+row/Next/rapid-switch evidence resolve the former style/capture discrepancies.
+
+Delayed Data-audit integration follows the same ownership boundaries: Data's
+progress/provenance/inventory, schema-key migration and actual-sync receipt
+contracts feed Geordi's presentation/navigation and Worf's non-destructive
+Data surface. Actual reconciliation is recorded after durable sync and adopted
+from validated account/generation-bound status on reload; snapshot parsing is
+not an import. Single Status/Book-detail guidance avoids duplicate UI.
+The updated suite/capture evidence is in 12; the earlier private matrix is not
+silently relabeled as a post-audit rerun.
+
+Remaining order: (1) review reproducible browser-tool provenance,
+(2) complete physical-device/VoiceOver and current provider-revocation/recovery
+evidence under approved boundaries, (3) officer evidence review and issue-specific decisions,
+(4) unchanged source/architecture/legal gates, then Captain audience decision.
+Green stream reports do not close issues, admit W6 activity or clear W7.
+No real-data capture, phone-to-loopback route or native build follows from this
+checkpoint. Preserve the existing 20% reserve; no measured velocity is claimed.
+
 ## Critical path and readiness
 
 ```text

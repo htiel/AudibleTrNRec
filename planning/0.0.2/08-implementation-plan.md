@@ -40,6 +40,53 @@ historical obligations, not implemented controls after owner change control.
 No new design sign-off, package/point estimate or source/native approval is
 inferred from this documentation reconciliation.
 
+**Final remediation checkpoint — 2026-09-21:** implementation streams for
+GitHub #1–#14 and separate Apple/LCARS shell markup are integrated and reported
+green. [12's issue matrix](12-accumulated-implementation.md#integrated-remediation-issues-114)
+is the current completion/evidence record, alongside
+[13's shell specification](13-independent-theme-ui-spec.md). This checkpoint
+does not retroactively approve CP records or close GitHub issues/A2 gates.
+
+Delivered: neutral shared views with independent shell constructors,
+search-first mobile controls, stable text filtering, bounded synopsis text,
+explicit series evidence, evidence-derived connection states, hard 50-row
+paging, pre-request export consent and actual both-theme synthetic capture/purge.
+Independent-review fixes wire reachable pagination with a dirty-draft guard,
+stable person feedback IDs and revision-safe legacy migration, race-free
+theme activation and failed-sync status refresh. Neutral shared tokens and
+exclusive stylesheet activation complete the former shell-independence gap.
+Apple HIG/API/design resources remain normative; Google image search is
+inspiration only, with third-party imagery/UI asset copying and private-data
+uploads prohibited.
+
+Reconciled deviations from the remediation proposal: filter/page state is
+persisted as version 2; series evidence adds a reserved standalone enum without
+a source/storage revision change; no new reauthorization flow was added.
+Playwright remains optional/undeclared/unpinned, with no new npm test/capture
+aliases. The capture runner now selects and verifies both themes in the live
+DOM rather than just labeling the manifest.
+
+Definitive supplied results for `npm test`, `npm run connector:test`,
+`npm run policy:check`, actual `--theme all` capture/purge and the live private
+matrix are centralized in 12. They are reconciled, not rerun by this final
+documentation task. Physical-device/VoiceOver and current provider revocation
+remain evidence limits; no blanket visual/AT certification follows.
+Original stop rules below describe their dated planning task.
+
+**Delayed Data-audit reconciliation:** completion and partial position are no
+longer presented as an undifferentiated fact; provenance labels are closed.
+Private Feasibility is context-linked from Data, not primary navigation.
+Data inventory is non-destructive; Status and actionable Book-detail feedback
+guidance appear once. Filter persistence now uses a schema-only key with
+validated, copy-only legacy migration.
+
+Actual sync reconciliation persists as an account/snapshot-bound, non-sensitive
+`last-import-counts.json` sidecar and restores through status after reload.
+Snapshot parsing alone remains Unknown / not an import; unmeasured counts
+remain null. No database/source revision changes or new provider probes follow.
+The post-audit definitive suite/capture totals in 12 supersede earlier counts,
+not historical release gates or platform limitations.
+
 **Inventory unchanged: 4 themes / 8 epics / 30 features / 30 stories /
 112 relative points.** Packages are execution aliases, not additional stories or
 estimates. No calendar estimates, velocity assumption, native build commitment,

@@ -1,3 +1,22 @@
+/*
+ * LCARS shell chrome layout: every selector in this file is exclusively
+ * built by `shells/lcars-shell.js` (elbows, swept sidebar, header/footer
+ * bars, the settings-gear icon button) — `shells/apple-shell.js` never
+ * creates any of these elements. This file's `<link>` carries
+ * `data-theme-scope="lcars"` in `index.html` and is disabled by
+ * `theme-preference.js`'s `applyTheme()` whenever a non-LCARS theme is
+ * active, alongside `theme-lcars.css`; the Apple/Liquid Glass shell's own
+ * chrome and stylesheet (`theme-liquid-glass.css`) never depend on
+ * anything defined here, including its custom properties (`--lcars-*`,
+ * defined by `theme-lcars.css` under `html[data-theme="lcars"]`) — so
+ * disabling this stylesheet, or removing it outright, changes nothing
+ * about how Apple mode renders.
+ *
+ * The one exception is `--atnr-min-target` (the shared WCAG 2.5.8 minimum
+ * touch-target token, defined once in `tokens.css`): it is a genuine
+ * cross-theme accessibility floor, not an LCARS-owned value, so this file
+ * reads it directly rather than through an LCARS-only alias.
+ */
 .lcars-frame {
   display: flex;
   flex-direction: column;
@@ -19,27 +38,44 @@
 }
 
 .lcars-elbow-top {
-  background: var(--lcars-accent-primary);
+  background: var(--atnr-accent-primary);
   border-radius: var(--lcars-radius-elbow) 0 0 0;
 }
 
 .lcars-elbow-bottom {
-  background: var(--lcars-accent-primary);
+  background: var(--atnr-accent-primary);
   border-radius: 0 0 0 var(--lcars-radius-elbow);
 }
 
 .lcars-header-bar {
   flex: 1;
   min-width: 0;
-  background: var(--lcars-accent-primary);
-  color: var(--lcars-black);
+  background: var(--atnr-accent-primary);
+  color: var(--atnr-ink-on-accent);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--lcars-space-3);
-  padding: calc(var(--lcars-space-3) + env(safe-area-inset-top)) calc(var(--lcars-space-4) + env(safe-area-inset-right)) var(--lcars-space-3) calc(var(--lcars-space-4) + env(safe-area-inset-left));
+  gap: var(--atnr-space-3);
+  padding: calc(var(--atnr-space-3) + env(safe-area-inset-top)) calc(var(--atnr-space-4) + env(safe-area-inset-right)) var(--atnr-space-3) calc(var(--atnr-space-4) + env(safe-area-inset-left));
   border-radius: 0 0 0 var(--lcars-radius-pill);
+}
+
+/*
+ * Groups the title and status readout as a single flex item so the
+ * settings gear always sits beside them (as it already did on desktop,
+ * where the title's own width left no room for the gear on the same line
+ * as the un-grouped status text) instead of also wrapping to its own row
+ * once the available width narrows below desktop. Purely a structural
+ * grouping — no text, link, or control is removed, reordered in the DOM,
+ * or hidden by this.
+ */
+.lcars-header-titles {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--atnr-space-3);
 }
 
 .lcars-title {
@@ -54,9 +90,9 @@
   margin: 0;
   min-width: 0;
   max-width: 100%;
-  background: var(--lcars-black);
-  color: var(--lcars-accent-secondary);
-  padding: var(--lcars-space-1) var(--lcars-space-4);
+  background: var(--atnr-bg);
+  color: var(--atnr-accent-secondary);
+  padding: var(--atnr-space-1) var(--atnr-space-4);
   border-radius: var(--lcars-radius-pill);
   font-size: 0.85rem;
   overflow-wrap: anywhere;
@@ -65,13 +101,13 @@
 .lcars-footer-bar {
   flex: 1;
   min-width: 0;
-  background: var(--lcars-accent-primary);
-  color: var(--lcars-black);
+  background: var(--atnr-accent-primary);
+  color: var(--atnr-ink-on-accent);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--lcars-space-2);
-  padding: var(--lcars-space-2) calc(var(--lcars-space-4) + env(safe-area-inset-right)) calc(var(--lcars-space-2) + env(safe-area-inset-bottom)) calc(var(--lcars-space-4) + env(safe-area-inset-left));
+  gap: var(--atnr-space-2);
+  padding: var(--atnr-space-2) calc(var(--atnr-space-4) + env(safe-area-inset-right)) calc(var(--atnr-space-2) + env(safe-area-inset-bottom)) calc(var(--atnr-space-4) + env(safe-area-inset-left));
   border-radius: 0 var(--lcars-radius-pill) 0 0;
 }
 
@@ -97,14 +133,14 @@
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: var(--lcars-bg);
-  padding: var(--lcars-space-4) var(--lcars-space-2) 0 0;
+  background: var(--atnr-bg);
+  padding: var(--atnr-space-4) var(--atnr-space-2) 0 0;
 }
 
 .lcars-sidebar-group {
   display: flex;
   flex-direction: column;
-  gap: var(--lcars-space-2);
+  gap: var(--atnr-space-2);
 }
 
 .lcars-sidebar ul {
@@ -113,18 +149,18 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--lcars-space-2);
+  gap: var(--atnr-space-2);
 }
 
 .lcars-sidebar a {
   display: flex;
   align-items: center;
-  min-height: var(--lcars-min-target);
+  min-height: var(--atnr-min-target);
   min-width: 0;
   max-width: 100%;
-  padding: 0 var(--lcars-space-4);
-  background: var(--lcars-accent-secondary);
-  color: var(--lcars-black);
+  padding: 0 var(--atnr-space-4);
+  background: var(--atnr-accent-secondary);
+  color: var(--atnr-ink-on-accent);
   text-decoration: none;
   overflow-wrap: anywhere;
   border-radius: 0 var(--lcars-radius-pill) var(--lcars-radius-pill) 0;
@@ -136,14 +172,14 @@
 }
 
 .lcars-sidebar a[aria-current="page"] {
-  background: var(--lcars-accent-active);
+  background: var(--atnr-accent-active);
 }
 
 .lcars-sidebar-filler {
   flex: 1;
-  background: var(--lcars-accent-muted);
-  margin: var(--lcars-space-4) 0;
-  padding: var(--lcars-space-3);
+  background: var(--atnr-accent-muted);
+  margin: var(--atnr-space-4) 0;
+  padding: var(--atnr-space-3);
   border-radius: 0 var(--lcars-radius-pill) var(--lcars-radius-pill) 0;
   min-height: 2rem;
   min-width: 0;
@@ -151,10 +187,56 @@
   scrollbar-gutter: stable;
 }
 
+/* Icon-only pill button (header gear/Settings link). Square-ish so the
+   glyph centers, but never smaller than the shared minimum touch target.
+   Relocated here (from `components.css`) because both classes are
+   exclusively built by `shells/lcars-shell.js`, never by any owned view or
+   by `shells/apple-shell.js` — keeping LCARS-shell-only chrome in this
+   LCARS-only stylesheet, rather than in the shared neutral file, is what
+   lets that shared file stay entirely theme-independent. */
+.lcars-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--atnr-min-target);
+  height: var(--atnr-min-target);
+  border-radius: 50%;
+  background: var(--atnr-bg);
+  color: var(--atnr-accent-secondary);
+  text-decoration: none;
+}
+
+.lcars-icon-btn:hover,
+.lcars-icon-btn:focus-visible {
+  filter: brightness(1.25);
+}
+
+.lcars-icon-btn[aria-current="page"] {
+  background: var(--atnr-accent-active);
+  color: var(--atnr-ink-on-accent);
+}
+
+/* Gear glyph drawn from CSS only (no image asset, no icon font/CDN), the
+   same technique already used for the group-disclosure chevron in
+   `components.css`. */
+.lcars-icon-gear {
+  display: inline-block;
+  width: 1.1rem;
+  height: 1.1rem;
+  line-height: 1.1rem;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.lcars-icon-gear::before {
+  content: '\2699';
+}
+
 .lcars-main {
   flex: 1;
   min-width: 0;
-  padding: var(--lcars-space-4) calc(var(--lcars-space-4) + env(safe-area-inset-right)) calc(var(--lcars-space-4) + env(safe-area-inset-bottom)) var(--lcars-space-4);
+  padding: var(--atnr-space-4) calc(var(--atnr-space-4) + env(safe-area-inset-right)) calc(var(--atnr-space-4) + env(safe-area-inset-bottom)) var(--atnr-space-4);
   overflow: auto;
   overscroll-behavior: contain;
 }
@@ -178,10 +260,10 @@
   .lcars-sidebar {
     width: 100%;
     min-width: 0;
-    padding: var(--lcars-space-2) env(safe-area-inset-right) var(--lcars-space-2) env(safe-area-inset-left);
+    padding: var(--atnr-space-2) env(safe-area-inset-right) var(--atnr-space-2) env(safe-area-inset-left);
     flex-direction: row;
     flex-wrap: wrap;
-    gap: var(--lcars-space-2);
+    gap: var(--atnr-space-2);
   }
   .lcars-sidebar-group {
     width: 100%;
@@ -195,7 +277,7 @@
     width: 100%;
     flex: 0 0 auto;
     margin: 0;
-    border-radius: var(--lcars-space-2);
+    border-radius: var(--atnr-space-2);
     overflow: visible;
   }
   .lcars-main {
@@ -213,4 +295,28 @@
   .lcars-title {
     font-size: var(--lcars-font-subheader);
   }
+}
+
+/*
+ * Issue #6 (P2): once `app.js` clears the library-controls filler on every
+ * non-Library route, it is genuinely empty. `:empty` only matches an
+ * element with zero child nodes (not merely zero visible content), which is
+ * exactly the state `librarySidebarControls.replaceChildren()` leaves it
+ * in, so this rule never hides the filler while it actually holds the
+ * Library toolbar.
+ */
+.lcars-sidebar-filler:empty {
+  display: none;
+}
+
+/*
+ * Issue #9 (P2): reserve extra breathing room below the last piece of main
+ * content, beyond the existing safe-area padding, so the final line of
+ * Book detail / Data & lifecycle content is never visually flush with (or
+ * covered by) the footer bar once the pane is scrolled to its end at
+ * constrained desktop heights (e.g. 1440x900) or under 200% text zoom.
+ */
+.lcars-main {
+  padding-bottom: calc(var(--atnr-space-8) + env(safe-area-inset-bottom));
+  scroll-padding-bottom: var(--atnr-space-8);
 }

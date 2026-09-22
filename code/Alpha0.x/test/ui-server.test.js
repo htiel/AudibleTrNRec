@@ -215,12 +215,29 @@ function extractDocumentAssets(html) {
   return assets;
 }
 
+/**
+ * Remove comments before scanning for imports.
+ *
+ * Prose is not code. A doc comment that happens to contain `from "…"` — for
+ * example a sentence distinguishing a refusal from "the network was down" — is
+ * not an import, and a scanner that cannot tell the difference reports a
+ * defect that does not exist while proving nothing about the one that might.
+ */
+function stripModuleComments(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .split('\n')
+    .map((line) => line.replace(/(^|[^:"'`\\])\/\/.*$/, '$1'))
+    .join('\n');
+}
+
 /** Extract static/dynamic ES module specifiers, as the browser loader would. */
 function extractModuleSpecifiers(source) {
+  const code = stripModuleComments(source);
   const specifiers = [];
-  for (const m of source.matchAll(/\bfrom\s*["']([^"']+)["']/g)) specifiers.push(m[1]);
-  for (const m of source.matchAll(/\bimport\s*["']([^"']+)["']/g)) specifiers.push(m[1]);
-  for (const m of source.matchAll(/\bimport\s*\(\s*["']([^"']+)["']\s*\)/g)) specifiers.push(m[1]);
+  for (const m of code.matchAll(/\bfrom\s*["']([^"']+)["']/g)) specifiers.push(m[1]);
+  for (const m of code.matchAll(/\bimport\s*["']([^"']+)["']/g)) specifiers.push(m[1]);
+  for (const m of code.matchAll(/\bimport\s*\(\s*["']([^"']+)["']\s*\)/g)) specifiers.push(m[1]);
   // Only relative/absolute URLs are resolvable by the server; bare specifiers
   // would mean an external dependency, which is asserted against elsewhere.
   return specifiers.filter((s) => s.startsWith('.') || s.startsWith('/'));
@@ -271,9 +288,10 @@ test('the whole ES module graph reachable from the shell resolves to 200', async
     assert.equal(res.status, 200, `module ${pathname} -> ${res.status}`);
     assert.match(res.headers['content-type'], /javascript/, pathname);
     const allSpecifiers = [];
-    for (const m of res.body.matchAll(/\bfrom\s*["']([^"']+)["']/g)) allSpecifiers.push(m[1]);
-    for (const m of res.body.matchAll(/\bimport\s*["']([^"']+)["']/g)) allSpecifiers.push(m[1]);
-    for (const m of res.body.matchAll(/\bimport\s*\(\s*["']([^"']+)["']\s*\)/g)) allSpecifiers.push(m[1]);
+    const code = stripModuleComments(res.body);
+    for (const m of code.matchAll(/\bfrom\s*["']([^"']+)["']/g)) allSpecifiers.push(m[1]);
+    for (const m of code.matchAll(/\bimport\s*["']([^"']+)["']/g)) allSpecifiers.push(m[1]);
+    for (const m of code.matchAll(/\bimport\s*\(\s*["']([^"']+)["']\s*\)/g)) allSpecifiers.push(m[1]);
     for (const specifier of allSpecifiers) {
       assert.match(specifier, /^(?:\.{1,2}\/|\/)/, `browser module ${pathname} imports unresolvable bare specifier ${specifier}`);
     }

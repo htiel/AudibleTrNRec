@@ -105,8 +105,17 @@ export class ConnectionApi {
    * takes the same single-use nonce as a deletion. It is only ever called from
    * an explicit user action; nothing exports on a timer, on startup, or as a
    * side effect of another operation.
+   *
+   * Defence in depth for issue #7: the caller must pass the result of an
+   * informed-consent prompt. Without `consentConfirmed === true` the method
+   * refuses locally, so no confirmation nonce is ever issued or spent and no
+   * request reaches the runtime. The transport layer cannot be used to skip
+   * the consent gate, however a future view is written.
    */
-  async exportAll() { return this.#confirmed('export', 'POST', '/api/v1/export'); }
+  async exportAll({ consentConfirmed = false } = {}) {
+    if (consentConfirmed !== true) throw new ConnectionApiError('export-consent-missing');
+    return this.#confirmed('export', 'POST', '/api/v1/export');
+  }
 
   /**
    * Two-leg destructive flow. The confirmation endpoint issues a short-lived,

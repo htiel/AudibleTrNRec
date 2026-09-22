@@ -85,20 +85,36 @@ test('index.html declares language, viewport, and a skip link', async () => {
   const html = await readFile(path.join(UI_ROOT, 'index.html'), 'utf8');
   assert.match(html, /<html[^>]+lang="en"/);
   assert.match(html, /name="viewport"[^>]+width=device-width/);
-  assert.match(html, /class="lcars-skip-link"[^>]+href="#main-content"/);
-  assert.match(html, /id="main-content"/);
+  assert.match(html, /class="atnr-skip-link"[^>]+href="#main-content"/);
   assert.match(html, /aria-live="polite"/);
   assert.match(html, /aria-live="assertive"/);
+  // `#main-content` is now built by whichever shell mounts at runtime (see
+  // `js/shells/lcars-shell.js` and `js/shells/apple-shell.js`) rather than
+  // existing statically; check both so the skip link's target always
+  // exists regardless of the active theme.
+  const lcarsShell = await readFile(path.join(UI_ROOT, 'js/shells/lcars-shell.js'), 'utf8');
+  const appleShell = await readFile(path.join(UI_ROOT, 'js/shells/apple-shell.js'), 'utf8');
+  for (const shell of [lcarsShell, appleShell]) {
+    assert.match(shell, /id:\s*'main-content'/);
+  }
 });
 
-test('index.html declares runtime-neutral loading copy and split navigation groups', async () => {
+test('the presentation shells declare runtime-neutral loading copy and split navigation groups', async () => {
+  // This copy/structure used to live as static markup in `index.html`; it
+  // is now built at runtime by each independent shell.
+  const lcarsShell = await readFile(path.join(UI_ROOT, 'js/shells/lcars-shell.js'), 'utf8');
+  const appleShell = await readFile(path.join(UI_ROOT, 'js/shells/apple-shell.js'), 'utf8');
+  for (const shell of [lcarsShell, appleShell]) {
+    assert.match(shell, /Loading the active runtime mode/i);
+    assert.match(shell, /Loading the active runtime source/i);
+  }
   const html = await readFile(path.join(UI_ROOT, 'index.html'), 'utf8');
-  assert.match(html, /Loading the active runtime mode/i);
-  assert.match(html, /Loading the active runtime source/i);
   assert.match(html, /viewport-fit=cover/i);
-  assert.match(html, /aria-label="Primary"/i);
-  assert.match(html, /lcars-sidebar-filler/);
-  assert.match(html, /aria-label="Diagnostics and lifecycle"/i);
+  // The LCARS shell still splits navigation into a "Primary" group and a
+  // "Diagnostics and lifecycle" group inside the grey sidebar filler.
+  assert.match(lcarsShell, /aria-label.*Primary/i);
+  assert.match(lcarsShell, /lcars-sidebar-filler/);
+  assert.match(lcarsShell, /aria-label.*Diagnostics and lifecycle/i);
 });
 
 test('the data view module states the synthetic/offline status explicitly', async () => {
@@ -146,17 +162,35 @@ test('no view file is named or exports a recommendation view', async () => {
 });
 
 test('the router and navigation expose only the charter-scoped routes', async () => {
-  const html = await readFile(path.join(UI_ROOT, 'index.html'), 'utf8');
-  assert.match(html, /data-route="library"/);
-  assert.match(html, /data-route="feasibility"/);
-  assert.match(html, /data-route="data"/);
-  assert.match(html, /data-route="settings"/);
-  assert.doesNotMatch(html, /data-route="recommendations"/);
+  // Route/nav destinations now live in `components/navigation.js`'s shared
+  // `ROUTES` list, and are rendered into DOM by each independent shell
+  // rather than hard-coded once into `index.html`; assert against all three
+  // so a regression in any one surface still fails this test.
+  const navigation = await readFile(path.join(UI_ROOT, 'js/components/navigation.js'), 'utf8');
+  const lcarsShell = await readFile(path.join(UI_ROOT, 'js/shells/lcars-shell.js'), 'utf8');
+  const appleShell = await readFile(path.join(UI_ROOT, 'js/shells/apple-shell.js'), 'utf8');
+  for (const source of [navigation, lcarsShell, appleShell]) {
+    assert.doesNotMatch(source, /route:\s*'recommendations'/);
+  }
+  assert.match(navigation, /route:\s*'library'/);
+  assert.match(navigation, /route:\s*'feasibility'/);
+  assert.match(navigation, /route:\s*'data'/);
+  assert.match(navigation, /route:\s*'settings'/);
+  assert.doesNotMatch(navigation, /route:\s*'recommendations'/);
 });
 
 test('a settings gear control is reachable from the header with an accessible name', async () => {
-  const html = await readFile(path.join(UI_ROOT, 'index.html'), 'utf8');
-  assert.match(html, /class="lcars-icon-btn"[^>]+href="#\/settings"[^>]+data-route="settings"[^>]+aria-label="Settings"/);
+  // The LCARS shell keeps the original header gear icon-button; the Apple
+  // shell instead reaches Settings via its bottom tab bar (see
+  // `shells/apple-shell.js`'s `atnr-tab`, built from `navigation.js`'s
+  // `TAB_ROUTES`, with a visible/accessible text label — not icon-only).
+  const lcarsShell = await readFile(path.join(UI_ROOT, 'js/shells/lcars-shell.js'), 'utf8');
+  assert.match(lcarsShell, /class:\s*'lcars-icon-btn',\s*href:\s*'#\/settings',\s*'data-route':\s*'settings',\s*'aria-label':\s*'Settings'/);
+  const navigation = await readFile(path.join(UI_ROOT, 'js/components/navigation.js'), 'utf8');
+  assert.match(navigation, /route:\s*'settings',\s*label:\s*'Settings'/);
+  const appleShell = await readFile(path.join(UI_ROOT, 'js/shells/apple-shell.js'), 'utf8');
+  assert.match(appleShell, /class:\s*'atnr-tab'/);
+  assert.match(appleShell, /class:\s*'atnr-tab-label',\s*text:\s*label/);
 });
 
 test('index.html declares a content security policy with no remote origins', async () => {

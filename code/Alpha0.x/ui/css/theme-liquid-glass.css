@@ -1,5 +1,5 @@
 /**
- * Liquid Glass (Apple HIG-informed) theme.
+ * Apple/iPhone (Liquid Glass) presentation.
  *
  * This is this project's own semantic HTML/CSS/JS interpretation of the
  * "Liquid Glass" material Apple introduced at WWDC 2025 for iOS 26 /
@@ -7,45 +7,69 @@
  * Guidelines (`developer.apple.com/design/human-interface-guidelines/
  * materials`) and its published "iOS 27 and iPadOS 27" UI Kit design
  * resources (`developer.apple.com/design/resources/`), Liquid Glass remains
- * the shipping iOS design language today, described there as "a dynamic
- * material that unifies the design language across Apple platforms,"
- * offered in `regular` and `clear` variants, whose appearance "can differ
- * in response to certain system settings ... [or] accessibility settings
- * that reduce transparency or increase contrast." This file targets only
- * that documented, cited HIG guidance (translucency, blur, continuous
- * corner radii, 44x44pt standard control sizing, system font, and the
- * Reduce Transparency / Increase Contrast / Reduce Motion accommodations
- * above) — it does not use, embed, or claim any private/undocumented Apple
- * API, SDK, or copied template artwork, and it cannot reproduce
- * native-only rendering (true real-time specular/refractive glass, or the
- * OS's own accessibility toggles — those are approximated here with the
- * equivalent standard `prefers-reduced-transparency` / `prefers-contrast` /
- * `prefers-reduced-motion` CSS media features, which are as close as a
- * browser gets to reading the same system settings).
+ * the shipping iOS design language today. This file targets only that
+ * documented HIG guidance (translucency, blur, continuous corner radii,
+ * 44x44pt standard control sizing, system font, compact nav bar + bottom
+ * tab bar navigation, and the Reduce Transparency / Increase Contrast /
+ * Reduce Motion accommodations) — it does not use, embed, or claim any
+ * private/undocumented Apple API, SDK, or copied template artwork.
  *
- * Scope and constraints (see also `test/ui-assets.test.js`):
+ * Independence from the LCARS shell (see `shells/apple-shell.js` and
+ * `shells/lcars-shell.js`):
+ *  - Every selector below targets either this theme's own `.atnr-*` chrome
+ *    classes (nav bar, tab bar, back button, toolbar slot — built only by
+ *    `shells/apple-shell.js`) or the shared, presentation-neutral `.atnr-*`
+ *    content vocabulary every owned view and `views/data-view.js` build
+ *    (form controls, cards, tables — the same "shared design system" both
+ *    shells already restyle; see the documentation comment on
+ *    `.atnr-button` in `components.css`). No owned view or component ever
+ *    builds an `.atnr-*` class, so there is nothing left here to target —
+ *    and this file never targets `.atnr-elbow`, `.atnr-sidebar`,
+ *    `.atnr-sidebar-filler`, `.atnr-header-bar`, or `.atnr-footer-bar`
+ *    either: the Apple shell never creates those elements, so there is
+ *    nothing LCARS-shaped here to hide.
  *  - No gradients, box-shadows, text-shadows, or drop-shadow filters
  *    anywhere in this file — depth reads through translucency and a
- *    hairline border only, never a fake bevel or glow.
- *  - The theme is opt-in and scoped entirely under
- *    `:root[data-theme="liquid-glass"]`; with the attribute absent (or set
- *    to `lcars`), every rule here is inert and the original LCARS theme in
- *    `tokens.css`/`base.css`/`layout.css`/`components.css` is unchanged.
+ *    hairline border only.
  *  - Every rule respects `prefers-reduced-transparency`, `prefers-contrast`,
  *    and (already handled globally in `base.css`) `prefers-reduced-motion`.
- *    A user who has asked their system for less transparency or more
- *    contrast never gets translucent "fake glass" text that is harder to
- *    read than the LCARS theme.
- *  - Layout structure (elbow → sidebar → content → footer), routes, and
- *    every interactive element's semantics are unchanged; only appearance
- *    is re-skinned.
+ *  - Token independence: this file assigns its own Apple/iOS-inspired
+ *    palette onto the shared neutral contract (see the
+ *    `:root[data-theme="liquid-glass"]` block below and `tokens.css`'s
+ *    header) and never reads an LCARS-prefixed custom property. This
+ *    stylesheet, and every rule in `components.css`/`base.css` it
+ *    restyles, renders correctly even if `theme-lcars.css` and
+ *    `layout.css` (the two LCARS-only stylesheets, see their own headers)
+ *    were both disabled or removed — see
+ *    `test/theme-token-independence.test.js`.
  */
 
 :root[data-theme="liquid-glass"] {
+  /*
+   * Apple/iOS-inspired semantic palette — this theme's own mapping of the
+   * shared neutral contract (`tokens.css`), entirely independent of
+   * `theme-lcars.css`'s mapping from the LCARS palette. Nothing below
+   * reads an LCARS-prefixed custom property; the color literals are
+   * original, loosely inspired by (not copied from) Apple's public iOS
+   * system-color naming (`systemBlue`, `systemTeal`, etc. from the HIG
+   * color documentation), not extracted from any Apple asset.
+   */
+  --atnr-bg: #000000;
+  --atnr-fg: #f2f2f7;
+  --atnr-accent-primary: #0a84ff;
+  --atnr-accent-secondary: #64d2ff;
+  --atnr-accent-tertiary: #5e5ce6;
+  --atnr-accent-active: #30d158;
+  --atnr-accent-danger: #ff453a;
+  --atnr-accent-muted: #8e8e93;
+  --atnr-focus-ring: #f2f2f7;
+  --atnr-ink-on-accent: #f2f2f7;
+  --atnr-font-size-subheader: 1rem;
+
   /* System font stack: Apple platforms resolve this to San Francisco;
      everywhere else it resolves to that OS's own UI font. No font file is
      ever fetched, bundled, or referenced by name-as-a-download. */
-  --lcars-font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui,
+  --atnr-font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui,
     'Segoe UI', Roboto, sans-serif;
 
   --glass-radius: 1.1rem;
@@ -54,104 +78,207 @@
   --glass-fill-strong: rgba(255, 255, 255, 0.22);
   --glass-border: rgba(255, 255, 255, 0.38);
   --glass-blur: blur(20px) saturate(150%);
+  --atnr-navbar-height: 3.25rem;
+  --atnr-tabbar-height: 3.5rem;
 }
 
 /* --- Typography: Apple HIG uses sentence/mixed case with Dynamic Type,
-   not the LCARS all-caps display convention. This overrides the base.css
-   uppercase list only for this theme, and only where `html[data-theme=...]`
-   gives it the higher specificity to win outright. --- */
-html[data-theme="liquid-glass"] .lcars-label-case,
-html[data-theme="liquid-glass"] .lcars-title,
-html[data-theme="liquid-glass"] .lcars-status-pill,
-html[data-theme="liquid-glass"] .lcars-sidebar a,
-html[data-theme="liquid-glass"] .lcars-field-label,
-html[data-theme="liquid-glass"] .lcars-btn,
+   not the LCARS all-caps display convention. --- */
+html[data-theme="liquid-glass"] .atnr-label-case,
+html[data-theme="liquid-glass"] .atnr-field-label,
+html[data-theme="liquid-glass"] .atnr-button,
 html[data-theme="liquid-glass"] legend,
-html[data-theme="liquid-glass"] .lcars-group-heading,
+html[data-theme="liquid-glass"] .atnr-group-heading,
 html[data-theme="liquid-glass"] h2,
 html[data-theme="liquid-glass"] h3,
 html[data-theme="liquid-glass"] h4,
-html[data-theme="liquid-glass"] summary {
+html[data-theme="liquid-glass"] summary,
+html[data-theme="liquid-glass"] .atnr-skip-link {
   text-transform: none;
   letter-spacing: normal;
 }
 
-/* Elbows are purely decorative (`aria-hidden="true"`) and have no iOS
-   analogue; removing them loses no information. */
-html[data-theme="liquid-glass"] .lcars-elbow {
+/* ============================= App chrome ============================= */
+
+html[data-theme="liquid-glass"] .atnr-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+html[data-theme="liquid-glass"] .atnr-navbar {
+  display: flex;
+  align-items: center;
+  gap: var(--atnr-space-3);
+  min-height: var(--atnr-navbar-height);
+  padding: calc(var(--atnr-space-2) + env(safe-area-inset-top)) calc(var(--atnr-space-4) + env(safe-area-inset-right)) var(--atnr-space-2) calc(var(--atnr-space-4) + env(safe-area-inset-left));
+  background: var(--glass-fill);
+  border-bottom: 1px solid var(--glass-border);
+  flex-wrap: wrap;
+}
+
+html[data-theme="liquid-glass"] .atnr-navbar-titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+html[data-theme="liquid-glass"] .atnr-navbar-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+html[data-theme="liquid-glass"] .atnr-status-line {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--atnr-accent-secondary);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+html[data-theme="liquid-glass"] .atnr-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  min-height: var(--atnr-min-target);
+  min-width: var(--atnr-min-target);
+  padding: 0 var(--atnr-space-2);
+  border: 0;
+  border-radius: var(--glass-radius);
+  background: transparent;
+  color: var(--atnr-accent-tertiary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+html[data-theme="liquid-glass"] .atnr-back-button[hidden] {
   display: none;
 }
 
-/* --- Header / footer: from swept LCARS bars to a translucent iOS-style
-   navigation/tab bar. --- */
-html[data-theme="liquid-glass"] .lcars-header-bar,
-html[data-theme="liquid-glass"] .lcars-footer-bar {
-  background: var(--glass-fill);
-  color: var(--lcars-fg);
-  border-radius: 0;
-  border-bottom: 1px solid var(--glass-border);
+html[data-theme="liquid-glass"] .atnr-content {
+  flex: 1;
+  min-width: 0;
+  padding: var(--atnr-space-3) calc(var(--atnr-space-4) + env(safe-area-inset-right)) calc(var(--atnr-tabbar-height) + env(safe-area-inset-bottom) + var(--atnr-space-6)) calc(var(--atnr-space-4) + env(safe-area-inset-left));
+  overflow: auto;
+  overscroll-behavior: contain;
+  scroll-padding-bottom: calc(var(--atnr-tabbar-height) + var(--atnr-space-4));
 }
 
-html[data-theme="liquid-glass"] .lcars-footer-bar {
-  border-bottom: 0;
+html[data-theme="liquid-glass"] .atnr-content:focus {
+  outline: none;
+}
+
+/* Issue #5 (P2): the shared library-toolbar slot renders at the very top
+   of scrollable content, ahead of the route body, so basic search is
+   reachable in the initial viewport without a sidebar at all. */
+html[data-theme="liquid-glass"] .atnr-toolbar-slot:empty {
+  display: none;
+}
+
+html[data-theme="liquid-glass"] .atnr-toolbar-slot {
+  margin-bottom: var(--atnr-space-3);
+}
+
+html[data-theme="liquid-glass"] .atnr-context-row:empty {
+  display: none;
+}
+
+html[data-theme="liquid-glass"] .atnr-context-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--atnr-min-target);
+  padding: 0 var(--atnr-space-3);
+  margin-bottom: var(--atnr-space-3);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  background: var(--glass-fill);
+  color: var(--atnr-fg);
+  text-decoration: none;
+}
+
+/* --- Bottom tab bar: Library / Data / Settings. Feasibility & trace has no
+   tab of its own; it is reached via `.atnr-context-link` from Data & lifecycle
+   and returns with `.atnr-back-button` (see `shells/apple-shell.js`). --- */
+html[data-theme="liquid-glass"] .atnr-tabbar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  min-height: var(--atnr-tabbar-height);
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--glass-fill-strong);
   border-top: 1px solid var(--glass-border);
 }
 
-html[data-theme="liquid-glass"] .lcars-status-pill {
-  background: var(--glass-fill-strong);
-  color: var(--lcars-fg);
+html[data-theme="liquid-glass"] .atnr-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  min-height: var(--atnr-min-target);
+  padding: var(--atnr-space-1);
+  color: var(--atnr-fg);
+  text-decoration: none;
+  font-size: 0.7rem;
+}
+
+html[data-theme="liquid-glass"] .atnr-tab-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+html[data-theme="liquid-glass"] .atnr-tab[aria-current="page"] {
+  color: var(--atnr-accent-secondary);
+  font-weight: 600;
+}
+
+html[data-theme="liquid-glass"] .atnr-footer-meta,
+html[data-theme="liquid-glass"] .atnr-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ===================== Shared content component reuse ================== */
+
+html[data-theme="liquid-glass"] .atnr-button,
+html[data-theme="liquid-glass"] .atnr-button-primary,
+html[data-theme="liquid-glass"] .atnr-button-secondary,
+html[data-theme="liquid-glass"] .atnr-button-danger {
+  background: var(--glass-fill);
+  color: var(--atnr-fg);
   border: 1px solid var(--glass-border);
   border-radius: var(--glass-radius);
 }
 
-/* --- Sidebar: pill nav rows become full-width rounded-rect rows, and the
-   filler panel becomes a glass card instead of a flat grey slab. --- */
-html[data-theme="liquid-glass"] .lcars-sidebar a {
-  background: var(--glass-fill);
-  color: var(--lcars-fg);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--glass-radius);
-}
-
-html[data-theme="liquid-glass"] .lcars-sidebar a[aria-current="page"] {
+html[data-theme="liquid-glass"] .atnr-button-primary,
+html[data-theme="liquid-glass"] .atnr-button:active {
   background: var(--glass-fill-strong);
-  border-color: var(--lcars-accent-secondary);
+  border-color: var(--atnr-accent-secondary);
+  color: var(--atnr-fg);
 }
 
-html[data-theme="liquid-glass"] .lcars-sidebar-filler {
-  background: var(--glass-fill);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--glass-radius-lg);
-}
-
-/* --- Buttons, dialogs, cards, tables, fieldsets, forms: continuous
-   corners plus the same glass fill/border pair. --- */
-html[data-theme="liquid-glass"] .lcars-btn,
-html[data-theme="liquid-glass"] .lcars-icon-btn {
-  background: var(--glass-fill);
-  color: var(--lcars-fg);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--glass-radius);
-}
-
-html[data-theme="liquid-glass"] .lcars-btn-primary,
-html[data-theme="liquid-glass"] .lcars-btn:active,
-html[data-theme="liquid-glass"] .lcars-icon-btn[aria-current="page"] {
-  background: var(--glass-fill-strong);
-  border-color: var(--lcars-accent-secondary);
-  color: var(--lcars-fg);
-}
-
-html[data-theme="liquid-glass"] .lcars-btn-danger {
+html[data-theme="liquid-glass"] .atnr-button-danger {
   background: rgba(255, 85, 85, 0.28);
-  border-color: var(--lcars-accent-danger);
-  color: var(--lcars-fg);
+  border-color: var(--atnr-accent-danger);
+  color: var(--atnr-fg);
 }
 
-html[data-theme="liquid-glass"] .lcars-btn:disabled {
+html[data-theme="liquid-glass"] .atnr-button:disabled {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.18);
-  color: var(--lcars-fg);
+  color: var(--atnr-fg);
 }
 
 html[data-theme="liquid-glass"] select,
@@ -164,15 +291,10 @@ html[data-theme="liquid-glass"] textarea {
   border-radius: var(--glass-radius);
 }
 
-/* Native radio/checkbox inputs (theme picker, rating/status filters): the
- * LCARS theme's plain `accent-color` dot reads as a native browser widget,
- * not an iOS list-row selection control. HIG has no bare "radio button" —
- * single-select rows in a grouped list use a plain circle that fills with
- * a checkmark/dot on selection — so this reproduces that reading with
- * ordinary CSS (`appearance: none` + a generated indicator), while keeping
- * the same underlying <input type="radio|checkbox"> for native semantics,
- * keyboard operability, and the shared `:focus-visible` outline. No image
- * asset, icon font, or box-shadow is used; the checkmark is a text glyph. */
+/* Native radio/checkbox inputs: HIG has no bare "radio button" — grouped
+ * list rows use a plain circle that fills with a checkmark/dot on
+ * selection — reproduced with ordinary CSS on the native <input>, so
+ * keyboard operability and the shared focus-visible outline are unchanged. */
 html[data-theme="liquid-glass"] input[type="radio"],
 html[data-theme="liquid-glass"] input[type="checkbox"] {
   appearance: none;
@@ -189,17 +311,12 @@ html[data-theme="liquid-glass"] input[type="checkbox"] {
   margin: 0;
 }
 
-html[data-theme="liquid-glass"] input[type="radio"] {
-  border-radius: 50%;
-}
-
-html[data-theme="liquid-glass"] input[type="checkbox"] {
-  border-radius: 0.35rem;
-}
+html[data-theme="liquid-glass"] input[type="radio"] { border-radius: 50%; }
+html[data-theme="liquid-glass"] input[type="checkbox"] { border-radius: 0.35rem; }
 
 html[data-theme="liquid-glass"] input[type="radio"]:checked,
 html[data-theme="liquid-glass"] input[type="checkbox"]:checked {
-  border-color: var(--lcars-accent-secondary);
+  border-color: var(--atnr-accent-secondary);
   background: var(--glass-fill-strong);
 }
 
@@ -208,12 +325,12 @@ html[data-theme="liquid-glass"] input[type="radio"]:checked::after {
   width: 0.65rem;
   height: 0.65rem;
   border-radius: 50%;
-  background: var(--lcars-accent-secondary);
+  background: var(--atnr-accent-secondary);
 }
 
 html[data-theme="liquid-glass"] input[type="checkbox"]:checked::after {
   content: '\2713';
-  color: var(--lcars-accent-secondary);
+  color: var(--atnr-accent-secondary);
   font-size: 1rem;
   line-height: 1;
   font-weight: bold;
@@ -224,28 +341,38 @@ html[data-theme="liquid-glass"] input[type="checkbox"]:disabled {
   opacity: 0.45;
 }
 
-html[data-theme="liquid-glass"] fieldset.lcars-fieldset,
-html[data-theme="liquid-glass"] .lcars-rating-fieldset,
-html[data-theme="liquid-glass"] .lcars-trace-edge,
-html[data-theme="liquid-glass"] .lcars-library-card {
+html[data-theme="liquid-glass"] fieldset.atnr-fieldset,
+html[data-theme="liquid-glass"] .atnr-advanced-filters,
+html[data-theme="liquid-glass"] .atnr-rating-fieldset,
+html[data-theme="liquid-glass"] .atnr-trace-edge,
+html[data-theme="liquid-glass"] .atnr-library-card,
+html[data-theme="liquid-glass"] .atnr-panel,
+html[data-theme="liquid-glass"] .atnr-notice {
   background: var(--glass-fill);
   border: 1px solid var(--glass-border);
   border-radius: var(--glass-radius-lg);
 }
 
-html[data-theme="liquid-glass"] .lcars-table th {
-  background: var(--glass-fill-strong);
-  color: var(--lcars-fg);
+html[data-theme="liquid-glass"] .atnr-sidebar-toolbar {
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius-lg);
+  padding: var(--atnr-space-3);
 }
 
-html[data-theme="liquid-glass"] .lcars-table td,
-html[data-theme="liquid-glass"] .lcars-table th {
+html[data-theme="liquid-glass"] .atnr-table th {
+  background: var(--glass-fill-strong);
+  color: var(--atnr-fg);
+}
+
+html[data-theme="liquid-glass"] .atnr-table td,
+html[data-theme="liquid-glass"] .atnr-table th {
   border-bottom: 1px solid var(--glass-border);
 }
 
-html[data-theme="liquid-glass"] dialog.lcars-dialog {
+html[data-theme="liquid-glass"] dialog.atnr-dialog {
   background: var(--glass-fill-strong);
-  color: var(--lcars-fg);
+  color: var(--atnr-fg);
   border: 1px solid var(--glass-border);
   border-radius: var(--glass-radius-lg);
 }
@@ -255,18 +382,17 @@ html[data-theme="liquid-glass"] dialog.lcars-dialog {
    fallback colors above always apply first, everywhere. */
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   @media (prefers-reduced-transparency: no-preference) {
-    html[data-theme="liquid-glass"] .lcars-header-bar,
-    html[data-theme="liquid-glass"] .lcars-footer-bar,
-    html[data-theme="liquid-glass"] .lcars-status-pill,
-    html[data-theme="liquid-glass"] .lcars-sidebar a,
-    html[data-theme="liquid-glass"] .lcars-sidebar-filler,
-    html[data-theme="liquid-glass"] .lcars-btn,
-    html[data-theme="liquid-glass"] .lcars-icon-btn,
-    html[data-theme="liquid-glass"] fieldset.lcars-fieldset,
-    html[data-theme="liquid-glass"] .lcars-rating-fieldset,
-    html[data-theme="liquid-glass"] .lcars-trace-edge,
-    html[data-theme="liquid-glass"] .lcars-library-card,
-    html[data-theme="liquid-glass"] dialog.lcars-dialog {
+    html[data-theme="liquid-glass"] .atnr-navbar,
+    html[data-theme="liquid-glass"] .atnr-tabbar,
+    html[data-theme="liquid-glass"] .atnr-context-link,
+    html[data-theme="liquid-glass"] .atnr-button,
+    html[data-theme="liquid-glass"] fieldset.atnr-fieldset,
+    html[data-theme="liquid-glass"] .atnr-advanced-filters,
+    html[data-theme="liquid-glass"] .atnr-sidebar-toolbar,
+    html[data-theme="liquid-glass"] .atnr-rating-fieldset,
+    html[data-theme="liquid-glass"] .atnr-trace-edge,
+    html[data-theme="liquid-glass"] .atnr-library-card,
+    html[data-theme="liquid-glass"] dialog.atnr-dialog {
       backdrop-filter: var(--glass-blur);
       -webkit-backdrop-filter: var(--glass-blur);
     }
@@ -279,25 +405,25 @@ html[data-theme="liquid-glass"] dialog.lcars-dialog {
   html[data-theme="liquid-glass"] input[type="radio"],
   html[data-theme="liquid-glass"] input[type="checkbox"] {
     border-width: 3px;
-    border-color: var(--lcars-fg);
-    background: var(--lcars-black);
+    border-color: var(--atnr-fg);
+    background: var(--atnr-bg);
   }
 
-  html[data-theme="liquid-glass"] .lcars-header-bar,
-  html[data-theme="liquid-glass"] .lcars-footer-bar,
-  html[data-theme="liquid-glass"] .lcars-status-pill,
-  html[data-theme="liquid-glass"] .lcars-sidebar a,
-  html[data-theme="liquid-glass"] .lcars-sidebar-filler,
-  html[data-theme="liquid-glass"] .lcars-btn,
-  html[data-theme="liquid-glass"] .lcars-icon-btn,
-  html[data-theme="liquid-glass"] fieldset.lcars-fieldset,
-  html[data-theme="liquid-glass"] .lcars-rating-fieldset,
-  html[data-theme="liquid-glass"] .lcars-trace-edge,
-  html[data-theme="liquid-glass"] .lcars-library-card,
-  html[data-theme="liquid-glass"] dialog.lcars-dialog {
-    background: var(--lcars-black);
+  html[data-theme="liquid-glass"] .atnr-navbar,
+  html[data-theme="liquid-glass"] .atnr-tabbar,
+  html[data-theme="liquid-glass"] .atnr-context-link,
+  html[data-theme="liquid-glass"] .atnr-button,
+  html[data-theme="liquid-glass"] fieldset.atnr-fieldset,
+  html[data-theme="liquid-glass"] .atnr-advanced-filters,
+  html[data-theme="liquid-glass"] .atnr-sidebar-toolbar,
+  html[data-theme="liquid-glass"] .atnr-rating-fieldset,
+  html[data-theme="liquid-glass"] .atnr-trace-edge,
+  html[data-theme="liquid-glass"] .atnr-library-card,
+  html[data-theme="liquid-glass"] dialog.atnr-dialog {
+    background: var(--atnr-bg);
+    color: var(--atnr-fg);
     border-width: 2px;
-    border-color: var(--lcars-fg);
+    border-color: var(--atnr-fg);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
@@ -309,18 +435,64 @@ html[data-theme="liquid-glass"] dialog.lcars-dialog {
    rule additionally strengthens the fallback fills so a "reduce" choice
    reads as clearly solid, not merely un-blurred. */
 @media (prefers-reduced-transparency: reduce) {
-  html[data-theme="liquid-glass"] .lcars-header-bar,
-  html[data-theme="liquid-glass"] .lcars-footer-bar,
-  html[data-theme="liquid-glass"] .lcars-status-pill,
-  html[data-theme="liquid-glass"] .lcars-sidebar a,
-  html[data-theme="liquid-glass"] .lcars-sidebar-filler,
-  html[data-theme="liquid-glass"] .lcars-btn,
-  html[data-theme="liquid-glass"] .lcars-icon-btn,
-  html[data-theme="liquid-glass"] fieldset.lcars-fieldset,
-  html[data-theme="liquid-glass"] .lcars-rating-fieldset,
-  html[data-theme="liquid-glass"] .lcars-trace-edge,
-  html[data-theme="liquid-glass"] .lcars-library-card,
-  html[data-theme="liquid-glass"] dialog.lcars-dialog {
+  html[data-theme="liquid-glass"] .atnr-navbar,
+  html[data-theme="liquid-glass"] .atnr-tabbar,
+  html[data-theme="liquid-glass"] .atnr-context-link,
+  html[data-theme="liquid-glass"] .atnr-button,
+  html[data-theme="liquid-glass"] fieldset.atnr-fieldset,
+  html[data-theme="liquid-glass"] .atnr-advanced-filters,
+  html[data-theme="liquid-glass"] .atnr-sidebar-toolbar,
+  html[data-theme="liquid-glass"] .atnr-rating-fieldset,
+  html[data-theme="liquid-glass"] .atnr-trace-edge,
+  html[data-theme="liquid-glass"] .atnr-library-card,
+  html[data-theme="liquid-glass"] dialog.atnr-dialog {
     background: rgba(20, 20, 24, 0.98);
+  }
+}
+
+@media (max-width: 640px) {
+  html[data-theme="liquid-glass"] .atnr-navbar-title {
+    font-size: 1rem;
+  }
+
+  /*
+   * Issue #5 (mobile density follow-up): the liquid-glass Library toolbar
+   * never received the same narrow-viewport rhythm tightening LCARS's
+   * `.atnr-sidebar-toolbar` already has (see `theme-lcars.css`'s own
+   * `max-width: 640px` block), so it still used the wider default
+   * `--atnr-space-4` gap between every heading/field-group/button at
+   * 320-390px, and its heading/intro/count block used the same relaxed
+   * line-height as desktop. Matching both here — nothing here removes,
+   * hides, or reorders a control; every field, button, and status message
+   * stays exactly where it is in the DOM and keeps its 44px minimum tap
+   * target, only the whitespace between them shrinks.
+   */
+  html[data-theme="liquid-glass"] .atnr-sidebar-toolbar {
+    gap: var(--atnr-space-1);
+  }
+  html[data-theme="liquid-glass"] .atnr-content #library-heading,
+  html[data-theme="liquid-glass"] .atnr-content .atnr-view-intro,
+  html[data-theme="liquid-glass"] .atnr-content .atnr-count {
+    line-height: 1.2;
+  }
+}
+
+/* Responsive desktop treatment: on a widescreen viewport this still reads
+ * as one continuous iPhone-style flow (same compact nav bar + bottom tab
+ * bar, same DOM, same `atnr-*` classes — no separate "desktop shell" is
+ * ever built), but the readable column is capped and centered rather than
+ * stretching form controls and card rows edge-to-edge across a 1440px
+ * viewport, the same treatment Apple's own web apps (e.g. Apple Music,
+ * Apple TV on the web) use for this material at wide widths. */
+@media (min-width: 900px) {
+  html[data-theme="liquid-glass"] .atnr-navbar,
+  html[data-theme="liquid-glass"] .atnr-tabbar {
+    padding-inline-start: max(calc(var(--atnr-space-4) + env(safe-area-inset-left)), calc((100% - 46rem) / 2));
+    padding-inline-end: max(calc(var(--atnr-space-4) + env(safe-area-inset-right)), calc((100% - 46rem) / 2));
+  }
+
+  html[data-theme="liquid-glass"] .atnr-content {
+    max-width: 46rem;
+    margin-inline: auto;
   }
 }

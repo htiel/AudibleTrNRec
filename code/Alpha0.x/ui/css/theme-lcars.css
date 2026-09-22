@@ -1,0 +1,318 @@
+/**
+ * LCARS palette, geometry, type scale, and neutral-contract mapping.
+ *
+ * This is where LCARS owns its look, per `tokens.css`'s neutral-contract
+ * header comment: the raw classic-palette swatches, the LCARS-only swept
+ * geometry (`--lcars-radius-elbow`, `--lcars-elbow-*`), and LCARS's own
+ * type scale/font stack all live here, scoped under
+ * `html[data-theme="lcars"]` — and nowhere else. `layout.css` (the LCARS
+ * shell chrome) reads the geometry/type custom properties directly; the
+ * `--atnr-*` assignments at the end of this block are how LCARS maps that
+ * same palette onto the shared neutral contract `base.css`/`components.css`
+ * consume, so those shared files render in LCARS's classic colors without
+ * ever having to name `--lcars-*` themselves.
+ *
+ * `theme-liquid-glass.css` never reads any custom property defined in this
+ * block — it defines its own, entirely independent set of `--atnr-*`
+ * assignments from its own Apple/iOS-inspired palette. Disabling this
+ * block (or this whole stylesheet, or `layout.css`) changes nothing about
+ * how Apple mode renders; see the standalone-rendering test in
+ * `test/theme-token-independence.test.js`.
+ */
+html[data-theme="lcars"] {
+  /* Raw classic LCARS palette (Bracer Jack / TheLCARS.com reference). */
+  --lcars-african-violet: #cc99ff;
+  --lcars-almond: #ffaa90;
+  --lcars-almond-creme: #ffbbaa;
+  --lcars-blue: #5566ff;
+  --lcars-bluey: #8899ff;
+  --lcars-butterscotch: #ff9966;
+  --lcars-gold: #ffaa00;
+  --lcars-golden-orange: #ff9900;
+  --lcars-gray: #666688;
+  --lcars-ice: #99ccff;
+  --lcars-lilac: #cc55ff;
+  --lcars-sunflower: #ffcc99;
+  --lcars-orange: #ff8800;
+  --lcars-peach: #ff8866;
+  --lcars-tomato: #ff5555;
+  --lcars-sky: #aaaaff;
+  --lcars-space-white: #f5f6fa;
+  --lcars-violet-creme: #ddbbff;
+  --lcars-black: #000000;
+
+  /* LCARS's own semantic role aliases (consumed only by `layout.css`,
+     the LCARS-only shell chrome). */
+  --lcars-accent-primary: var(--lcars-butterscotch);
+  --lcars-accent-secondary: var(--lcars-sunflower);
+  --lcars-accent-active: var(--lcars-gold);
+  --lcars-accent-muted: var(--lcars-gray);
+
+  /* LCARS-only geometry and type scale (`layout.css`; no Apple equivalent
+     — the Apple shell has its own independent `--glass-radius`/navbar
+     sizing instead). */
+  --lcars-font-family: 'Arial Narrow', 'Liberation Sans Narrow', Arial, Helvetica, sans-serif;
+  --lcars-radius-pill: 1.5rem;
+  --lcars-radius-elbow: 60px;
+  --lcars-elbow-width: 96px;
+  --lcars-elbow-height: 72px;
+  --lcars-elbow-width-compact: 48px;
+  --lcars-elbow-height-compact: 48px;
+  --lcars-font-title: 1.75rem;
+  --lcars-font-subheader: 1.15rem;
+
+  /*
+   * Neutral-contract mapping: every `--atnr-*` token `base.css`/
+   * `components.css` read is assigned from the LCARS palette above. This
+   * is the *only* place this file maps onto that shared contract — it is
+   * a one-way assignment (LCARS palette -> shared token), never the
+   * reverse, and `theme-liquid-glass.css` performs the identical mapping
+   * from its own, unrelated palette with no reference back to any name
+   * defined in this block.
+   */
+  --atnr-bg: var(--lcars-black);
+  --atnr-fg: var(--lcars-space-white);
+  --atnr-accent-primary: var(--lcars-accent-primary);
+  --atnr-accent-secondary: var(--lcars-accent-secondary);
+  --atnr-accent-tertiary: var(--lcars-ice);
+  --atnr-accent-active: var(--lcars-accent-active);
+  --atnr-accent-danger: var(--lcars-tomato);
+  --atnr-accent-muted: var(--lcars-accent-muted);
+  --atnr-focus-ring: var(--lcars-space-white);
+  --atnr-ink-on-accent: var(--lcars-black);
+  --atnr-font-family: var(--lcars-font-family);
+  --atnr-font-size-base: 1rem;
+  --atnr-font-size-subheader: var(--lcars-font-subheader);
+}
+
+/**
+ * LCARS-only chrome refinements.
+ *
+ * `layout.css`/`components.css` already carry the original, unmodified
+ * LCARS frame (elbows, swept sidebar, header/footer bars) and are the only
+ * stylesheets `shells/lcars-shell.js` depends on for its base structure;
+ * `shells/apple-shell.js` never creates any of the elements those rules
+ * target, and never links this file's selectors either. This stylesheet
+ * holds the small set of LCARS-shell-only fixes introduced alongside the
+ * new independent Apple shell, scoped under `html[data-theme="lcars"]` so
+ * they are inert with any other theme attribute value (including a
+ * transient unset state before `theme-preference.js` runs).
+ *
+ * Bracer Jack / TheLCARS.com constraints preserved here: flat color only
+ * (no gradient/box-shadow/text-shadow/glow), the swept elbow geometry is
+ * untouched, and every added control keeps the shared minimum touch target
+ * and focus-visible outline.
+ */
+
+/*
+ * Issue #11 (P2): a persistent, always-inspectable "more options below"
+ * affordance for the grey library-controls filler, shown only while it is
+ * actually scrollable and not yet scrolled to its end (see the
+ * `bindOverflowAffordance()` scroll/resize listener in
+ * `shells/lcars-shell.js`). A translucent overlay scrollbar alone gives no
+ * such persistent cue at a constrained desktop height (e.g. 1440x900); this
+ * is a flat text/glyph row, not a shadow or gradient.
+ */
+html[data-theme="lcars"] .lcars-scroll-more {
+  display: none;
+  position: sticky;
+  bottom: 0;
+  margin: 0;
+  padding: var(--atnr-space-1) var(--atnr-space-2);
+  background: var(--lcars-black);
+  color: var(--lcars-accent-secondary);
+  font-size: 0.75rem;
+  text-align: center;
+  border-radius: var(--atnr-space-1);
+}
+
+html[data-theme="lcars"] .lcars-sidebar-filler--more .lcars-scroll-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--atnr-space-1);
+}
+
+html[data-theme="lcars"] .lcars-scroll-more-chevron::before {
+  content: '\25BE';
+}
+
+/*
+ * Full "LCARS reskin" of the shared, theme-agnostic `.atnr-*` component
+ * vocabulary every owned view and `views/data-view.js` build (see the
+ * documentation comment on `.atnr-button` in `components.css`). This is
+ * the theme-scoped half of the "neutral structure, theme-scoped skin"
+ * split: `components.css` defines a workable, unstyled-for-any-theme
+ * default; this file adds back the classic swept-pill/uppercase LCARS
+ * look on top of it for `html[data-theme="lcars"]` only, exactly the way
+ * `theme-liquid-glass.css` layers its own glass look on top of the same
+ * classes for `html[data-theme="liquid-glass"]`. Neither theme hides the
+ * other's DOM or classes to get its look — each theme only ever adds its
+ * own positive styling to the shared, neutral base.
+ */
+html[data-theme="lcars"] .atnr-button {
+  border-radius: 0 var(--lcars-radius-pill) var(--lcars-radius-pill) 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+html[data-theme="lcars"] .atnr-field-label,
+html[data-theme="lcars"] .atnr-group-heading {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/*
+ * Issue B4: when private-alpha mode omits Feasibility & trace from the
+ * persistent sidebar (see `components/navigation.js#primaryNavRoutesFor`
+ * and `shells/lcars-shell.js`), it stays reachable as a flat LCARS pill
+ * link shown only above Data & lifecycle's content — never a fourth
+ * always-visible sidebar pill leading to synthetic-only empty copy.
+ */
+html[data-theme="lcars"] .lcars-context-row:empty {
+  display: none;
+}
+
+html[data-theme="lcars"] .lcars-context-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--atnr-min-target);
+  padding: 0 var(--atnr-space-3);
+  margin-bottom: var(--atnr-space-3);
+  background: var(--lcars-accent-secondary);
+  color: var(--lcars-black);
+  border-radius: 0 var(--lcars-radius-pill) var(--lcars-radius-pill) 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+
+html[data-theme="lcars"] .lcars-context-link:hover,
+html[data-theme="lcars"] .lcars-context-link:focus-visible {
+  filter: brightness(1.2);
+}
+
+/*
+ * Issue #5 (mobile density follow-up): live evidence at 390x844 found the
+ * first library result at ~1044px — the header bar, the primary+secondary
+ * navigation pills, and the private library toolbar (search, closed
+ * advanced filters, reset, status) together consumed ~821px before
+ * `#view-root` even began, well past what Apple's much shallower nav
+ * bar/tab bar needs for the identical view content. None of this removes,
+ * hides, or reorders anything a keyboard/screen-reader user can reach —
+ * `order` here is a *visual* reorder only, scoped to this same
+ * `max-width: 640px` breakpoint layout.css already used to stack the
+ * sidebar into a single mobile column, and never applies at the shared
+ * desktop breakpoint, so LCARS desktop is byte-for-byte unaffected. Search
+ * remains the first control in the toolbar; nothing here defaults the
+ * advanced-filters disclosure back open.
+ */
+@media (max-width: 640px) {
+  /*
+   * The elbow/header-bar wrapped the title, status readout, and settings
+   * gear onto up to three separate lines. Tightening the bar's own padding
+   * and gap, and letting the status readout truncate to one line (its full
+   * text is still present for assistive tech; only the visual line is
+   * capped, matching the LCARS "fixed-width console readout" convention)
+   * removes stacked whitespace without shortening or hiding any label.
+   */
+  html[data-theme="lcars"] .lcars-header-bar {
+    padding-top: calc(var(--atnr-space-1) + env(safe-area-inset-top));
+    padding-bottom: var(--atnr-space-1);
+    gap: var(--atnr-space-2);
+  }
+  html[data-theme="lcars"] .lcars-header-titles {
+    gap: var(--atnr-space-1);
+  }
+  html[data-theme="lcars"] .lcars-status-pill {
+    max-width: 60vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /*
+   * At 390/320px the title's own available width (next to the now-adjacent
+   * settings gear) is narrow enough that "Audible Track and Recommend"
+   * alone wrapped to three lines, which was the header's largest remaining
+   * contributor to the mobile height budget. Single-lining it (its full
+   * text stays the `<h1>`'s accessible name/content either way — only the
+   * visual line is clipped, the same convention already applied to the
+   * status readout above) removes that without shortening the title text.
+   */
+  html[data-theme="lcars"] .lcars-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  /*
+   * DOM order (primary nav, filler, diagnostics nav) is unchanged — only
+   * flexbox `order` moves the diagnostics/secondary-navigation pills next
+   * to the primary pill visually, so both short nav rows can share the
+   * same wrapped line(s) instead of the library toolbar sitting between
+   * them and forcing two separate stacked nav rows either side of it.
+   * Secondary nav (Data & lifecycle, Settings) stays exactly as reachable
+   * — same links, same tab order in the DOM, same `aria-current` wiring —
+   * only its visual position moves up, ahead of the (now taller) toolbar.
+   */
+  html[data-theme="lcars"] .lcars-sidebar-filler {
+    order: 3;
+  }
+  html[data-theme="lcars"] nav.lcars-sidebar-group:nth-of-type(2) {
+    order: 2;
+  }
+  html[data-theme="lcars"] .lcars-sidebar-group {
+    width: auto;
+    flex: 0 1 auto;
+  }
+  html[data-theme="lcars"] .lcars-sidebar-group ul {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  /* Tighten the private library toolbar's own internal rhythm. */
+  html[data-theme="lcars"] .atnr-sidebar-toolbar {
+    gap: var(--atnr-space-1);
+  }
+
+  /*
+   * A tighter (but still comfortably readable, well above any minimum
+   * body-text line-height) line-height for the main heading/intro/count
+   * block reclaims a few wrapped-line's worth of height at the narrowest
+   * widths without shrinking the font size itself.
+   */
+  html[data-theme="lcars"] .lcars-main #library-heading,
+  html[data-theme="lcars"] .lcars-main .atnr-view-intro,
+  html[data-theme="lcars"] .lcars-main .atnr-count {
+    line-height: 1.2;
+  }
+
+  /*
+   * Main content's heading/intro/result-count keep their full text (no
+   * content removed) but no longer carry full desktop-scale paragraph
+   * margins on top of the sidebar/toolbar's own already-tightened rhythm.
+   */
+  html[data-theme="lcars"] .lcars-main #library-heading {
+    margin: 0 0 var(--atnr-space-1) 0;
+  }
+  /*
+   * The gap directly above the result count (not below it) is what pushes
+   * the count's own bottom edge past the 844px budget at 320px — its
+   * *own* height is fixed by its line-height, so only the margin between
+   * it and the intro paragraph above it can still buy headroom here.
+   */
+  html[data-theme="lcars"] .lcars-main .atnr-view-intro {
+    margin-block: 0 var(--atnr-space-1);
+  }
+  /*
+   * The result count sits directly above the first card; giving it the
+   * smallest spacing token (rather than the same one the intro paragraph
+   * above it uses) is the last few sub-pixels of headroom issue #5's
+   * one-844px-viewport budget needs at the narrowest (320px) width, without
+   * shrinking the count's own text or line-height any further.
+   */
+  html[data-theme="lcars"] .lcars-main .atnr-count {
+    margin-block: 0 0;
+  }
+}

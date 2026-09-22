@@ -429,6 +429,186 @@ fabricated identifiers, so that no personal data is ever committed. The private
 runtime additionally refuses to *serve* `src/fixtures/` modules, so demo
 material cannot be loaded into a real session even by accident.
 
+## 12. Provider synopsis text (issue #3)
+
+Audible supplies book descriptions as **provider markup**. That markup is
+untrusted input from a third party, and the application never renders, parses
+as a document, or executes any of it.
+
+`connector/atnr_connector/normalize.py::plain_text_from_markup` converts it to
+bounded plain text at the ingestion boundary, so no downstream surface ever
+holds markup at all:
+
+| Rule | Behaviour |
+|---|---|
+| Vocabulary | A **closed** tag list. `<script>`, `<style>`, `<iframe>` and similar are dropped *with their contents*, including when unclosed. |
+| Unknown tags | An angle bracket that does not open a known tag stays literal, so prose such as `5 < 6` survives unharmed. |
+| Structure | `</p>`, `<br>`, `<li>` and block ends become paragraph separators; paragraphs are joined with a blank line. Inline tags become nothing. |
+| Entities | Decoded **after** tags are removed, so `&lt;p&gt;` stays the literal text `<p>` and can never be promoted into structure. |
+| Invisible characters | Zero-width, bidirectional-override, BOM and replacement characters are stripped, defeating bidi display spoofing. |
+| Input bound | Markup over 64 KiB is refused outright. |
+| Output bound | Results over 2,000 characters are **omitted, not truncated** — an optional field is either complete or absent, never a misleading fragment. |
+
+The emitted `synopsis` is therefore plain text. A view may display it directly
+as text content; it must never be inserted as HTML.
+
+## 13. Series evidence (issue #4)
+
+Missing metadata is not evidence. A title with no series information is
+**unknown**, and only an authoritative statement may call it a standalone.
+
+Closed vocabulary, identical in Python (`normalize.py::SERIES_EVIDENCE`) and
+JavaScript (`src/core/model.js::SERIES_EVIDENCE`):
+
+| Value | Meaning | Produced by |
+|---|---|---|
+| `provider-supplied` | The provider named a series for this title. | Ingestion, when a series is present. |
+| `unknown` | Nothing is known about series membership. | Ingestion default. |
+| `confirmed-standalone` | An authoritative source states this title belongs to no series. | **No current path.** Reserved. |
+
+Rules:
+
+- A provider may not assert `confirmed-standalone` by *omission*, and a
+  provider-supplied `seriesEvidence` on an input record is ignored.
+- A series record that exists but carries no name is a classified stop
+  (`required-text-missing`), not a silent unknown.
+- `src/core/library.js::seriesPresentation()` is the **only** place a label is
+  chosen. Every surface reads `row.seriesLabel` / `detail.seriesLabel`, so the
+  card, the group heading and the detail pane cannot disagree:
+  `Series unknown` for `unknown`, `Not part of a series` for
+  `confirmed-standalone`, the series name for `provider-supplied`.
+
+## 14. Connection state (issue #8)
+
+**Credential presence is custody, not proof.** Holding an authorization
+envelope establishes only that a file exists on this computer; it says nothing
+about whether Audible still honours it.
+
+Closed vocabulary, mirrored in `connector/atnr_connector/service.py`,
+`src/sync/private-alpha-service.js` and `ui/js/bootstrap-state.js`:
+
+| State | Meaning |
+|---|---|
+| `disconnected` | No authorization is held. |
+| `unverified` | An authorization is held, but no recent provider interaction has confirmed it works. |
+| `verified` | A recorded, in-date provider interaction confirmed it. |
+| `authorization-failed` | The provider refused the held authorization (HTTP 401/403 or an equivalent refusal). |
+
+Rules:
+
+- `verified` is produced **only** from an interaction the owner already asked
+  for — device registration at connect time, or a successful library sync.
+  There is **no probe**: `status()` performs no provider I/O.
+- Verification expires after `VERIFICATION_FRESHNESS_SECONDS` (24 hours).
+  A timestamp in the future never counts. A refusal at or after the last
+  success wins.
+- A transient failure (timeout, network error) is **never** reported as
+  revocation; only an authorization refusal sets `authorization-failed`.
+- Anything unrecognized resolves to `unverified`, which prompts a check rather
+  than asserting health. The UI never derives a state of its own.
+- The connector status field `connected` is **retained** with its original
+  meaning — *an authorization envelope is held* — because lifecycle controls
+  key off it. It is custody, not health. Health is `connectionState`.
+- An authorization failure is recorded as evidence and reported through the
+  existing allow-listed `library-sync-failed` code; no new error code is
+  introduced at the process boundary.
+- Because that code cannot distinguish "Audible refused us" from "the network
+  was down", the **evidence recorded during the same requested sync** is what
+  resolves it. After a failed sync the runtime re-reads the connector status
+  (an evidence read, no provider access) so a revoked session cannot keep
+  reporting `verified` until the next bootstrap:
+  - `PrivateAlphaService.sync()` refreshes automatically; the thrown
+    `PrivateAlphaServiceError` carries `connectionState`, and
+    `connectionEvidence()` returns the cached verdict.
+  - `PrivateAppStore.noteSyncFailure(codeOrError)` is the UI-side path;
+    `refreshConnectionState()` and `applyConnectionInfo(info)` are the narrower
+    primitives. None of them touch the library, feedback, drafts or session.
+  - A refusal timestamp at or after the last success outranks any `verified`
+    claim, on both sides of the boundary.
+  - If the connector cannot be asked, the last known state stands: an
+    unreachable runtime proves nothing and never upgrades a state.
+- A refusal the connector observed but could **not persist** is still reported
+  for the life of that process, so an unwritable evidence store cannot leave a
+  refused session reading `verified`.
+- Credential custody and the authorization policy are unchanged by this
+  contract: it only decides what may honestly be *said* about them.
+
+### Group feedback identity (issue #4 follow-up)
+
+Feedback attached to an author, narrator or series group belongs to *the
+person or series the owner reviewed*, not to however many provider identities
+are merged into that group today.
+
+| Target | Identity |
+|---|---|
+| Series group | `series:<seriesId>` — provider-stable, member-count free. |
+| Person group | `person:<author\|narrator>:display-<16-hex hash of normalized label>` — **always**, regardless of member count. |
+
+An earlier scheme keyed a person group on its single source identifier when it
+had exactly one member and on the display hash otherwise, so a later sync that
+merged or split a duplicate name silently moved the target and orphaned saved
+feedback. Rules now:
+
+- The canonical identity never changes with `sourceIdentityCount`.
+- `aliasTargetIds` lists the legacy `person:<kind>:<personId>` identifiers for
+  the group's current members. It is **person-only**; a series target omits the
+  field rather than carrying a permanently empty list.
+- Read order: the canonical record always wins. Aliases are consulted only when
+  the canonical identifier holds nothing, so a migration can never shadow a
+  record written under the current scheme.
+- Migration order: the canonical record is written **first**, then the alias is
+  retired using **its own revision** — so optimistic concurrency and account
+  binding are unchanged, and a failure leaves two copies (canonical wins on
+  read) rather than none. The outcome is reported as `aliasMigration`, never
+  swallowed.
+- If two or more aliases hold records the situation is ambiguous: the first is
+  shown so nothing disappears, `aliasConflict` is set, and **no automatic
+  migration or deletion runs**. The store does not guess which review the owner
+  meant.
+
+## 15. Bounded library presentation (issue #10)
+
+The Library renders a **bounded page**, never the whole library. At 180 titles
+the unbounded list produced a single page over 57,000 px tall on mobile; the
+same shape at 1,000 or 20,000 titles is a navigation, assistive-technology and
+memory problem, not merely a slow one.
+
+`src/core/paginate.js` is the single contract every client inherits:
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `LIBRARY_PAGE_SIZE` | 50 | Maximum book rows on one ungrouped page. |
+| `LIBRARY_GROUP_PAGE_SIZE` | 5 | Maximum groups on one grouped page. |
+| `LIBRARY_GROUP_ROW_PAGE_SIZE` | 10 | Maximum rows inside one visible group. |
+| `LIBRARY_GROUPED_ROW_CEILING` | 50 | Maximum rows on a grouped page. |
+| `LIBRARY_ROW_CEILING` | 50 | Maximum rows on **any** Library page. |
+
+Rules:
+
+- **No "Show all".** There is no parameter, sentinel page or escape hatch that
+  renders an unbounded list. Removing the bound requires a reviewed code
+  change, not a click.
+- **Counts stay true.** `matched` and `total` always describe the whole
+  filtered library, and every group carries its real `total`. A bounded page
+  never makes the library look smaller than it is.
+- **Collapsed groups render zero rows** and still report their true size.
+- **Deterministic.** Order is decided by sorting upstream and never
+  re-derived. The same page of the same library is identical.
+- **Complete.** Paging reaches every row exactly once; nothing is hidden.
+- **Nothing is lost to navigation.** Filters, sort, grouping, collapse state,
+  feedback targets and an unsaved draft all survive paging. Paging resets only
+  when a *listing-changing* field changes (`PAGE_RESETTING_FIELDS`); scroll,
+  focus and editor state do not reset it.
+- `describePage()` produces the announced sentence, so the text and the rows
+  cannot disagree.
+- Paging position is persisted with the filters it belongs to
+  (`library-filter-persistence.js`, state version 2), and every stored page
+  value is validated, never trusted.
+- Gated at 180 / 1,000 / 20,000 titles by `test/library-pagination.test.js`
+  using `src/fixtures/large-library.js`. Those fixtures are synthetic and
+  test-only; the private runtime still refuses to serve `src/fixtures/`.
+
+
 ---
 
 
@@ -446,3 +626,259 @@ material cannot be loaded into a real session even by accident.
 | Feedback contract / store | `test/feedback.test.js`, `test/feedback-store.test.js` | — |
 | Export / deletion | `test/export.test.js` | — |
 | Release vs. legacy identity | `test/version.test.js`, `test/production-migration.test.js` | `connector/test/test_release_identity.py` |
+| Synopsis plain text | — | `connector/test/test_normalize.py` |
+| Series evidence | `test/model.test.js`, `test/library.test.js`, `test/private-library-state.test.js` | `connector/test/test_normalize.py` |
+| Connection state | `test/bootstrap-state.test.js`, `test/private-alpha-service.test.js` | `connector/test/test_service.py` |
+| Bounded library presentation | `test/library-pagination.test.js`, `test/library-filter-persistence.test.js`, `test/ui-store.test.js` | — |
+
+## 16. Status and playback position are two facts (issue B2)
+
+Audible reports a listening **status** and a recorded **playback position**
+independently, and they legitimately disagree: a title can be marked finished
+while the position reads 36%, because the owner skipped the credits, listened
+on another device, or the provider closed the title out.
+
+Neither value is ever rewritten to agree with the other, and neither is
+inferred from the other. `LibraryRow.status` and `LibraryRow.percentComplete`
+remain exactly what the source said.
+
+`progressPresentation({ status, percentComplete, source })` in
+`src/core/library.js` is the single authority for what may be *said* about
+them. It is attached to every row as `row.progress`:
+
+| Field | Meaning |
+|---|---|
+| `status`, `percentComplete` | the source values, unchanged |
+| `statusKnown` | false only for the `unknown` status |
+| `statusLabel` | `Marked finished by Audible`, attributed to the source |
+| `statusSource`, `statusSourceLabel` | the provenance behind the status claim |
+| `progressKnown` | false when no position was reported |
+| `progressLabel` | `playback position 36%`, or `playback position unknown` |
+| `statusProgressConflict` | true when a completed title has a position below 100% |
+| `parts` | ordered `{kind, text}` pairs, deliberately **not** pre-joined |
+
+Rules:
+
+- The two labels are returned separately. A view may render them adjacently
+  (for example `Marked finished by Audible · playback position 36%`), but the
+  contract never hands back one merged sentence, because the two statements
+  have different sources and different reliability.
+- `0%` is a real position and prints as one. An absent position prints as
+  unknown and is never shown as `0%`.
+- `statusProgressConflict` is a flag for emphasis, not an error. Both values
+  are still shown when it is set.
+- An unrecognized status resolves to `Listening status unknown`; a prototype
+  key such as `constructor` is not a status.
+
+## 17. Provenance presentation (issue B3)
+
+A provenance token is an internal identifier, not a sentence. Passing an
+unrecognized one to the screen shows the owner a string they cannot evaluate
+and implies we know where a fact came from when we do not.
+
+`PROVENANCE_PRESENTATION` and `provenancePresentation(source)` in
+`src/core/model.js` are the closed vocabulary:
+
+| Source | `label` | `agent` | `live` |
+|---|---|---|---|
+| `audible-community-private-api` | Imported from Audible | Audible | true |
+| `synthetic-fixture` | Imported (synthetic fixture) | a synthetic fixture | false |
+| `local-user` | Local/synthetic annotation | you | false |
+| `derived` | Derived | this app | false |
+| `unknown` | Unknown provenance | an unknown source | false |
+
+- Every token outside this table - including `null`, a non-string, and a
+  prototype key - resolves to the `unknown` entry. Nothing passes through.
+- `agent` exists so a sentence can name the claimant ("Marked finished by
+  Audible") without any surface inventing its own wording.
+- `ui/js/format.js` is owned by another stream. Its `formatProvenance()` still
+  passes unknown tokens through; the labels above are byte-identical to the
+  ones it already uses for the keys it knows, so it can delegate to
+  `provenancePresentation()` with no change in existing output. That
+  delegation is a coordination item, not a change made here.
+
+## 18. Data-screen inventory (issue B7)
+
+`PrivateAppStore.inventory()` (and the matching `AppStore.inventory()`) report
+what is held on this device. Both are **strictly non-destructive**: a pure read
+of state already in memory, starting nothing and deleting nothing.
+
+```
+{
+  titles:     { known, count, libraryEntryCount, observedAt, basis, reason },
+  feedback:   { known, count, basis, reason },
+  lastImport: { known, basis, authority, observedAt,
+                counts: {added, updated, reappeared, missingFromSource,
+                                       unchanged, rejected}, source, reason }
+}
+```
+
+The governing rule is that **`known` is reported separately from the value, and
+a count appears only where evidence for it exists**:
+
+- `titles.known` is true when a snapshot was actually read, or when local
+  evidence states there is no snapshot. Otherwise the count is `null` with
+  reason `no-snapshot-read` - not `0`.
+- `feedback.known` is true only after the feedback list has been read.
+  Before that the count is `null` with reason `feedback-not-loaded`. "We have
+  not looked" and "there is nothing" are different facts.
+- `AppStore` (synthetic runtime) has no feedback store at all and reports
+  `not-applicable`, which is a fact about the runtime, not a count of zero.
+- `loadInventory()` reads the feedback list first so the count can be
+  reported. If that read fails, the inventory is still returned with feedback
+  honestly marked unknown; one unreadable section never suppresses the others.
+
+### `lastImport` is a provider import, not a snapshot parse
+
+Loading the retained snapshot at startup validates it against an **empty**
+base, so `lastImportReport.added` necessarily contains every retained title.
+Publishing that as the latest import tells an owner with 12 retained titles
+that Audible just delivered 12 new ones. It is a parse, not an import.
+
+`basis` and `authority` are therefore explicit, so no consumer has to infer
+whether the numbers are real by inspecting the numbers - a heuristic that
+cannot work, because "12 titles arrived" and "12 titles were parsed" both
+produce `added: 12`.
+
+| `basis` | `authority` | `known` | Meaning |
+|---|---|---|---|
+| `sync-reconciliation` | `requested-sync` | true | A completed, requested sync reconciled against the previous stored snapshot. |
+| `snapshot-load` | `local-snapshot-parse` | false | The retained snapshot was parsed. Reason `snapshot-parse-only`. |
+| `synthetic-import-in-session` | `in-session-fixture-load` | true | `AppStore` only: a real in-session synthetic fixture import. |
+| `none` | `null` | false | Nothing has been loaded. Reason `no-import-in-session`. |
+
+- **Only `PrivateAppStore.noteSyncReconciliation(syncResult)` may set
+  `known: true`.** It takes the result of `connectionApi.sync()` unchanged and
+  reads its `reconciliation` block, which `reconcileSnapshot` produced against
+  the previous stored snapshot. A result with no `reconciliation` block is
+  refused with `sync-reconciliation-missing`; the inventory stays unknown
+  rather than inventing a basis. Non-integer and negative counts are recorded
+  as `null`, not coerced.
+- `counts` is a fixed shape: `{added, updated, reappeared, missingFromSource,
+  unchanged, rejected}`. Reconciliation does not measure `unchanged` or
+  `rejected`, so they are `null` - never `0`, which would be a number we did
+  not measure.
+- `source` states where the held counts came from: `in-session-sync` (measured
+  by this page) or `persisted-status` (restored from the record described
+  below). It is `null` whenever `known` is false.
+- Counts are **never reconstructed from the retained snapshot**. They are
+  either measured in this session or restored from the persisted record of the
+  sync that measured them.
+
+### Persisted latest-import record
+
+`performSync` records a reconciliation and then reloads, so an in-memory-only
+measurement reverts to unknown within a second of being taken. The connector
+therefore persists the counts of each completed sync, and the store restores
+them.
+
+The record is written by `PrivateAlphaService` to `last-import-counts.json` in
+the same protected custody root as the deletion marker - a small versioned
+JSON file, following the existing sidecar convention rather than changing the
+frozen encrypted container schema. It holds **integers, timestamps and a
+one-way binding only**: no title, identifier, account key, marketplace or
+private text.
+
+On disk:
+
+```
+{ version: 1, basis: 'sync-reconciliation', authority: 'requested-sync',
+  observedAt, recordedAt, snapshotGeneration, accountBinding,
+  counts: { added, updated, reappeared, missingFromSource } }
+```
+
+`accountBinding` is `sha256('atnr-last-import-binding:' + accountKey)`. The
+account key itself never leaves the encrypted container; a digest is enough to
+prove a record belongs to the account currently in custody.
+
+Surfaced on `status().local.lastImport`, with `accountBinding` withheld and
+`counts` widened to the full fixed shape (`unchanged` and `rejected` `null`):
+
+```
+{ version, basis, authority, observedAt, recordedAt, snapshotGeneration,
+  counts: { added, updated, reappeared, missingFromSource,
+            unchanged: null, rejected: null } }
+```
+
+`status()` performs no provider access, so reading this adds **no probe**.
+
+Adoption is fail-closed at both ends. The record is `null` - and the inventory
+stays unknown - unless every one of these holds:
+
+| Check | Refusal |
+|---|---|
+| `version === 1`, `basis === 'sync-reconciliation'`, `authority === 'requested-sync'` | an older or foreign schema proves nothing |
+| `accountBinding` matches the account currently in custody | no cross-account carryover |
+| `snapshotGeneration` equals the stored snapshot's generation | superseded evidence is unknown, not stale truth |
+| `observedAt` and `recordedAt` parse as instants | a record without a time is not evidence |
+| all four counts are integers in `0..20000` | negative, fractional or missing counts are refused whole |
+| the file parses | an unreadable record is unknown |
+| the account join is not quarantined | a quarantined status carries `lastImport: null` |
+
+Store-side, `PrivateAppStore` re-validates version, basis, authority, counts
+and `observedAt` before adopting, in `loadPrivateSnapshot`, in
+`applyConnectionInfo`, and in the public `noteStatusImport(status)`. **An
+in-session measurement always wins**: adoption returns
+`{ok: false, code: 'in-session-measurement-retained'}` rather than replacing
+counts this page measured itself.
+
+Lifecycle:
+
+- Writing the record can never fail a sync that already succeeded; a failed
+  write costs one reload's worth of knowledge, reported as unknown.
+- `deleteLocalSnapshot`, `deleteLocalSnapshotVerified` and `purgeAllLocalData`
+  remove the record: derived evidence must not outlive the data it describes.
+  The generation binding refuses it even if the file removal fails.
+- `disconnect` retains it. The local snapshot it describes is retained too,
+  and a subsequent connection by another account fails the binding check.
+- A snapshot store with no custody root (a test double) persists nothing and
+  reports unknown, which is the honest answer.
+- `titles.observedAt` and `lastImport.observedAt` (for `snapshot-load`) are
+  the snapshot's observation instant: real evidence of when the provider was
+  *observed*, not of an import we ran.
+- Naming constraint: no code in this vocabulary may end with the word
+  `import`. The module-graph scan in `test/ui-server.test.js` reads `import'`
+  as the start of an import statement, exactly as a naive parser would, so
+  `snapshot-parse-only` and `synthetic-import-in-session` are worded to avoid
+  that ending rather than the scan being loosened.
+
+This is separate from `connectionApi.deletionInventory()`, which is the
+connector's pre-deletion manifest and remains unchanged.
+
+## 19. Saved Library controls are keyed by schema (issue B10)
+
+The session key for saved Library controls is
+`atnr:private-library-filters:v<LIBRARY_FILTER_STATE_VERSION>`. It no longer
+contains `ALPHA_VERSION`.
+
+Keying it on the release meant every patch bump silently orphaned a valid
+saved state: filters, sort, grouping, collapsed groups and page position
+vanished on upgrade with no explanation, although the stored shape was still
+supported. The state schema version is the only thing that determines whether
+a stored value can be read, so it is the only thing in the key.
+
+- `LEGACY_LIBRARY_FILTER_STORAGE_KEYS` lists the release-scoped keys earlier
+  builds wrote. They are read once and **copied** to the canonical key.
+- The schema-scoped key always wins, so a migration can never overwrite state
+  the current build already saved.
+- Nothing is ever erased. This module is forbidden to call
+  `removeItem`/`clear` (enforced by `test/scan.test.js`) so a
+  filter-persistence bug can never destroy unrelated browser state. A
+  superseded legacy value is simply never read again while the canonical key
+  exists, and it is per-tab, so it disappears with the tab. If the canonical
+  write fails, the state is still restored for the current session.
+- A legacy value that cannot be read is reported on each load until any valid
+  state is saved under the canonical key. It is reported rather than silently
+  dropped, and it is never deleted to suppress the message.
+- Tab scope, all bounds (32 KB, 500-character query, 1000 collapsed groups,
+  200 group row pages, page 1..1,000,000) and full validation are unchanged and
+  applied to migrated values exactly as to new ones. Transient state (open
+  editor, dirty draft, return focus, scroll) is still never persisted.
+- `loadLibraryFilterState()` returns `{ ok, code, state, reset, migrated }`.
+  `reset: true` with code `library-filter-state-outdated` is surfaced **only**
+  for a well-formed envelope carrying an incompatible schema version. Corrupt,
+  oversized or widened values remain `library-filter-state-invalid` and are
+  never described to the owner as a routine reset.
+- `PrivateAppStore.libraryStateNotice` turns that code into
+  `{ code, kind: 'reset'|'error', text }` so no surface prints a machine token
+  or invents wording.

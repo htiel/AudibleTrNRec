@@ -98,7 +98,7 @@ test('the library view has a dedicated, truthful notice for a library emptied by
   assert.doesNotMatch(text, /(device (was|were) (erased|removed|deregistered|deleted))/i);
 
   // It must point the owner back to the one screen that can resume sync.
-  assert.match(source, /href: '#\/data', class: 'lcars-btn lcars-btn-secondary', text: 'Go to Data & lifecycle to Sync now or reconnect'/);
+  assert.match(source, /href: '#\/data', class: 'atnr-button atnr-button-secondary', text: 'Go to Data & lifecycle to Sync now or reconnect'/);
 });
 
 test('the suppressed-library notice only replaces a genuinely empty library, never a filtered-to-zero result', () => {

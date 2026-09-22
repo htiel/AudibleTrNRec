@@ -95,16 +95,16 @@ export function confirmAction({ title, message, confirmLabel = 'Confirm', cancel
   return new Promise((resolve) => {
     const previouslyFocused = document.activeElement;
     const titleId = `confirm-title-${Math.random().toString(36).slice(2)}`;
-    const dialog = h('dialog', { class: 'lcars-dialog', 'aria-labelledby': titleId });
-    const heading = h('h2', { id: titleId, class: 'lcars-dialog-title', text: title });
-    const body = h('p', { class: 'lcars-dialog-body', text: message });
-    const actions = h('div', { class: 'lcars-dialog-actions' });
+    const dialog = h('dialog', { class: 'atnr-dialog', 'aria-labelledby': titleId });
+    const heading = h('h2', { id: titleId, class: 'atnr-dialog-title', text: title });
+    const body = h('p', { class: 'atnr-dialog-body', text: message });
+    const actions = h('div', { class: 'atnr-dialog-actions' });
     const cancelBtn = h('button', {
-      type: 'button', class: 'lcars-btn lcars-btn-secondary', text: cancelLabel,
+      type: 'button', class: 'atnr-button atnr-button-secondary', text: cancelLabel,
       onclick: () => finish(false),
     });
     const confirmBtn = h('button', {
-      type: 'button', class: 'lcars-btn lcars-btn-danger', text: confirmLabel,
+      type: 'button', class: 'atnr-button atnr-button-danger', text: confirmLabel,
       onclick: () => finish(true),
     });
     actions.append(cancelBtn, confirmBtn);

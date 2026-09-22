@@ -28,6 +28,9 @@ import {
   SYNTHETIC_PEOPLE, SYNTHETIC_FACETS, SYNTHETIC_BOOKS,
   SYNTHETIC_SNAPSHOT, SYNTHETIC_SNAPSHOT_V2,
 } from '../../src/fixtures/synthetic.js';
+import { paginateRows, paginateGroups, describePage } from '../../src/core/paginate.js';
+import { seriesPresentation } from '../../src/core/library.js';
+import { resolveConnectionState } from './bootstrap-state.js';
 
 export {
   SORT_FIELDS, FILTER_FIELDS, FACET_FIELDS,
@@ -36,6 +39,15 @@ export {
 
 /** Sort-by-name comparator shared by feasibility/trace projections. */
 const byName = (a, b) => a.name.localeCompare(b.name);
+
+/**
+ * Why a `lastImport` section is not a provider import. Held as constants so
+ * the codes are stated once, in one place.
+ */
+const IMPORT_REASON = Object.freeze({
+  snapshotParse: 'snapshot-parse-only',
+  noImport: 'no-import-in-session',
+});
 
 /** Read-only feasibility dimensions shown on the metadata feasibility card. */
 const FEASIBILITY_DIMENSIONS = Object.freeze([
@@ -76,8 +88,12 @@ export class AppStore {
     const merge = mergeLibrarySnapshot([], SYNTHETIC_SNAPSHOT, { observedAt: SYNTHETIC_NOW });
     this.entries = merge.entries;
     this.lastImportReport = merge.report;
+    // A real in-session import of the synthetic fixture, not a reparse.
+    this.lastImportBasis = 'synthetic-import-in-session';
     this.lastRefreshedAt = SYNTHETIC_NOW;
     this.connectionStatus = 'connected'; // 'connected' | 'disconnected' | 'deleted'
+    // A synthetic session has no provider connection to verify, and says so.
+    this.connectionState = resolveConnectionState(null);
     this.consentAcknowledged = false;
     return this.summary();
   }
@@ -90,6 +106,9 @@ export class AppStore {
       this.catalog = validated.catalog;
       this.entries = validated.entries;
       this.lastImportReport = validated.report;
+      // Parsing a retained snapshot against an empty base marks every
+      // retained title `added`. That is not a provider import.
+      this.lastImportBasis = 'snapshot-load';
       this.lastRefreshedAt = snapshot.observedAt;
     } else {
       this.catalog = new Catalog(
@@ -98,9 +117,11 @@ export class AppStore {
       );
       this.entries = [];
       this.lastImportReport = null;
+      this.lastImportBasis = 'none';
       this.lastRefreshedAt = connectionInfo?.local?.observedAt ?? null;
     }
     this.connectionStatus = connectionInfo?.connected ? 'connected' : 'disconnected';
+    this.connectionState = resolveConnectionState(connectionInfo);
     this.consentAcknowledged = false;
     return this.summary();
   }
@@ -110,8 +131,71 @@ export class AppStore {
       bookCount: this.catalog.books.size,
       libraryEntryCount: this.entries.length,
       connectionStatus: this.connectionStatus,
+      connectionState: this.connectionState.state,
       runtimeMode: this.runtimeMode,
     };
+  }
+
+  /**
+   * The same non-destructive Data-screen inventory shape the private store
+   * reports (issue B7), with the same explicit `basis`/`authority` metadata.
+   *
+   * This synthetic runtime holds no feedback store at all, so the feedback
+   * section is `known: false` with reason `not-applicable` - a fact about
+   * this runtime, not a count of zero reviews. A deleted session reports zero
+   * titles because deletion is evidence.
+   *
+   * `lastImport` is known only for a real in-session synthetic import. When
+   * this store is holding a *parsed* retained snapshot its report counts every
+   * retained title as `added`, which is not an import and is reported as
+   * unknown.
+   */
+  inventory() {
+    const report = this.lastImportReport;
+    const deleted = this.connectionStatus === 'deleted';
+    const imported = this.lastImportBasis === 'synthetic-import-in-session' && report && !deleted;
+    const parsedOnly = !deleted && this.lastImportBasis === 'snapshot-load';
+    return Object.freeze({
+      titles: Object.freeze({
+        known: true,
+        count: deleted ? 0 : this.catalog.books.size,
+        libraryEntryCount: deleted ? 0 : this.entries.length,
+        observedAt: this.lastRefreshedAt ?? null,
+        basis: deleted ? 'local-evidence-no-snapshot' : 'loaded-snapshot',
+        reason: null,
+      }),
+      feedback: Object.freeze({
+        known: false, count: null, basis: 'none', reason: 'not-applicable',
+      }),
+      lastImport: Object.freeze(imported
+        ? {
+          known: true,
+          basis: 'synthetic-import-in-session',
+          authority: 'in-session-fixture-load',
+          observedAt: this.lastRefreshedAt ?? null,
+          counts: Object.freeze({
+            added: report.added.length,
+            updated: report.updated.length,
+            reappeared: null,
+            missingFromSource: report.missingFromSource.length,
+            unchanged: report.unchanged.length,
+            rejected: report.rejected.length,
+          }),
+          // Same field as the private store: where the counts came from. The
+          // synthetic store can only ever measure within its own session.
+          source: 'in-session-sync',
+          reason: null,
+        }
+        : {
+          known: false,
+          basis: deleted ? 'none' : (this.lastImportBasis ?? 'none'),
+          authority: parsedOnly ? 'local-snapshot-parse' : null,
+          observedAt: null,
+          counts: null,
+          source: null,
+          reason: parsedOnly ? IMPORT_REASON.snapshotParse : IMPORT_REASON.noImport,
+        }),
+    });
   }
 
   // --- Consent acknowledgment ------------------------------------------------
@@ -137,16 +221,39 @@ export class AppStore {
    * @param {object} [options.filter] a `FILTER_FIELDS`-shaped criteria object
    * @param {object} [options.sort] `{ field, direction }`
    * @param {string|null} [options.group] a `FACET_FIELDS`-adjacent grouping key, or null
+   * @param {number} [options.page] page of ungrouped rows (bounded)
+   * @param {number} [options.groupPage] page of groups (bounded)
+   *
+   * The result is bounded by the same presentation contract the private
+   * runtime uses, so the demo cannot demonstrate a shape the real library
+   * refuses to render.
    */
-  queryLibrary({ filter, sort, group } = {}) {
+  queryLibrary({ filter, sort, group, page = 1, groupPage = 1 } = {}) {
     let rows = this.libraryRows();
     const total = rows.length;
     if (filter && Object.keys(filter).length > 0) rows = filterLibrary(rows, filter);
     rows = sortLibrary(rows, sort ?? {});
+    const matched = rows.length;
     if (group) {
-      return { rows, groups: groupLibrary(rows, group), matched: rows.length, total };
+      const pagination = paginateGroups(groupLibrary(rows, group), { groupPage });
+      return {
+        rows: [],
+        groups: pagination.groups,
+        matched,
+        total,
+        pagination,
+        summary: describePage(pagination, { matched, total, noun: 'synthetic demo titles' }),
+      };
     }
-    return { rows, groups: null, matched: rows.length, total };
+    const pagination = paginateRows(rows, { page });
+    return {
+      rows: pagination.rows,
+      groups: null,
+      matched,
+      total,
+      pagination,
+      summary: describePage(pagination, { matched, total, noun: 'synthetic demo titles' }),
+    };
   }
 
   facetOptions(field) {
@@ -162,7 +269,20 @@ export class AppStore {
       ...book.provenance.unknownFields,
       ...(entry?.provenance?.unknownFields ?? []),
     ])].sort();
-    return { book, entry, facets, unknownFields };
+    const presentation = seriesPresentation({
+      series: book.seriesId ? this.catalog.facetName(book.seriesId) : null,
+      seriesEvidence: book.seriesEvidence ?? 'unknown',
+      seriesPosition: book.seriesPosition,
+    });
+    return {
+      book,
+      entry,
+      facets,
+      unknownFields,
+      seriesLabel: presentation.label,
+      seriesEvidence: presentation.evidence,
+      seriesPositionLabel: presentation.positionLabel,
+    };
   }
 
   #relatedFacets(book) {
@@ -259,6 +379,7 @@ export class AppStore {
     const merge = mergeLibrarySnapshot(this.entries, snapshot, { observedAt: SYNTHETIC_NOW });
     this.entries = merge.entries;
     this.lastImportReport = merge.report;
+    this.lastImportBasis = 'synthetic-import-in-session';
     this.lastRefreshedAt = new Date().toISOString();
     return { ok: true, reason: null, report: merge.report };
   }
@@ -292,6 +413,7 @@ export class AppStore {
     this.catalog = new Catalog({ people: [], facets: [], books: [] }, { source: 'synthetic-fixture', observedAt: SYNTHETIC_NOW });
     this.entries = [];
     this.lastImportReport = null;
+    this.lastImportBasis = 'none';
     this.connectionStatus = 'deleted';
     return { ok: true, reason: null };
   }

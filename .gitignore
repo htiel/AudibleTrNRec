@@ -11,3 +11,14 @@ local-data/
 *.sqlite3-*
 credentials.bin
 identity.bin
+
+# Visual-capture artifacts (issue #14). A screenshot of the running app is an
+# unprotected plaintext copy of whatever was on screen, so capture output
+# folders and images are never tracked anywhere in this repository.
+.capture-out/
+capture-out/
+screenshots/
+**/.capture-out/
+**/capture-out/
+**/screenshots/
+*.png

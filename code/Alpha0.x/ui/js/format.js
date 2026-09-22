@@ -54,6 +54,37 @@ export function formatStatus(status) {
   return STATUS_LABELS[status] ?? 'Unknown status';
 }
 
+/**
+ * Composed "status · progress" presentation for a library row.
+ *
+ * `status` and `percentComplete` are independent source-owned fields (see
+ * `docs/data-contracts.md` §2): a `completed` book's `percentComplete` can
+ * legitimately be a stale first-listen percentage, a later re-listen
+ * position, or simply never refreshed after completion. Concatenating them
+ * as "Completed · 36%" reads as a completion percentage and is misleading.
+ *
+ * Data has a forthcoming, separate completion/current-position
+ * presentation — a distinct field naming the *current playback position*
+ * apart from historical `percentComplete` — that disambiguates this
+ * precisely. This function is the single place that consumes it: pass the
+ * new field through as `currentPositionPercent` and, once Data supplies it,
+ * a completed title's re-listen position is labeled explicitly as a
+ * position, never as completion progress. Until that field exists on a
+ * given row, a `completed` status renders alone — the honest choice, since
+ * an unqualified percentage next to "Completed" cannot otherwise be told
+ * apart from stale data — while every other status keeps its own
+ * `percentComplete`, which is unambiguous for them.
+ */
+export function formatListeningState({ status, percentComplete, currentPositionPercent } = {}) {
+  const statusLabel = formatStatus(status);
+  if (status === 'completed') {
+    return isUnknown(currentPositionPercent)
+      ? statusLabel
+      : `${statusLabel} · Currently re-listening at ${formatPercent(currentPositionPercent)}`;
+  }
+  return `${statusLabel} · ${formatPercent(percentComplete)}`;
+}
+
 export function formatFacetKind(kind) {
   return FACET_KIND_LABELS[kind] ?? kind;
 }
@@ -68,8 +99,15 @@ export function formatBoolean(value, { yes = 'Yes', no = 'No', unknown = 'Not se
   return value ? yes : no;
 }
 
+/**
+ * Closed, owner-readable vocabulary. Must stay in sync with
+ * `PROVENANCE_SOURCES` in `src/core/model.js` — a source the core model can
+ * emit but this map does not name is a defect here, not a licence to render
+ * the raw token to the owner.
+ */
 const PROVENANCE_LABELS = Object.freeze({
   'synthetic-fixture': 'Imported (synthetic fixture)',
+  'audible-community-private-api': 'Imported (Audible, via the community private API connector)',
   'local-user': 'Local/synthetic annotation',
   derived: 'Derived',
   unknown: 'Unknown provenance',
@@ -78,11 +116,13 @@ const PROVENANCE_LABELS = Object.freeze({
 /**
  * Text-based provenance label (ATR-S008 AC2: every mixed-source field must
  * have a text/accessible-description provenance, never color or position
- * alone).
+ * alone). The vocabulary is closed: an unrecognized source is honestly
+ * reported as unknown rather than leaking the raw internal token to the
+ * owner-facing UI.
  */
 export function formatProvenance(source) {
   if (isUnknown(source)) return PROVENANCE_LABELS.unknown;
-  return PROVENANCE_LABELS[source] ?? source;
+  return PROVENANCE_LABELS[source] ?? PROVENANCE_LABELS.unknown;
 }
 
 export function formatPercentKnown(value) {

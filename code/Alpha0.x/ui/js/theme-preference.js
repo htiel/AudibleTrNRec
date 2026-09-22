@@ -69,11 +69,35 @@ export function saveThemePreference(theme, storage = null) {
 }
 
 /**
+ * Enables only the `<link data-theme-scope="...">` stylesheet matching the
+ * active theme and disables every other theme-scoped stylesheet, so exactly
+ * one theme's CSS is ever active — never both, and never neither. Links
+ * with no `data-theme-scope` (the neutral `tokens.css`/`base.css`/
+ * `components.css` contract every theme shares) are left completely
+ * untouched; only the theme-exclusive sheets (`layout.css`/`theme-lcars.css`
+ * for `lcars`, `theme-liquid-glass.css` for `liquid-glass`) are toggled.
+ *
+ * @param {string} theme the resolved theme name already validated by the caller
+ * @param {Document|{querySelectorAll: Function}|null} [doc]
+ */
+export function syncThemeStylesheets(theme, doc = globalThis.document ?? null) {
+  if (!doc?.querySelectorAll) return;
+  for (const link of doc.querySelectorAll('[data-theme-scope]')) {
+    link.disabled = link.dataset?.themeScope !== theme;
+  }
+}
+
+/**
  * Applies a theme to the document by setting `data-theme` on `<html>`. This
  * is a plain attribute, not inline `style`, so it stays compatible with the
  * `style-src 'self'` CSP and the `h()` builder's blocked `style` attribute —
  * every visual rule lives in the theme's own stylesheet, keyed off the
- * attribute selector.
+ * attribute selector. It also enables/disables the theme-scoped
+ * `<link>`s via `syncThemeStylesheets()` so the previous theme's exclusive
+ * stylesheet stops applying the instant the new one is chosen — CSS
+ * selectors keyed off `data-theme` alone are not enough on their own,
+ * because a disabled theme's raw custom properties and geometry rules
+ * would otherwise still be present (just unmatched) in the cascade.
  *
  * @param {string} theme one of `THEMES`; an unknown value falls back to
  *   `DEFAULT_THEME` rather than leaving the document in an unstyled state.
@@ -83,4 +107,34 @@ export function applyTheme(theme, root = globalThis.document?.documentElement ??
   if (!root) return;
   const resolved = THEMES.includes(theme) ? theme : DEFAULT_THEME;
   root.setAttribute('data-theme', resolved);
+  syncThemeStylesheets(resolved, root.ownerDocument ?? globalThis.document ?? null);
+  notifyThemeApplied(resolved);
+}
+
+/**
+ * Subscribers notified whenever `applyTheme()` resolves and sets a theme.
+ * This is the seam `app.js` uses to swap the mounted *shell* (see
+ * `js/shells/lcars-shell.js` / `js/shells/apple-shell.js`) the instant the
+ * owner changes the theme in Settings, without a page reload and without
+ * either shell instantiating the other's DOM. It carries only the resolved
+ * theme name — never library, feedback, or connection data.
+ */
+const themeListeners = new Set();
+
+export function onThemeApplied(listener) {
+  if (typeof listener !== 'function') return () => {};
+  themeListeners.add(listener);
+  return () => themeListeners.delete(listener);
+}
+
+function notifyThemeApplied(theme) {
+  for (const listener of themeListeners) {
+    try {
+      listener(theme);
+    } catch {
+      // A subscriber's failure must never block the theme attribute from
+      // having already been applied above, and must never throw out of
+      // applyTheme() into caller code (e.g. the Settings view's onchange).
+    }
+  }
 }

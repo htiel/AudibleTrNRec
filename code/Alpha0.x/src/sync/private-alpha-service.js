@@ -1,3 +1,8 @@
+import { createHash } from 'node:crypto';
+import {
+  existsSync, readFileSync, rmSync, writeFileSync,
+} from 'node:fs';
+import path from 'node:path';
 import { ConnectorProcessError } from '../adapters/connector-process.js';
 import {
   REQUIRED_RUNTIME_DATA_SOURCE,
@@ -8,6 +13,112 @@ import { ExportError, buildExportDocument, deletionInventory as buildDeletionInv
 import { STORAGE_SCHEMA_REVISION } from '../version.js';
 import { validateLiveSnapshot } from './live-snapshot.js';
 import { ReconcileError, reconcileSnapshot } from './reconcile.js';
+
+/**
+ * Closed vocabulary for provider connection health (issue #8).
+ *
+ * Mirrored by `connector/atnr_connector/service.py::CONNECTION_STATES` and
+ * `ui/js/bootstrap-state.js::CONNECTION_STATES`; `test/private-alpha-service.test.js`
+ * asserts the JS copies stay identical so the two cannot drift apart.
+ */
+export const CONNECTION_STATES = Object.freeze([
+  'disconnected',
+  'unverified',
+  'verified',
+  'authorization-failed',
+]);
+
+/**
+ * Versioned contract for the persisted latest-import record.
+ *
+ * The record exists so a measured import survives the page reload that
+ * immediately follows a sync. It holds **counts only**: four non-negative
+ * integers, two timestamps, a generation number and a one-way account
+ * binding. No title, identifier, account key, marketplace or private text is
+ * written, so the record is safe to keep as plain text beside the encrypted
+ * library rather than inside it.
+ *
+ * `basis` and `authority` are stored explicitly. A reader must never infer
+ * whether counts are real by looking at the counts: parsing a retained
+ * snapshot of twelve titles and receiving twelve new titles both produce
+ * `added: 12`.
+ */
+export const LAST_IMPORT_RECORD_VERSION = 1;
+export const LAST_IMPORT_BASIS = 'sync-reconciliation';
+export const LAST_IMPORT_AUTHORITY = 'requested-sync';
+
+/**
+ * Lives in the same protected custody root as the state it describes, next to
+ * the deletion marker, and follows the same convention: a small versioned
+ * JSON file rather than a schema change to the frozen encrypted container.
+ */
+const LAST_IMPORT_FILENAME = 'last-import-counts.json';
+
+/** Matches the snapshot store's own item-count ceiling. */
+const MAX_IMPORT_COUNT = 20_000;
+
+const MEASURED_COUNTS = Object.freeze(['added', 'updated', 'reappeared', 'missingFromSource']);
+
+function validCount(value) {
+  return Number.isInteger(value) && value >= 0 && value <= MAX_IMPORT_COUNT;
+}
+
+function validInstant(value) {
+  return typeof value === 'string' && Number.isFinite(Date.parse(value));
+}
+
+/**
+ * One-way binding token for the owning account.
+ *
+ * The account key itself is never written outside the encrypted container.
+ * A digest is enough to prove that a record belongs to the account currently
+ * in custody, and proves nothing to anyone who does not already hold the key.
+ */
+function accountBindingToken(accountKey) {
+  if (typeof accountKey !== 'string' || accountKey.length === 0) return null;
+  return createHash('sha256').update(`atnr-last-import-binding:${accountKey}`).digest('hex');
+}
+
+/**
+ * Validate a persisted record against the live local state. Fails closed:
+ * anything unknown, older, malformed, superseded or bound to another account
+ * returns `null`, which every consumer reads as "unknown".
+ */
+export function validateLastImportRecord(raw, { accountKey = null, snapshotGeneration = null } = {}) {
+  if (!raw || typeof raw !== 'object') return null;
+  if (raw.version !== LAST_IMPORT_RECORD_VERSION) return null;
+  if (raw.basis !== LAST_IMPORT_BASIS || raw.authority !== LAST_IMPORT_AUTHORITY) return null;
+  if (!validInstant(raw.observedAt) || !validInstant(raw.recordedAt)) return null;
+  if (!Number.isInteger(raw.snapshotGeneration) || raw.snapshotGeneration < 0) return null;
+  const binding = accountBindingToken(accountKey);
+  // No live account means nothing to bind to: the record cannot be shown to
+  // belong here, so it is not adopted.
+  if (binding === null || raw.accountBinding !== binding) return null;
+  // A record from an earlier generation described a snapshot that no longer
+  // stands. Superseded evidence is unknown evidence, not stale truth.
+  if (!Number.isInteger(snapshotGeneration) || raw.snapshotGeneration !== snapshotGeneration) return null;
+  const counts = raw.counts;
+  if (!counts || typeof counts !== 'object') return null;
+  if (!MEASURED_COUNTS.every((key) => validCount(counts[key]))) return null;
+  return Object.freeze({
+    version: LAST_IMPORT_RECORD_VERSION,
+    basis: LAST_IMPORT_BASIS,
+    authority: LAST_IMPORT_AUTHORITY,
+    observedAt: raw.observedAt,
+    recordedAt: raw.recordedAt,
+    snapshotGeneration: raw.snapshotGeneration,
+    counts: Object.freeze({
+      added: counts.added,
+      updated: counts.updated,
+      reappeared: counts.reappeared,
+      missingFromSource: counts.missingFromSource,
+      // Reconciliation does not measure these. Explicitly null, never 0, so
+      // no surface can print a number that was never counted.
+      unchanged: null,
+      rejected: null,
+    }),
+  });
+}
 
 export class PrivateAlphaServiceError extends Error {
   constructor(code) {
@@ -90,6 +201,7 @@ function quarantinedLocalStatus({ hasLocalSnapshot = true } = {}) {
     lastSuccessAt: null,
     lastCandidateObservedAt: null,
     lastErrorCode: ACCOUNT_QUARANTINE_CODE,
+    lastImport: null,
   });
 }
 
@@ -127,6 +239,14 @@ export class PrivateAlphaService {
     this.accountJoinAt = null;
     this.quarantined = false;
     this.startupCheckpointAt = null;
+    /**
+     * Cached provider connection state as last *reported by the connector*.
+     * Never inferred from the presence of a stored credential (issue #8): a
+     * runtime that has not seen a connector status yet knows nothing, and
+     * says `unverified` rather than guessing.
+     */
+    this.connectionState = 'unverified';
+    this.lastVerifiedAt = null;
   }
 
   /**
@@ -150,6 +270,8 @@ export class PrivateAlphaService {
       localDataSuppressed: this.localDataSuppressed(),
       hasCompletedSync: this.quarantined ? false : typeof local.lastSuccessAt === 'string',
       accountJoin: this.accountJoinVerdict,
+      // Connector-reported health, not credential custody (issue #8).
+      connectionState: this.connectionState,
       quarantined: this.quarantined,
     });
   }
@@ -242,7 +364,24 @@ export class PrivateAlphaService {
     this.accountJoinVerdict = join.verdict;
     this.accountJoinAt = this.clock();
     this.quarantined = join.quarantined;
+    this.#cacheConnectionState(status);
     return join;
+  }
+
+  /**
+   * Record the connector's own verdict on the provider connection.
+   *
+   * The runtime copies the connector's `connectionState` verbatim and never
+   * substitutes one of its own. If the connector did not report a state - or
+   * was not asked at all - the honest answer is `unverified`, not `connected`
+   * (issue #8). `connected` on a status payload means an authorization
+   * envelope is held; custody is not proof that it still works.
+   */
+  #cacheConnectionState(status) {
+    if (!status) return;
+    const state = typeof status.connectionState === 'string' ? status.connectionState : null;
+    this.connectionState = CONNECTION_STATES.includes(state) ? state : 'unverified';
+    this.lastVerifiedAt = typeof status.lastVerifiedAt === 'string' ? status.lastVerifiedAt : null;
   }
 
   /**
@@ -277,7 +416,91 @@ export class PrivateAlphaService {
       const local = this.snapshotStore.status();
       return { ...connection, local: quarantinedLocalStatus({ hasLocalSnapshot: local.hasLocalSnapshot === true }) };
     }
-    return { ...connection, local: this.snapshotStore.status() };
+    return { ...connection, local: { ...this.snapshotStore.status(), lastImport: this.lastImportRecord() } };
+  }
+
+  /**
+   * The persisted latest-import record, validated against the live local
+   * state, or `null` when nothing may honestly be claimed.
+   *
+   * Pure read of local files: no provider access, no probe, no write.
+   *
+   * @returns {Readonly<object>|null}
+   */
+  lastImportRecord() {
+    const file = this.#lastImportPath();
+    if (file === null || !existsSync(file)) return null;
+    let raw = null;
+    try {
+      raw = JSON.parse(readFileSync(file, 'utf8'));
+    } catch {
+      // An unreadable record proves nothing: unknown, not stale truth.
+      return null;
+    }
+    const local = this.snapshotStore.status();
+    return validateLastImportRecord(raw, {
+      accountKey: local.accountKey ?? null,
+      snapshotGeneration: local.snapshotGeneration ?? null,
+    });
+  }
+
+  /** Path of the persisted record, or `null` when the store has no root. */
+  #lastImportPath() {
+    const storePath = this.snapshotStore?.path;
+    if (typeof storePath !== 'string' || storePath.length === 0) return null;
+    return path.join(path.dirname(storePath), LAST_IMPORT_FILENAME);
+  }
+
+  /**
+   * Persist the counts of a completed provider sync reconciliation.
+   *
+   * Never throws: failing to persist evidence costs a reload's worth of
+   * knowledge, which is reported as unknown. It must not fail a sync that
+   * already succeeded.
+   */
+  #recordLastImport({ accountKey, snapshotGeneration, observedAt, report }) {
+    const file = this.#lastImportPath();
+    const binding = accountBindingToken(accountKey);
+    if (file === null || binding === null) return false;
+    const counts = {
+      added: report.added.length,
+      updated: report.updated.length,
+      reappeared: report.reappeared.length,
+      missingFromSource: report.missingFromSource.length,
+    };
+    if (!Number.isInteger(snapshotGeneration) || snapshotGeneration < 0) return false;
+    if (!validInstant(observedAt)) return false;
+    if (!MEASURED_COUNTS.every((key) => validCount(counts[key]))) return false;
+    try {
+      writeFileSync(file, JSON.stringify({
+        version: LAST_IMPORT_RECORD_VERSION,
+        basis: LAST_IMPORT_BASIS,
+        authority: LAST_IMPORT_AUTHORITY,
+        observedAt,
+        recordedAt: this.clock(),
+        snapshotGeneration,
+        accountBinding: binding,
+        counts,
+      }), { encoding: 'utf8' });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Remove the persisted record. Called wherever the snapshot it describes is
+   * erased: derived evidence must not outlive the data it was derived from.
+   */
+  #clearLastImportRecord() {
+    const file = this.#lastImportPath();
+    if (file === null) return false;
+    try {
+      rmSync(file, { force: true });
+      return !existsSync(file);
+    } catch {
+      return false;
+    }
   }
 
   async connect({ accountAlias }) {
@@ -376,6 +599,15 @@ export class PrivateAlphaService {
         // Durable commit time, produced here - not the connector's observation.
         committedAt: this.clock(),
       });
+      // Counts measured here are the only real evidence of what the provider
+      // changed. Persisted - integers only - so the reload that follows a
+      // sync does not have to report unknown.
+      this.#recordLastImport({
+        accountKey: result.status.accountKey,
+        snapshotGeneration: generation,
+        observedAt: snapshot.observedAt,
+        report,
+      });
       return {
         ok: true,
         itemCount: snapshot.entries.length,
@@ -391,8 +623,43 @@ export class PrivateAlphaService {
     } catch (error) {
       const code = error instanceof PrivateAlphaServiceError ? error.code : errorCode(error);
       this.snapshotStore.recordFailure(code, this.clock());
-      throw new PrivateAlphaServiceError(code);
+      // The connector reports an authorization refusal through the same
+      // allow-listed `library-sync-failed` code as a transient network
+      // failure, so the code alone cannot distinguish them. The evidence the
+      // connector recorded *during this requested sync* can. Reading it back
+      // is an evidence read - `status()` performs no provider access - so
+      // this adds no probe, and it stops a revoked session from remaining
+      // `verified` until the next bootstrap.
+      await this.#refreshConnectionEvidence();
+      const failure = new PrivateAlphaServiceError(code);
+      failure.connectionState = this.connectionState;
+      throw failure;
     }
+  }
+
+  /**
+   * Re-read the connector's recorded connection evidence.
+   *
+   * Never throws and never changes an operation's outcome: a connector that
+   * cannot be asked has proven nothing, so the cached state simply stands.
+   */
+  async #refreshConnectionEvidence() {
+    try {
+      this.#cacheConnectionState(await this.connector.status());
+    } catch {
+      // Intentionally ignored - see above.
+    }
+  }
+
+  /**
+   * Redacted connection evidence for a caller that has just seen a failure.
+   * Cached, synchronous, and free of account identifiers.
+   */
+  connectionEvidence() {
+    return Object.freeze({
+      connectionState: this.connectionState,
+      lastVerifiedAt: this.lastVerifiedAt,
+    });
   }
 
   /** Open the last durable snapshot for reconciliation. */
@@ -555,6 +822,7 @@ export class PrivateAlphaService {
     if (join.quarantined) throw new PrivateAlphaServiceError(ACCOUNT_QUARANTINE_CODE);
     const connectorArtifacts = await this.#connectorArtifacts();
     const result = this.snapshotStore.purgeAllLocalData({ at: this.clock() });
+    this.#clearLastImportRecord();
     const local = this.snapshotStore.status();
     const inventory = buildDeletionInventory({
       hasSnapshot: local.hasLocalSnapshot === true,
@@ -612,6 +880,7 @@ export class PrivateAlphaService {
     if (this.quarantined) throw new PrivateAlphaServiceError(ACCOUNT_QUARANTINE_CODE);
     if (!this.#accountJoinIsFresh()) throw new PrivateAlphaServiceError('account-join-stale');
     const result = this.snapshotStore.deleteLocalSnapshot({ at: this.clock() });
+    this.#clearLastImportRecord();
     return { ...this.snapshotStore.status(), deletion: result ?? null };
   }
 
@@ -620,6 +889,7 @@ export class PrivateAlphaService {
     const join = await this.#resolveAccountJoin();
     if (join.quarantined) throw new PrivateAlphaServiceError(ACCOUNT_QUARANTINE_CODE);
     const result = this.snapshotStore.deleteLocalSnapshot({ at: this.clock() });
+    this.#clearLastImportRecord();
     return { ...this.snapshotStore.status(), deletion: result ?? null };
   }
 

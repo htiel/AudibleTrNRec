@@ -105,6 +105,55 @@ def _safe_external_browser_callback(url: str) -> str:
 
 ALIAS_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._-]{0,63}$")
 
+#: Closed vocabulary for the reported provider connection state.
+#:
+#: ``disconnected``        no authorization envelope is held at all.
+#: ``unverified``          an envelope is held, but no provider interaction
+#:                         within the freshness horizon has proven it still
+#:                         works. Credential presence is never proof.
+#: ``verified``            a real provider interaction succeeded recently.
+#: ``authorization-failed`` the provider refused the held authorization.
+CONNECTION_STATES = ("disconnected", "unverified", "verified", "authorization-failed")
+
+#: How long a successful provider interaction keeps backing a ``verified``
+#: report. Chosen well above the 15-minute automatic sync interval, so a
+#: working installation stays verified without any extra provider call, and a
+#: revoked or abandoned one decays to ``unverified`` rather than lying.
+VERIFICATION_FRESHNESS_SECONDS = 24 * 60 * 60
+
+#: Closed vocabulary for the *basis* of the last verification. Both values
+#: come from interactions the user already asked for; neither is a probe.
+VERIFICATION_BASES = ("device-registration", "library-sync")
+
+#: Exception class names that mean "the provider refused this authorization".
+#: Matched by class name only - no exception message, URL, header or body is
+#: read, so no provider content can leak into local state.
+_AUTHORIZATION_ERROR_NAMES = frozenset({"Unauthorized", "Forbidden", "NotAuthenticated"})
+_AUTHORIZATION_STATUS_CODES = frozenset({401, 403})
+
+
+def _is_authorization_failure(error: BaseException) -> bool:
+    """Classify a provider failure as an authorization refusal, or not.
+
+    Deliberately narrow: only an explicit 401/403 status or a named
+    authorization exception counts. A network blip, a timeout or a parse
+    failure must never be reported as "your authorization was revoked" -
+    that would send the owner to re-authorize for no reason.
+    """
+
+    for candidate in (error, getattr(error, "__cause__", None), getattr(error, "__context__", None)):
+        if candidate is None:
+            continue
+        if type(candidate).__name__ in _AUTHORIZATION_ERROR_NAMES:
+            return True
+        status = getattr(candidate, "status_code", None)
+        if not isinstance(status, int):
+            response = getattr(candidate, "response", None)
+            status = getattr(response, "status_code", None)
+        if isinstance(status, int) and status in _AUTHORIZATION_STATUS_CODES:
+            return True
+    return False
+
 
 def _account_key(customer_info: Any, identity_key: bytes) -> str:
     if not isinstance(customer_info, dict):
@@ -227,6 +276,11 @@ class ConnectorService:
         self.protector = protector or WindowsDpapiProtector()
         self.store = store or SecureJsonStore.credentials(self.protector)
         self.identity_store = identity_store or SecureJsonStore.identity(self.protector)
+        #: In-process record of a provider refusal, used only when the durable
+        #: envelope write fails. Without it, an unwritable store would let a
+        #: refused session keep reporting ``verified`` for the life of the
+        #: process - the one direction it is unsafe to be wrong in.
+        self._authorization_refused_at: str | None = None
 
     def status(self) -> dict[str, Any]:
         if not self.store.exists():
@@ -263,9 +317,18 @@ class ConnectorService:
                 "accountAlias": alias,
                 "accountKey": _account_key(auth.customer_info, identity_key),
                 "registeredAt": _now(),
+                # Registration is itself a completed provider interaction: the
+                # provider issued this authorization and returned the customer
+                # record used for `accountKey`. It is recorded as verification
+                # evidence rather than re-proven with an extra call.
+                "lastVerifiedAt": _now(),
+                "lastVerificationBasis": "device-registration",
+                "lastAuthorizationFailureAt": None,
                 "auth": auth.to_dict(),
             }
             self.store.write(envelope)
+            # A freshly registered authorization carries no prior refusal.
+            self._authorization_refused_at = None
             return self._public_status(envelope)
         except ConnectorError:
             if auth is not None:
@@ -302,7 +365,14 @@ class ConnectorService:
             )
             envelope["auth"] = auth.to_dict()
             envelope["lastSuccessfulSyncAt"] = observed_at
+            # A completed library read is the strongest evidence this process
+            # can hold that the stored authorization still works.
+            envelope["lastVerifiedAt"] = observed_at
+            envelope["lastVerificationBasis"] = "library-sync"
+            envelope["lastAuthorizationFailureAt"] = None
             self.store.write(envelope)
+            # A completed read supersedes any earlier refusal this process saw.
+            self._authorization_refused_at = None
             return {
                 "status": self._public_status(envelope),
                 "itemCount": len(items),
@@ -313,11 +383,34 @@ class ConnectorService:
         except ConnectorError:
             raise
         except NormalizeError as error:
+            # A local normalization stop says nothing about the provider
+            # authorization, so verification evidence is left untouched.
             raise ConnectorError(
                 "library-normalization-failed", error.diagnostic()
             ) from error
         except Exception as error:
+            if _is_authorization_failure(error):
+                self._record_authorization_failure()
             raise ConnectorError("library-sync-failed") from error
+
+    def _record_authorization_failure(self) -> None:
+        """Persist "the provider refused this authorization" as local evidence.
+
+        The in-process marker is set **first** and unconditionally, so the
+        refusal is reported by this process even if the durable write fails.
+        The durable write is best-effort and silent on failure: a status that
+        cannot be updated must not convert a sync failure into a custody
+        error. Nothing from the provider response is stored - only the fact
+        and the local timestamp.
+        """
+
+        self._authorization_refused_at = _now()
+        try:
+            envelope = self.store.read()
+            envelope["lastAuthorizationFailureAt"] = self._authorization_refused_at
+            self.store.write(envelope)
+        except (CustodyError, ConnectorError, OSError, KeyError, TypeError, ValueError):
+            return
 
     def disconnect(self) -> dict[str, Any]:
         envelope = self.store.read()
@@ -327,6 +420,7 @@ class ConnectorService:
         except Exception as error:
             raise ConnectorError("deregistration-unconfirmed") from error
         self.store.delete()
+        self._authorization_refused_at = None
         return self._public_status(None)
 
     def unseal(self, encoded: str) -> dict[str, Any]:
@@ -431,15 +525,86 @@ class ConnectorService:
         self.identity_store.write({"schemaVersion": 1, "key": key.hex()})
         return key
 
+    def _connection_state(self, envelope: dict[str, Any] | None) -> dict[str, Any]:
+        """Derive the reported connection state from recorded evidence only.
+
+        This method performs **no provider access**. It reads nothing but the
+        outcomes of interactions the owner already initiated - registration,
+        synchronization - so asking for status can never create traffic, and
+        holding a credential can never, on its own, produce ``verified``.
+        """
+
+        if envelope is None:
+            return {
+                "connectionState": "disconnected",
+                "credentialsPresent": False,
+                "lastVerifiedAt": None,
+                "lastVerificationBasis": None,
+                "lastAuthorizationFailureAt": None,
+                "verificationFreshnessSeconds": VERIFICATION_FRESHNESS_SECONDS,
+            }
+
+        verified_at = envelope.get("lastVerifiedAt")
+        basis = envelope.get("lastVerificationBasis")
+        failed_at = envelope.get("lastAuthorizationFailureAt")
+        if not isinstance(verified_at, str):
+            verified_at = None
+        if basis not in VERIFICATION_BASES:
+            basis = None
+        if not isinstance(failed_at, str):
+            failed_at = None
+        # A refusal this process observed but could not persist is still
+        # evidence. The most recent of the two wins.
+        if self._authorization_refused_at is not None and (
+            failed_at is None or self._authorization_refused_at > failed_at
+        ):
+            failed_at = self._authorization_refused_at
+
+        state = "unverified"
+        if failed_at is not None and (verified_at is None or failed_at >= verified_at):
+            # A refusal that is at least as recent as the last success wins:
+            # the safe direction to be wrong in is "re-authorize", not
+            # "everything is fine".
+            state = "authorization-failed"
+        elif verified_at is not None and self._within_freshness(verified_at):
+            state = "verified"
+
+        return {
+            "connectionState": state,
+            "credentialsPresent": True,
+            "lastVerifiedAt": verified_at,
+            "lastVerificationBasis": basis,
+            "lastAuthorizationFailureAt": failed_at,
+            "verificationFreshnessSeconds": VERIFICATION_FRESHNESS_SECONDS,
+        }
+
+    @staticmethod
+    def _within_freshness(verified_at: str) -> bool:
+        try:
+            parsed = datetime.fromisoformat(verified_at.replace("Z", "+00:00"))
+        except ValueError:
+            return False
+        if parsed.tzinfo is None:
+            return False
+        age = (datetime.now(UTC) - parsed.astimezone(UTC)).total_seconds()
+        # A future-dated stamp is treated as unusable rather than as a very
+        # fresh one: a clock change must not manufacture verification.
+        return 0 <= age <= VERIFICATION_FRESHNESS_SECONDS
+
     def _public_status(self, envelope: dict[str, Any] | None) -> dict[str, Any]:
         base = {
             "available": True,
+            # `connected` answers "is an authorization envelope held?" and is
+            # what the lifecycle controls key off. It is deliberately *not*
+            # the connection health report - `connectionState` is. Credential
+            # presence is custody, not proof (issue #8).
             "connected": envelope is not None,
             "appAbbreviation": self.policy.app_abbreviation,
             "distribution": self.policy.distribution,
             "commercialShippingBlocked": True,
             "providerDeviceDisplayName": self.policy.provider_device_display_name,
             "automaticSyncIntervalMinutes": self.policy.automatic_sync_interval_minutes,
+            **self._connection_state(envelope),
         }
         if envelope is None:
             return base

@@ -10,14 +10,14 @@ body {
   margin: 0;
   min-height: 100vh;
   min-height: 100dvh;
-  background: var(--lcars-bg);
-  color: var(--lcars-fg);
-  font-family: var(--lcars-font-family);
-  font-size: var(--lcars-font-normal);
+  background: var(--atnr-bg);
+  color: var(--atnr-fg);
+  font-family: var(--atnr-font-family);
+  font-size: var(--atnr-font-size-base);
   line-height: 1.5;
 }
 
-p, li, dd, textarea, .lcars-synopsis, .lcars-note, .lcars-subtitle {
+p, li, dd, textarea, .atnr-synopsis, .atnr-note, .atnr-subtitle {
   font-variant-caps: normal;
 }
 
@@ -29,28 +29,22 @@ p {
 .lcars-title,
 .lcars-status-pill,
 .lcars-sidebar a,
-.lcars-field-label,
-.lcars-btn,
 legend,
-.lcars-group-heading,
 h2, h3, h4,
 summary {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.lcars-title-link,
-.lcars-subtitle,
-.lcars-synopsis,
-.lcars-note,
-table.lcars-table td,
-.lcars-tag-chip span,
-.lcars-result-meta,
-.lcars-explanation-body,
-.lcars-status-statement,
-.lcars-library-meta,
-.lcars-library-state,
-.lcars-library-feedback-indicator,
+.atnr-title-link,
+.atnr-subtitle,
+.atnr-synopsis,
+.atnr-note,
+table.atnr-table td,
+.atnr-status-statement,
+.atnr-library-meta,
+.atnr-library-state,
+.atnr-library-feedback-indicator,
 option,
 textarea,
 input {
@@ -59,41 +53,41 @@ input {
 }
 
 a {
-  color: var(--lcars-accent-tertiary);
+  color: var(--atnr-accent-tertiary);
 }
 
 a:visited {
-  color: var(--lcars-accent-tertiary);
+  color: var(--atnr-accent-tertiary);
 }
 
 :focus {
-  outline: 3px solid var(--lcars-border-focus);
+  outline: 3px solid var(--atnr-focus-ring);
   outline-offset: 3px;
 }
 
 :focus:not(:focus-visible) {
-  outline: 3px solid var(--lcars-border-focus);
+  outline: 3px solid var(--atnr-focus-ring);
   outline-offset: 3px;
 }
 
-.lcars-skip-link {
+.atnr-skip-link {
   position: absolute;
   left: 1rem;
   top: -3rem;
-  background: var(--lcars-accent-secondary);
-  color: var(--lcars-black);
-  padding: var(--lcars-space-2) var(--lcars-space-4);
-  border-radius: var(--lcars-radius-pill);
+  background: var(--atnr-accent-secondary);
+  color: var(--atnr-ink-on-accent);
+  padding: var(--atnr-space-2) var(--atnr-space-4);
+  border-radius: var(--atnr-space-2);
   z-index: 100;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.lcars-skip-link:focus {
+.atnr-skip-link:focus {
   top: calc(1rem + env(safe-area-inset-top));
 }
 
-.lcars-sr-only {
+.atnr-sr-only {
   position: absolute;
   width: 1px;
   height: 1px;

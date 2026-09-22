@@ -1,163 +1,118 @@
-.lcars-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--lcars-min-target);
-  min-width: 0;
-  max-width: 100%;
-  padding: var(--lcars-space-2) var(--lcars-space-4);
-  border: 0;
-  border-radius: 0 var(--lcars-radius-pill) var(--lcars-radius-pill) 0;
-  background: var(--lcars-accent-secondary);
-  color: var(--lcars-black);
-  font-family: inherit;
-  font-size: 0.9rem;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  text-align: center;
-  cursor: pointer;
-}
+/*
+ * `.atnr-button` (and its `-primary`/`-secondary`/`-danger` variants) is the
+ * single neutral button vocabulary shared by every owned view and by
+ * `views/data-view.js`'s own `NEUTRAL_COMPONENTS.button*` roles — no view
+ * anywhere in this app ever builds a theme-named button class. Its base
+ * geometry/interaction states below (padding, hover/focus brightness,
+ * active/disabled) are intentionally theme-agnostic; `theme-lcars.css`
+ * layers the classic swept pill shape and uppercase caps on top of exactly
+ * this class for `html[data-theme="lcars"]`, and `theme-liquid-glass.css`
+ * layers translucent glass fills on top of it for
+ * `html[data-theme="liquid-glass"]` — neither theme's look lives here, and
+ * neither theme hides the other's; see the full block later in this file.
+ *
+ * Every custom property this file reads is a neutral `--atnr-*` token
+ * defined in `tokens.css` and reassigned by whichever theme is active
+ * (see that file's header) — this stylesheet never reads a `--lcars-*` or
+ * `--glass-*`-named custom property directly, so it renders correctly
+ * (with the neutral fallback palette) even if both theme stylesheets were
+ * removed, and identically regardless of which one is actually active.
+ */
 
-.lcars-btn:hover:not(:disabled),
-.lcars-btn:focus-visible:not(:disabled) {
-  filter: brightness(1.15);
-}
-
-.lcars-btn:active {
-  background: var(--lcars-accent-active);
-}
-
-.lcars-btn-primary { background: var(--lcars-accent-primary); }
-.lcars-btn-secondary { background: var(--lcars-accent-tertiary); }
-.lcars-btn-danger { background: var(--lcars-accent-danger); }
-
-/* Icon-only pill button (header gear/Settings link). Square-ish so the
-   glyph centers, but never smaller than the shared minimum touch target. */
-.lcars-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: var(--lcars-min-target);
-  height: var(--lcars-min-target);
-  border-radius: 50%;
-  background: var(--lcars-black);
-  color: var(--lcars-accent-secondary);
-  text-decoration: none;
-}
-
-.lcars-icon-btn:hover,
-.lcars-icon-btn:focus-visible {
-  filter: brightness(1.25);
-}
-
-.lcars-icon-btn[aria-current="page"] {
-  background: var(--lcars-accent-active);
-  color: var(--lcars-black);
-}
-
-/* Gear glyph drawn from CSS only (no image asset, no icon font/CDN), the
-   same technique already used for the group-disclosure chevron below. */
-.lcars-icon-gear {
-  display: inline-block;
-  width: 1.1rem;
-  height: 1.1rem;
-  line-height: 1.1rem;
-  font-size: 1.1rem;
-  text-align: center;
-}
-
-.lcars-icon-gear::before {
-  content: '\2699';
-}
-
-.lcars-btn:disabled {
-  background: var(--lcars-accent-muted);
-  color: var(--lcars-fg);
-  cursor: not-allowed;
-  filter: none;
-}
-
-.lcars-form,
-.lcars-toolbar {
+/* Icon-only pill button (header gear/Settings link) and its LCARS-only
+   inner glyph now live in `layout.css` alongside the rest of the LCARS
+   shell chrome those two classes exclusively belong to (see the header
+   comment there) — neither is built or targeted anywhere else, including
+   `shells/apple-shell.js`, which has always had its own separate back-
+   button/tab markup. */
+.atnr-form,
+.atnr-toolbar {
   display: flex;
   flex-direction: column;
-  gap: var(--lcars-space-3);
-  margin: var(--lcars-space-3) 0;
+  gap: var(--atnr-space-3);
+  margin: var(--atnr-space-3) 0;
 }
 
-.lcars-sidebar-toolbar {
+.atnr-sidebar-toolbar {
   margin: 0;
-  gap: var(--lcars-space-4);
+  gap: var(--atnr-space-4);
 }
 
-.lcars-sidebar-toolbar h2,
-.lcars-sidebar-toolbar h3 {
+.atnr-sidebar-toolbar h2,
+.atnr-sidebar-toolbar h3 {
   margin: 0;
 }
 
-.lcars-sidebar-toolbar h2 {
+.atnr-sidebar-toolbar h2 {
   font-size: 1rem;
-  color: var(--lcars-black);
+  color: var(--atnr-fg);
 }
 
-.lcars-sidebar-toolbar h3 {
+.atnr-sidebar-toolbar h3 {
   font-size: 0.85rem;
-  color: var(--lcars-black);
+  color: var(--atnr-fg);
 }
 
-.lcars-sidebar-toolbar .lcars-control-row {
+.atnr-sidebar-toolbar .atnr-control-row {
   flex-direction: column;
-  gap: var(--lcars-space-2);
+  gap: var(--atnr-space-2);
 }
 
-.lcars-sidebar-toolbar .lcars-field,
-.lcars-sidebar-toolbar .lcars-field-wide {
+.atnr-sidebar-toolbar .atnr-field,
+.atnr-sidebar-toolbar .atnr-field-wide {
   min-width: 0;
   width: 100%;
 }
 
-.lcars-sidebar-toolbar .lcars-field-label,
-.lcars-sidebar-toolbar legend,
-.lcars-sidebar-toolbar .lcars-checkbox-row {
-  color: var(--lcars-black);
+.atnr-sidebar-toolbar .atnr-field-label,
+.atnr-sidebar-toolbar legend,
+.atnr-sidebar-toolbar .atnr-checkbox-row {
+  /*
+   * Issue #1 (P1): these labels/legends previously rendered in ink dark
+   * enough to disappear against the grey `.atnr-sidebar-filler` panel
+   * (`#666688`), measuring ~3.8:1 — below the 4.5:1 WCAG 1.4.3 minimum for
+   * normal-size text. `--atnr-fg` (near-white) against that same grey
+   * measures ~5.2:1, and remains readable against every other surface this
+   * shared toolbar can be mounted into (the Apple shell's toolbar slot).
+   */
+  color: var(--atnr-fg);
 }
 
-.lcars-sidebar-toolbar fieldset.lcars-fieldset {
-  border-color: var(--lcars-black);
+.atnr-sidebar-toolbar fieldset.atnr-fieldset {
+  border-color: var(--atnr-fg);
 }
 
-.lcars-field {
+.atnr-field {
   display: flex;
   flex-direction: column;
-  gap: var(--lcars-space-1);
+  gap: var(--atnr-space-1);
   min-width: 12rem;
 }
 
-.lcars-field-wide {
+.atnr-field-wide {
   min-width: 100%;
 }
 
-.lcars-field-label {
+.atnr-field-label {
   font-size: 0.8rem;
-  color: var(--lcars-accent-secondary);
+  color: var(--atnr-accent-secondary);
 }
 
-.lcars-control-row {
+.atnr-control-row {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--lcars-space-4);
+  gap: var(--atnr-space-4);
 }
 
 select, input[type="text"], input[type="search"], input[type="number"], textarea {
-  background: var(--lcars-black);
-  color: var(--lcars-fg);
-  border: 2px solid var(--lcars-accent-tertiary);
-  border-radius: var(--lcars-space-2);
-  padding: var(--lcars-space-2);
+  background: var(--atnr-bg);
+  color: var(--atnr-fg);
+  border: 2px solid var(--atnr-accent-tertiary);
+  border-radius: var(--atnr-space-2);
+  padding: var(--atnr-space-2);
   font-family: inherit;
   font-size: 1rem;
-  min-height: var(--lcars-min-target);
+  min-height: var(--atnr-min-target);
 }
 
 textarea {
@@ -169,249 +124,265 @@ input[type="checkbox"],
 input[type="radio"] {
   width: 1.5rem;
   height: 1.5rem;
-  accent-color: var(--lcars-accent-secondary);
+  accent-color: var(--atnr-accent-secondary);
 }
 
 input[type="range"] {
   width: 100%;
-  min-height: var(--lcars-min-target);
-  accent-color: var(--lcars-accent-secondary);
+  min-height: var(--atnr-min-target);
+  accent-color: var(--atnr-accent-secondary);
 }
 
-.lcars-checkbox-row {
+.atnr-checkbox-row {
   display: flex;
   align-items: center;
-  gap: var(--lcars-space-2);
-  min-height: var(--lcars-min-target);
+  gap: var(--atnr-space-2);
+  min-height: var(--atnr-min-target);
 }
 
-.lcars-checkbox-row label {
+.atnr-checkbox-row label {
   cursor: pointer;
 }
 
-.lcars-theme-option {
+.atnr-theme-option {
   align-items: flex-start;
   height: auto;
-  min-height: var(--lcars-min-target);
+  min-height: var(--atnr-min-target);
 }
 
-.lcars-theme-option input[type="radio"] {
+.atnr-theme-option input[type="radio"] {
   margin-top: 0.6rem;
   flex-shrink: 0;
 }
 
-.lcars-theme-option-text {
+.atnr-theme-option-text {
   display: flex;
   flex-direction: column;
-  gap: var(--lcars-space-1);
+  gap: var(--atnr-space-1);
 }
 
-.lcars-theme-option-text label {
+.atnr-theme-option-text label {
   cursor: pointer;
 }
 
-.lcars-theme-option-text .lcars-note {
+.atnr-theme-option-text .atnr-note {
   max-width: 48rem;
 }
 
-fieldset.lcars-fieldset {
-  border: 2px solid var(--lcars-accent-muted);
-  border-radius: var(--lcars-space-2);
-  padding: var(--lcars-space-3);
+fieldset.atnr-fieldset {
+  border: 2px solid var(--atnr-accent-muted);
+  border-radius: var(--atnr-space-2);
+  padding: var(--atnr-space-3);
   margin: 0;
 }
 
-.lcars-form-actions {
+.atnr-form-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--lcars-space-2);
+  gap: var(--atnr-space-2);
 }
 
-.lcars-form-status {
+/* Issue #10: pagination nav for the library results list, group list, and
+   per-group row list. Reused across all three so "Page X of Y" plus
+   Previous/Next always look and behave the same regardless of which level
+   of the list they page through. */
+.atnr-pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--atnr-space-3);
+  margin-block: var(--atnr-space-3);
+}
+
+.atnr-pagination-status {
+  font-size: 0.9em;
+  color: var(--atnr-accent-secondary);
+}
+
+.atnr-form-status {
   min-height: 1.4em;
-  color: var(--lcars-accent-secondary);
+  color: var(--atnr-accent-secondary);
 }
 
-.lcars-form-status[role="alert"] {
-  color: var(--lcars-accent-danger);
+.atnr-form-status[role="alert"] {
+  color: var(--atnr-accent-danger);
 }
 
-.lcars-error {
-  color: var(--lcars-accent-danger);
+.atnr-error {
+  color: var(--atnr-accent-danger);
 }
 
-.lcars-note {
-  color: var(--lcars-accent-tertiary);
+.atnr-note {
+  color: var(--atnr-accent-tertiary);
   font-style: italic;
 }
 
-.lcars-table {
+.atnr-table {
   width: 100%;
   border-collapse: collapse;
-  margin: var(--lcars-space-3) 0;
+  margin: var(--atnr-space-3) 0;
 }
 
-.lcars-table caption {
+.atnr-table caption {
   caption-side: top;
   text-align: left;
-  color: var(--lcars-accent-secondary);
-  padding-bottom: var(--lcars-space-1);
+  color: var(--atnr-accent-secondary);
+  padding-bottom: var(--atnr-space-1);
 }
 
-.lcars-table th,
-.lcars-table td {
+.atnr-table th,
+.atnr-table td {
   text-align: left;
-  padding: var(--lcars-space-2);
-  border-bottom: 1px solid var(--lcars-accent-muted);
+  padding: var(--atnr-space-2);
+  border-bottom: 1px solid var(--atnr-accent-muted);
   vertical-align: top;
 }
 
-.lcars-table th {
-  background: var(--lcars-accent-muted);
-  color: var(--lcars-fg);
+.atnr-table th {
+  background: var(--atnr-accent-muted);
+  color: var(--atnr-fg);
 }
 
-.lcars-title-link {
+.atnr-title-link {
   font-weight: bold;
 }
 
-.lcars-subtitle {
+.atnr-subtitle {
   font-size: 0.85rem;
-  color: var(--lcars-accent-tertiary);
+  color: var(--atnr-accent-tertiary);
 }
 
-.lcars-group-heading {
-  margin-top: var(--lcars-space-6);
-  color: var(--lcars-accent-secondary);
+.atnr-group-heading {
+  margin-top: var(--atnr-space-6);
+  color: var(--atnr-accent-secondary);
 }
 
-.lcars-count {
-  color: var(--lcars-accent-secondary);
+.atnr-count {
+  color: var(--atnr-accent-secondary);
 }
 
-.lcars-facet-list {
+.atnr-facet-list {
   padding-left: 1.25rem;
 }
 
-.lcars-meta-list {
+.atnr-meta-list {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: var(--lcars-space-1) var(--lcars-space-4);
-  margin: var(--lcars-space-3) 0;
+  gap: var(--atnr-space-1) var(--atnr-space-4);
+  margin: var(--atnr-space-3) 0;
 }
 
-.lcars-meta-list dt {
-  color: var(--lcars-accent-secondary);
+.atnr-meta-list dt {
+  color: var(--atnr-accent-secondary);
 }
 
-.lcars-meta-list dd {
+.atnr-meta-list dd {
   margin: 0;
 }
 
-.lcars-trace-list {
+.atnr-trace-list {
   list-style: none;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--lcars-space-3);
+  gap: var(--atnr-space-3);
 }
 
-.lcars-trace-edge {
-  border: 1px solid var(--lcars-accent-muted);
-  border-radius: var(--lcars-space-2);
-  padding: var(--lcars-space-3);
+.atnr-trace-edge {
+  border: 1px solid var(--atnr-accent-muted);
+  border-radius: var(--atnr-space-2);
+  padding: var(--atnr-space-3);
 }
 
-.lcars-trace-heading {
-  margin: 0 0 var(--lcars-space-1);
-  color: var(--lcars-accent-secondary);
+.atnr-trace-heading {
+  margin: 0 0 var(--atnr-space-1);
+  color: var(--atnr-accent-secondary);
 }
 
-.lcars-status-block ul {
+.atnr-status-block ul {
   padding-left: 1.25rem;
 }
 
-.lcars-status-statement {
-  font-size: var(--lcars-font-subheader);
-  color: var(--lcars-accent-secondary);
+.atnr-status-statement {
+  font-size: var(--atnr-font-size-subheader);
+  color: var(--atnr-accent-secondary);
 }
 
-dialog.lcars-dialog {
-  background: var(--lcars-black);
-  color: var(--lcars-fg);
-  border: 2px solid var(--lcars-accent-secondary);
-  border-radius: var(--lcars-space-2);
-  padding: var(--lcars-space-4);
+dialog.atnr-dialog {
+  background: var(--atnr-bg);
+  color: var(--atnr-fg);
+  border: 2px solid var(--atnr-accent-secondary);
+  border-radius: var(--atnr-space-2);
+  padding: var(--atnr-space-4);
   max-width: min(28rem, calc(100vw - 2rem));
   width: 100%;
   box-sizing: border-box;
 }
 
-dialog.lcars-dialog::backdrop {
+dialog.atnr-dialog::backdrop {
   background: rgba(0, 0, 0, 0.6);
 }
 
-.lcars-dialog-title {
+.atnr-dialog-title {
   margin-top: 0;
 }
 
-.lcars-dialog-actions {
+.atnr-dialog-actions {
   display: flex;
   justify-content: flex-end;
-  gap: var(--lcars-space-2);
-  margin-top: var(--lcars-space-3);
+  gap: var(--atnr-space-2);
+  margin-top: var(--atnr-space-3);
 }
 
-.lcars-view-intro {
-  color: var(--lcars-accent-tertiary);
+.atnr-view-intro {
+  color: var(--atnr-accent-tertiary);
   max-width: 60rem;
 }
 
-.lcars-card-list {
+.atnr-card-list {
   display: grid;
-  gap: var(--lcars-space-3);
+  gap: var(--atnr-space-3);
 }
 
-.lcars-library-card {
-  border: 1px solid var(--lcars-accent-muted);
-  border-radius: var(--lcars-space-2);
-  padding: var(--lcars-space-3);
+.atnr-library-card {
+  border: 1px solid var(--atnr-accent-muted);
+  border-radius: var(--atnr-space-2);
+  padding: var(--atnr-space-3);
   display: grid;
-  gap: var(--lcars-space-3);
+  gap: var(--atnr-space-3);
 }
 
-.lcars-library-card-main,
-.lcars-library-card-side {
+.atnr-library-card-main,
+.atnr-library-card-side {
   display: flex;
   flex-direction: column;
-  gap: var(--lcars-space-1);
+  gap: var(--atnr-space-1);
 }
 
-.lcars-library-card-side {
+.atnr-library-card-side {
   align-items: flex-start;
 }
 
-.lcars-library-meta,
-.lcars-library-state,
-.lcars-library-feedback-indicator {
+.atnr-library-meta,
+.atnr-library-state,
+.atnr-library-feedback-indicator {
   margin: 0;
 }
 
-.lcars-library-feedback-indicator {
-  color: var(--lcars-accent-secondary);
+.atnr-library-feedback-indicator {
+  color: var(--atnr-accent-secondary);
 }
 
-.lcars-group-details {
-  margin: var(--lcars-space-3) 0;
+.atnr-group-details {
+  margin: var(--atnr-space-3) 0;
 }
 
-.lcars-group-summary {
-  min-height: var(--lcars-min-target);
+.atnr-group-summary {
+  min-height: var(--atnr-min-target);
   display: flex;
   align-items: center;
   cursor: pointer;
-  color: var(--lcars-accent-secondary);
-  gap: var(--lcars-space-3);
+  color: var(--atnr-accent-secondary);
+  gap: var(--atnr-space-3);
   justify-content: space-between;
   flex-wrap: wrap;
   list-style: none;
@@ -422,87 +393,87 @@ dialog.lcars-dialog::backdrop {
    is an expand/collapse control. Restore an explicit chevron and flip it
    with the <details> [open] state; ::-webkit-details-marker covers Safari,
    which keeps its own marker even once display changes. */
-.lcars-group-summary::-webkit-details-marker {
+.atnr-group-summary::-webkit-details-marker {
   display: none;
 }
 
-.lcars-group-summary::before {
+.atnr-group-summary::before {
   content: '\25B8';
   order: -1;
-  color: var(--lcars-accent-tertiary);
+  color: var(--atnr-accent-tertiary);
   flex-shrink: 0;
   transition: transform 0.15s ease-out;
 }
 
-details[open] > .lcars-group-summary::before {
+details[open] > .atnr-group-summary::before {
   transform: rotate(90deg);
 }
 
-.lcars-group-review-button {
+.atnr-group-review-button {
   margin-left: auto;
 }
 
-.lcars-feedback-editor {
-  border-top: 1px solid var(--lcars-accent-muted);
-  padding-top: var(--lcars-space-3);
+.atnr-feedback-editor {
+  border-top: 1px solid var(--atnr-accent-muted);
+  padding-top: var(--atnr-space-3);
   scroll-margin-top: 6rem;
   scroll-margin-bottom: 10rem;
 }
 
-.lcars-feedback-grid {
+.atnr-feedback-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  gap: var(--lcars-space-3);
+  gap: var(--atnr-space-3);
 }
 
-.lcars-rating-fieldset {
+.atnr-rating-fieldset {
   border: 0;
   margin: 0;
   padding: 0;
   min-width: 0;
 }
 
-.lcars-rating-fieldset legend {
-  margin-bottom: var(--lcars-space-2);
-  color: var(--lcars-accent-secondary);
+.atnr-rating-fieldset legend {
+  margin-bottom: var(--atnr-space-2);
+  color: var(--atnr-accent-secondary);
   font-size: 0.8rem;
   text-transform: uppercase;
 }
 
-.lcars-rating-options {
+.atnr-rating-options {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--lcars-space-2);
+  gap: var(--atnr-space-2);
 }
 
-.lcars-rating-choice {
+.atnr-rating-choice {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: var(--lcars-min-target);
-  width: var(--lcars-min-target);
-  min-height: var(--lcars-min-target);
+  min-width: var(--atnr-min-target);
+  width: var(--atnr-min-target);
+  min-height: var(--atnr-min-target);
   padding: 0;
-  border: 3px solid var(--lcars-accent-tertiary);
+  border: 3px solid var(--atnr-accent-tertiary);
   border-radius: 50%;
   background: transparent;
   cursor: pointer;
 }
 
-.lcars-rating-fieldset[data-rating="1"] .lcars-rating-choice[data-value="1"],
-.lcars-rating-fieldset[data-rating="2"] .lcars-rating-choice:is([data-value="1"], [data-value="2"]),
-.lcars-rating-fieldset[data-rating="3"] .lcars-rating-choice:is([data-value="1"], [data-value="2"], [data-value="3"]),
-.lcars-rating-fieldset[data-rating="4"] .lcars-rating-choice:is([data-value="1"], [data-value="2"], [data-value="3"], [data-value="4"]),
-.lcars-rating-fieldset[data-rating="5"] .lcars-rating-choice {
-  background: var(--lcars-accent-primary);
+.atnr-rating-fieldset[data-rating="1"] .atnr-rating-choice[data-value="1"],
+.atnr-rating-fieldset[data-rating="2"] .atnr-rating-choice:is([data-value="1"], [data-value="2"]),
+.atnr-rating-fieldset[data-rating="3"] .atnr-rating-choice:is([data-value="1"], [data-value="2"], [data-value="3"]),
+.atnr-rating-fieldset[data-rating="4"] .atnr-rating-choice:is([data-value="1"], [data-value="2"], [data-value="3"], [data-value="4"]),
+.atnr-rating-fieldset[data-rating="5"] .atnr-rating-choice {
+  background: var(--atnr-accent-primary);
 }
 
-.lcars-rating-choice:has(input:focus-visible) {
-  outline: 3px solid var(--lcars-border-focus);
+.atnr-rating-choice:has(input:focus-visible) {
+  outline: 3px solid var(--atnr-focus-ring);
   outline-offset: 2px;
 }
 
-.lcars-rating-input {
+.atnr-rating-input {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -515,23 +486,187 @@ details[open] > .lcars-group-summary::before {
 }
 
 @media (min-width: 720px) {
-  .lcars-library-card {
+  .atnr-library-card {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
   }
 }
 
 @media (max-width: 640px) {
-  .lcars-meta-list {
+  .atnr-meta-list {
     grid-template-columns: 1fr;
   }
-  .lcars-meta-list dt {
-    margin-top: var(--lcars-space-2);
+  .atnr-meta-list dt {
+    margin-top: var(--atnr-space-2);
   }
-  .lcars-field {
+  .atnr-field {
     min-width: 0;
   }
-  .lcars-feedback-grid {
+  .atnr-feedback-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/*
+ * Issue #5 (P2): the immediate search row always renders first in the
+ * shared Library toolbar (`views/library-view.js`), ahead of the
+ * `<details>` "Advanced filters" disclosure below, on every breakpoint and
+ * in both shells. This keeps basic search — and therefore the result count
+ * and first title — reachable at the top of a 390x844 viewport without
+ * scrolling past sort/group/status/rating controls first.
+ */
+.atnr-search-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--atnr-space-1);
+}
+
+.atnr-advanced-filters {
+  border: 1px solid var(--atnr-accent-muted);
+  border-radius: var(--atnr-space-2);
+  padding: 0 var(--atnr-space-3) var(--atnr-space-3);
+}
+
+/*
+ * Issue #5: the disclosure's bottom padding exists to give the open body
+ * breathing room before the border — while closed there is no body to
+ * pad, so this removed padding is otherwise wasted vertical space in
+ * front of every result below it (both themes; most visible on narrow
+ * mobile viewports where every closed-disclosure pixel counts toward
+ * fitting the first result in one screen).
+ */
+.atnr-advanced-filters:not([open]) {
+  padding-bottom: 0;
+}
+
+.atnr-advanced-filters > summary {
+  min-height: var(--atnr-min-target);
+  display: flex;
+  align-items: center;
+  gap: var(--atnr-space-2);
+  cursor: pointer;
+  list-style: none;
+  color: var(--atnr-fg);
+  margin: 0 calc(var(--atnr-space-3) * -1);
+  padding: 0 var(--atnr-space-3);
+}
+
+.atnr-advanced-filters > summary::-webkit-details-marker {
+  display: none;
+}
+
+.atnr-advanced-filters > summary::before {
+  content: '\25B8';
+  color: var(--atnr-accent-tertiary);
+  flex-shrink: 0;
+  transition: transform 0.15s ease-out;
+}
+
+.atnr-advanced-filters[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.atnr-advanced-filters > .atnr-advanced-filters-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--atnr-space-3);
+  padding-top: var(--atnr-space-2);
+}
+
+/*
+ * Theme-neutral component vocabulary shared with `views/data-view.js`
+ * (`NEUTRAL_COMPONENTS`/`componentClass()`). Every `.atnr-*` role below is
+ * styled directly from the same semantic tokens the `.atnr-*` aliases use,
+ * so a neutral-only element (no legacy alias) already renders correctly in
+ * both shells; the Apple/Liquid Glass theme restyles these further in
+ * `theme-liquid-glass.css` without ever needing an `.atnr-*` class to be
+ * present.
+ */
+.atnr-button,
+.atnr-button-primary,
+.atnr-button-secondary,
+.atnr-button-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--atnr-min-target);
+  min-width: 0;
+  max-width: 100%;
+  padding: var(--atnr-space-2) var(--atnr-space-4);
+  border: 0;
+  border-radius: var(--atnr-space-2);
+  font-family: inherit;
+  font-size: 0.9rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  background: var(--atnr-accent-tertiary);
+  color: var(--atnr-ink-on-accent);
+}
+
+.atnr-button-primary { background: var(--atnr-accent-primary); }
+.atnr-button-danger { background: var(--atnr-accent-danger); }
+
+.atnr-button:hover:not(:disabled),
+.atnr-button:focus-visible:not(:disabled) {
+  filter: brightness(1.15);
+}
+
+.atnr-button:active:not(:disabled) {
+  background: var(--atnr-accent-active);
+}
+
+.atnr-button:disabled {
+  background: var(--atnr-accent-muted);
+  color: var(--atnr-fg);
+  cursor: not-allowed;
+  filter: none;
+}
+
+.atnr-panel,
+.atnr-notice {
+  border: 1px solid var(--atnr-accent-muted);
+  border-radius: var(--atnr-space-2);
+  padding: var(--atnr-space-3);
+}
+
+.atnr-statement {
+  font-size: var(--atnr-font-size-subheader);
+  color: var(--atnr-accent-secondary);
+}
+
+.atnr-note { color: var(--atnr-accent-tertiary); }
+.atnr-error { color: var(--atnr-accent-danger); }
+
+.atnr-meta-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--atnr-space-1) var(--atnr-space-4);
+  margin: var(--atnr-space-3) 0;
+}
+
+.atnr-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--atnr-space-2);
+}
+
+.atnr-form-status { min-height: 1.4em; }
+
+.atnr-field,
+.atnr-field-wide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--atnr-space-1);
+}
+
+.atnr-field-label { font-size: 0.8rem; }
+
+.atnr-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: var(--atnr-space-2);
+  min-height: var(--atnr-min-target);
 }

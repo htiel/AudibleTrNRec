@@ -19,7 +19,7 @@ const THEME_DESCRIPTIONS = Object.freeze({
 });
 
 function buildThemeFieldset(currentTheme, { onSelect } = {}) {
-  const status = h('p', { class: 'lcars-form-status', role: 'status', id: 'settings-theme-status' });
+  const status = h('p', { class: 'atnr-form-status', role: 'status', id: 'settings-theme-status' });
   const options = THEMES.map((theme) => {
     const id = `settings-theme-${theme}`;
     const input = h('input', {
@@ -30,17 +30,17 @@ function buildThemeFieldset(currentTheme, { onSelect } = {}) {
       checked: theme === currentTheme || undefined,
       onchange: () => onSelect?.(theme, status),
     });
-    return h('div', { class: 'lcars-checkbox-row lcars-theme-option' }, [
+    return h('div', { class: 'atnr-checkbox-row atnr-theme-option' }, [
       input,
-      h('div', { class: 'lcars-theme-option-text' }, [
+      h('div', { class: 'atnr-theme-option-text' }, [
         h('label', { for: id, text: THEME_LABELS[theme] }),
-        h('p', { class: 'lcars-note', text: THEME_DESCRIPTIONS[theme] }),
+        h('p', { class: 'atnr-note', text: THEME_DESCRIPTIONS[theme] }),
       ]),
     ]);
   });
-  const fieldset = h('fieldset', { class: 'lcars-fieldset' }, [
+  const fieldset = h('fieldset', { class: 'atnr-fieldset' }, [
     h('legend', { text: 'Interface theme' }),
-    h('p', { class: 'lcars-note', text: 'Applies immediately in this browser and is remembered for your next visit here. It never changes any library, feedback, or Audible connection data.' }),
+    h('p', { class: 'atnr-note', text: 'Applies immediately in this browser and is remembered for your next visit here. It never changes any library, feedback, or Audible connection data.' }),
     ...options,
     status,
   ]);
@@ -69,9 +69,9 @@ export function renderSettingsView(root) {
   });
   const section = h('section', { 'aria-labelledby': 'settings-heading' }, [
     h('h2', { id: 'settings-heading', tabindex: '-1', text: 'Settings' }),
-    h('p', { class: 'lcars-view-intro', text: 'Interface preferences for this browser only. Nothing on this page touches your Audible account, library data, or private feedback.' }),
+    h('p', { class: 'atnr-view-intro', text: 'Interface preferences for this browser only. Nothing on this page touches your Audible account, library data, or private feedback.' }),
     themeFieldset,
-    h('p', { class: 'lcars-note', text: 'Both themes always respect your system-level Reduce Motion, Reduce Transparency, and Increase Contrast settings, and keep every control keyboard-operable with a visible focus outline.' }),
+    h('p', { class: 'atnr-note', text: 'This interface reads your system-level Reduce Motion, Reduce Transparency, and Increase Contrast settings and adapts its own animation, translucency, and contrast in both themes to match. Every control here is built to stay keyboard-operable with a visible focus outline; if you find a control that is not, please report it.' }),
   ]);
   mount(root, section);
   section.querySelector('h2')?.focus?.();

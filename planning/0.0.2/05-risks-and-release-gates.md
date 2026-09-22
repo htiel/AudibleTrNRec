@@ -14,9 +14,53 @@ The latter remains the historical 0.0.1 assessment; 11 controls the current
 0.0.2 implementation assessment. Old planning sign-offs do not close gates.
 The [accumulated working-tree record](12-accumulated-implementation.md) supplies
 current test/policy evidence and theme/storage limits; it is not a new Worf
-security review or full-team release approval. Both themes still require
-rendered accessibility evidence. Browser filter storage is not DPAPI custody,
+security review or full-team release approval. Final supplied Chromium/live
+private and both-theme capture evidence cover the stated shell/paging/switching
+behavior, not blanket accessibility certification. Browser filter/page storage is not DPAPI custody,
 and display-name grouping is not canonical person identity.
+
+## Final remediation evidence boundary — 2026-09-21
+
+Issues #1–#14 have implementation changes and the three streams report green.
+Definitive post-audit verification is **685 Node tests / 684 pass / 0 fail /
+1 environment symlink skip** (**87.7 seconds**) and **128 connector
+tests / 126 pass / 0 fail / 2 skips**, policy PASS; details and scope are
+in [12](12-accumulated-implementation.md#executed-evidence-and-limitations).
+No A2 gate status changes from those totals.
+
+Delayed-audit safeguards now distinguish completion/partial progress and close
+provenance labels; inventory is non-destructive and Unknown-aware. Actual sync
+counts persist in a non-sensitive account/generation-bound sidecar, not a
+snapshot-parse inference or an encrypted content export. Invalid/stale evidence
+stays Unknown, deletion invalidates its receipt, and no new provider probe or
+storage-schema migration is introduced. Schema-only filter migration copies
+validated legacy state without deleting browser data; session-storage privacy
+limits are unchanged.
+
+Remaining acceptance risks:
+
+- The earlier Apple token/stylesheet discrepancy is resolved: no `--lcars-*`
+  references in Apple styling, neutral shared tokens, and LCARS-only sheets
+  disabled in Apple mode. Final live private evidence verifies zero initial
+  LCARS classes, 50 rows, reachable Next and correct rapid-switch final state.
+  CSS pixels and browser evidence still prove no UIKit/SwiftUI equivalence.
+- Actual synthetic `--theme all` capture verified both themes, wrote 12 neutral
+  PNGs plus manifest, and purge verified. Playwright remains dynamically
+  imported but undeclared/unpinned. Physical-device/VoiceOver and current
+  provider-revocation evidence remain open; supplied matrices are not blanket
+  accessibility or performance certification.
+- Export consent protects the decision, not the resulting plaintext copy.
+  Synthetic capture is default; real capture needs separate per-run consent,
+  protected non-synced handling, a deadline and purge verification. Path checks
+  do not themselves provide encryption/ACL custody; purge is not forensic
+  erasure. No private capture is authorized by a green test run.
+- Apple HIG/API/design resources are normative; Google image search is
+  inspiration only. No copied/traced/bundled/hotlinked third-party imagery or
+  UI assets, private uploads or image-derived acceptance criteria.
+
+Do not lower FMEA residuals or label missing controls passed without new
+evidence. Officer re-review and Captain release/audience authority remain
+required, independently of the integrated remediation.
 
 ## Gate matrix
 

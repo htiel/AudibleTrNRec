@@ -1,50 +1,62 @@
+/**
+ * Shared, theme-agnostic design tokens.
+ *
+ * Every custom property here is a *neutral semantic contract* (`--atnr-*`)
+ * — never a theme's own palette, geometry, or type scale. `base.css` and
+ * `components.css` (the presentation-neutral view/component vocabulary
+ * shared by every owned view, both shells, and `views/data-view.js`) read
+ * only these `--atnr-*` names, never a theme-named custom property
+ * directly, so neither shared file depends on which theme is active or on
+ * that theme's stylesheet being loaded at all.
+ *
+ * Each theme's own stylesheet *maps* this exact contract onto its own
+ * palette, under its own `html[data-theme="..."]` scope:
+ *   - `theme-lcars.css` defines the full classic LCARS palette (raw
+ *     swatches, geometry, type scale) under `html[data-theme="lcars"]`
+ *     and assigns every `--atnr-*` token below from it there.
+ *   - `theme-liquid-glass.css` defines its own, independent Apple/iOS
+ *     system-color-inspired palette under `html[data-theme="liquid-glass"]`
+ *     and assigns every `--atnr-*` token below from it there — it never
+ *     references a `--lcars-*`-named custom property.
+ * Neither theme file reads the other's tokens, and this file never reads
+ * either theme's tokens either — the dependency arrow points one way,
+ * from each theme into this shared contract, never sideways.
+ *
+ * The literal values below are a deliberately plain, WCAG-passing dark
+ * fallback (solid black background, near-white text, mid-tone accents) —
+ * not "the LCARS look" and not "the Apple look" — used only in the narrow
+ * window before `applyTheme()` (see `theme-preference.js`, called
+ * synchronously at the top of `app.js` before any other work) has set
+ * `data-theme` on `<html>`, or if that attribute is ever unset or carries
+ * an unrecognized value. Once a theme is applied, that theme's own
+ * `html[data-theme="..."]` block takes over every property below.
+ */
 :root {
-  --lcars-african-violet: #cc99ff;
-  --lcars-almond: #ffaa90;
-  --lcars-almond-creme: #ffbbaa;
-  --lcars-blue: #5566ff;
-  --lcars-bluey: #8899ff;
-  --lcars-butterscotch: #ff9966;
-  --lcars-gold: #ffaa00;
-  --lcars-golden-orange: #ff9900;
-  --lcars-gray: #666688;
-  --lcars-ice: #99ccff;
-  --lcars-lilac: #cc55ff;
-  --lcars-sunflower: #ffcc99;
-  --lcars-orange: #ff8800;
-  --lcars-peach: #ff8866;
-  --lcars-tomato: #ff5555;
-  --lcars-sky: #aaaaff;
-  --lcars-space-white: #f5f6fa;
-  --lcars-violet-creme: #ddbbff;
-  --lcars-black: #000000;
+  /* Spacing rhythm and the WCAG 2.5.8 minimum touch target: both design
+     languages already share this exact scale, so it is a genuine shared
+     primitive, not a per-theme choice each theme would otherwise have to
+     duplicate identically. */
+  --atnr-space-1: 0.25rem;
+  --atnr-space-2: 0.5rem;
+  --atnr-space-3: 0.75rem;
+  --atnr-space-4: 1rem;
+  --atnr-space-6: 1.5rem;
+  --atnr-space-8: 2rem;
+  --atnr-min-target: 2.75rem;
 
-  --lcars-bg: var(--lcars-black);
-  --lcars-fg: var(--lcars-space-white);
-  --lcars-accent-primary: var(--lcars-butterscotch);
-  --lcars-accent-secondary: var(--lcars-sunflower);
-  --lcars-accent-tertiary: var(--lcars-ice);
-  --lcars-accent-active: var(--lcars-gold);
-  --lcars-accent-danger: var(--lcars-tomato);
-  --lcars-accent-muted: var(--lcars-gray);
-  --lcars-border-focus: var(--lcars-space-white);
-  --lcars-border-focus-on-light: var(--lcars-black);
-
-  --lcars-font-family: 'Arial Narrow', 'Liberation Sans Narrow', Arial, Helvetica, sans-serif;
-  --lcars-space-1: 0.25rem;
-  --lcars-space-2: 0.5rem;
-  --lcars-space-3: 0.75rem;
-  --lcars-space-4: 1rem;
-  --lcars-space-6: 1.5rem;
-  --lcars-space-8: 2rem;
-  --lcars-radius-pill: 1.5rem;
-  --lcars-radius-elbow: 60px;
-  --lcars-elbow-width: 96px;
-  --lcars-elbow-height: 72px;
-  --lcars-elbow-width-compact: 48px;
-  --lcars-elbow-height-compact: 48px;
-  --lcars-font-title: 1.75rem;
-  --lcars-font-subheader: 1.15rem;
-  --lcars-font-normal: 1rem;
-  --lcars-min-target: 2.75rem;
+  /* Neutral fallback semantic palette (see file header) — every one of
+     these is reassigned by whichever theme's stylesheet is active. */
+  --atnr-bg: #000000;
+  --atnr-fg: #f5f6fa;
+  --atnr-accent-primary: #8899ff;
+  --atnr-accent-secondary: #cccccc;
+  --atnr-accent-tertiary: #99ccff;
+  --atnr-accent-active: #ffffff;
+  --atnr-accent-danger: #ff5555;
+  --atnr-accent-muted: #666688;
+  --atnr-focus-ring: #f5f6fa;
+  --atnr-ink-on-accent: #000000;
+  --atnr-font-family: system-ui, sans-serif;
+  --atnr-font-size-base: 1rem;
+  --atnr-font-size-subheader: 1.1rem;
 }

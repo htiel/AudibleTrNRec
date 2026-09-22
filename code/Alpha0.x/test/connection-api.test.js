@@ -135,7 +135,7 @@ for (const [label, action] of [
   ['disconnect', (api) => api.disconnect()],
   ['delete-local', (api) => api.deleteLocal()],
   ['delete-all', (api) => api.deleteAllLocal()],
-  ['export', (api) => api.exportAll()],
+  ['export', (api) => api.exportAll({ consentConfirmed: true })],
 ]) {
   test(`the confirmed ${label} flow uses a session-bound nonce without a key prompt`, async () => {
     const requests = [];
@@ -198,13 +198,38 @@ test('an export request carries only its confirmation nonce', async () => {
     destructiveResponder({ document: { exportSchemaVersion: 1 }, feedbackIncluded: true }),
   );
   try {
-    const result = await makeApi().exportAll();
+    const result = await makeApi().exportAll({ consentConfirmed: true });
     assert.equal(result.document.exportSchemaVersion, 1);
   } finally {
     globalThis.fetch = originalFetch;
   }
   assert.deepEqual(Object.keys(JSON.parse(requests[0].body)), ['action']);
   assert.deepEqual(Object.keys(JSON.parse(requests[1].body)), ['confirmation']);
+});
+
+test('an unconfirmed export is refused locally: no nonce is issued and no request is sent', async () => {
+  const requests = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = recordingFetch(requests, destructiveResponder({ document: {} }));
+  try {
+    const api = makeApi();
+    for (const call of [
+      () => api.exportAll(),
+      () => api.exportAll({}),
+      () => api.exportAll({ consentConfirmed: false }),
+      // A truthy-but-not-true value must not pass the gate either.
+      () => api.exportAll({ consentConfirmed: 'yes' }),
+      () => api.exportAll({ consentConfirmed: 1 }),
+    ]) {
+      await assert.rejects(
+        call,
+        (error) => error instanceof ConnectionApiError && error.code === 'export-consent-missing',
+      );
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.deepEqual(requests, [], 'a refused export must not contact the local runtime at all');
 });
 
 test('a failed nonce issuance never reaches the destructive route', async () => {

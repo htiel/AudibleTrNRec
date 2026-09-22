@@ -13,6 +13,7 @@ import {
   applyTheme,
   loadThemePreference,
   saveThemePreference,
+  syncThemeStylesheets,
 } from '../ui/js/theme-preference.js';
 
 function memoryStorage() {
@@ -97,4 +98,49 @@ test('applyTheme sets a plain data-theme attribute and falls back to the default
 
 test('applyTheme is a no-op with no root element (never throws)', () => {
   assert.doesNotThrow(() => applyTheme('liquid-glass', null));
+});
+
+function fakeLink(themeScope, disabled) {
+  return { dataset: { themeScope }, disabled };
+}
+
+function fakeDoc(links) {
+  return { querySelectorAll: (selector) => (selector === '[data-theme-scope]' ? links : []) };
+}
+
+test('syncThemeStylesheets enables only the active theme\'s scoped links and disables every other one', () => {
+  const lcarsLayout = fakeLink('lcars', false);
+  const lcarsTheme = fakeLink('lcars', false);
+  const appleTheme = fakeLink('liquid-glass', true);
+  const doc = fakeDoc([lcarsLayout, lcarsTheme, appleTheme]);
+
+  syncThemeStylesheets('liquid-glass', doc);
+  assert.equal(lcarsLayout.disabled, true, 'the previously-active LCARS layout stylesheet must be disabled');
+  assert.equal(lcarsTheme.disabled, true, 'the previously-active LCARS theme stylesheet must be disabled');
+  assert.equal(appleTheme.disabled, false, 'the newly-active liquid-glass stylesheet must be enabled');
+
+  syncThemeStylesheets('lcars', doc);
+  assert.equal(lcarsLayout.disabled, false);
+  assert.equal(lcarsTheme.disabled, false);
+  assert.equal(appleTheme.disabled, true, 'switching back to lcars must re-disable the liquid-glass stylesheet');
+});
+
+test('syncThemeStylesheets never touches an unscoped link and never throws with no document', () => {
+  assert.doesNotThrow(() => syncThemeStylesheets('liquid-glass', null));
+  assert.doesNotThrow(() => syncThemeStylesheets('liquid-glass', {}));
+});
+
+test('applyTheme drives syncThemeStylesheets through the root element\'s ownerDocument', () => {
+  const appleTheme = fakeLink('liquid-glass', true);
+  const lcarsTheme = fakeLink('lcars', false);
+  const doc = fakeDoc([appleTheme, lcarsTheme]);
+  const root = { setAttribute() {}, ownerDocument: doc };
+
+  applyTheme('liquid-glass', root);
+  assert.equal(appleTheme.disabled, false);
+  assert.equal(lcarsTheme.disabled, true);
+
+  applyTheme('lcars', root);
+  assert.equal(appleTheme.disabled, true);
+  assert.equal(lcarsTheme.disabled, false);
 });

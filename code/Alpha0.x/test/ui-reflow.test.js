@@ -45,13 +45,15 @@ test('the reflow breakpoint is pinned in px, not rem/em, in every stylesheet', a
 });
 
 test('decorative elbow geometry is sized in fixed px tokens, immune to text-zoom scaling', async () => {
-  const tokens = await css('tokens.css');
+  // The LCARS geometry tokens live in `theme-lcars.css` (LCARS's own themed
+  // block), not the neutral `tokens.css` contract shared by both themes.
+  const lcarsTheme = await css('theme-lcars.css');
   const layout = await css('layout.css');
-  assert.match(tokens, /--lcars-elbow-width:\s*\d+px/);
-  assert.match(tokens, /--lcars-elbow-height:\s*\d+px/);
-  assert.match(tokens, /--lcars-elbow-width-compact:\s*\d+px/);
-  assert.match(tokens, /--lcars-elbow-height-compact:\s*\d+px/);
-  assert.match(tokens, /--lcars-radius-elbow:\s*\d+px/);
+  assert.match(lcarsTheme, /--lcars-elbow-width:\s*\d+px/);
+  assert.match(lcarsTheme, /--lcars-elbow-height:\s*\d+px/);
+  assert.match(lcarsTheme, /--lcars-elbow-width-compact:\s*\d+px/);
+  assert.match(lcarsTheme, /--lcars-elbow-height-compact:\s*\d+px/);
+  assert.match(lcarsTheme, /--lcars-radius-elbow:\s*\d+px/);
   assert.match(layout, /\.lcars-elbow\s*{[^}]*width:\s*var\(--lcars-elbow-width\)/s);
   // The compact (<=640px) elbow must reference the compact px tokens, not a rem value.
   assert.match(layout, /width:\s*var\(--lcars-elbow-width-compact\)/);
@@ -86,10 +88,10 @@ test('header/footer bars and their long-text children can shrink and wrap instea
 
 test('buttons wrap long labels instead of relying on the native no-wrap default', async () => {
   const components = await css('components.css');
-  const btn = components.match(/\.lcars-btn\s*{[^}]*}/s)?.[0] ?? '';
-  assert.match(btn, /white-space:\s*normal/, '.lcars-btn must override the UA default white-space: nowrap on <button> so long labels wrap');
-  assert.match(btn, /min-width:\s*0/, '.lcars-btn must be able to shrink inside a wrapping flex row');
-  assert.match(btn, /max-width:\s*100%/, '.lcars-btn must never exceed its container width');
+  const btn = components.match(/\.atnr-button,\n\.atnr-button-primary,\n\.atnr-button-secondary,\n\.atnr-button-danger\s*{[^}]*}/s)?.[0] ?? '';
+  assert.match(btn, /white-space:\s*normal/, '.atnr-button must override the UA default white-space: nowrap on <button> so long labels wrap');
+  assert.match(btn, /min-width:\s*0/, '.atnr-button must be able to shrink inside a wrapping flex row');
+  assert.match(btn, /max-width:\s*100%/, '.atnr-button must never exceed its container width');
 });
 
 test('sidebar navigation links can wrap and shrink at the mobile breakpoint', async () => {
@@ -101,21 +103,21 @@ test('sidebar navigation links can wrap and shrink at the mobile breakpoint', as
 
 test('dialogs are capped to the viewport width so a confirmation cannot itself overflow', async () => {
   const components = await css('components.css');
-  const dialog = components.match(/dialog\.lcars-dialog\s*{[^}]*}/s)?.[0] ?? '';
-  assert.match(dialog, /max-width:\s*min\(\s*[\d.]+rem\s*,\s*calc\(100vw/, 'dialog.lcars-dialog must clamp its max-width to the viewport');
+  const dialog = components.match(/dialog\.atnr-dialog\s*{[^}]*}/s)?.[0] ?? '';
+  assert.match(dialog, /max-width:\s*min\(\s*[\d.]+rem\s*,\s*calc\(100vw/, 'dialog.atnr-dialog must clamp its max-width to the viewport');
 });
 
 test('form fields can drop their minimum width at the mobile breakpoint', async () => {
   const components = await css('components.css');
   const mobileBlock = components.match(/@media \(max-width:\s*640px\)\s*{([\s\S]*?)\n}/)?.[1] ?? '';
-  assert.match(mobileBlock, /\.lcars-field\s*{\s*min-width:\s*0;?\s*}/, 'the mobile breakpoint must relax .lcars-field min-width so fields can shrink to fit a 320px viewport');
+  assert.match(mobileBlock, /\.atnr-field\s*{\s*min-width:\s*0;?\s*}/, 'the mobile breakpoint must relax .atnr-field min-width so fields can shrink to fit a 320px viewport');
 });
 
 test('minimum tap targets are raised to 44px and the frame uses dynamic viewport height', async () => {
   const tokens = await css('tokens.css');
   const base = await css('base.css');
   const layout = await css('layout.css');
-  assert.match(tokens, /--lcars-min-target:\s*2\.75rem/);
+  assert.match(tokens, /--atnr-min-target:\s*2\.75rem/);
   assert.match(layout, /min-height:\s*100vh;[\s\S]*min-height:\s*100dvh;/);
   assert.match(base, /top:\s*calc\([^)]*env\(safe-area-inset-top\)\)/);
 });
@@ -126,7 +128,7 @@ test('safe-area padding protects header, body, footer, and mobile sidebar from i
   assert.match(layout, /safe-area-inset-right/);
   assert.match(layout, /safe-area-inset-bottom/);
   assert.match(layout, /safe-area-inset-left/);
-  assert.match(layout, /\.lcars-sidebar-filler\s*{[^}]*background:\s*var\(--lcars-accent-muted\)/s);
+  assert.match(layout, /\.lcars-sidebar-filler\s*{[^}]*background:\s*var\(--atnr-accent-muted\)/s);
   const mobileBlock = layout.match(/@media \(max-width:\s*640px\)\s*{([\s\S]*?)\n}/)?.[1] ?? '';
   assert.match(mobileBlock, /\.lcars-sidebar\s*{[^}]*safe-area-inset-right[^}]*safe-area-inset-left/s);
   assert.match(mobileBlock, /\.lcars-sidebar-filler\s*{[^}]*width:\s*100%[^}]*overflow:\s*visible/s);
@@ -141,13 +143,32 @@ test('desktop locks the frame and scrolls the main pane without moving the sideb
 });
 
 test('library controls mount in the gray sidebar in the requested order', async () => {
-  const index = await readFile(path.join(UI_ROOT, 'index.html'), 'utf8');
+  // The LCARS chrome (elbow header/footer, swept sidebar, grey filler) is
+  // now built by `shells/lcars-shell.js` at runtime rather than existing as
+  // static markup in `index.html`; `app.js` mounts a shell and passes it
+  // `shell.viewRoot`/`shell.librarySidebarControls` (read live, since the
+  // shell can be swapped by a theme change) instead of bare variables.
+  const lcarsShell = await readFile(path.join(UI_ROOT, 'js', 'shells', 'lcars-shell.js'), 'utf8');
   const library = await readFile(path.join(UI_ROOT, 'js', 'views', 'library-view.js'), 'utf8');
   const app = await readFile(path.join(UI_ROOT, 'js', 'app.js'), 'utf8');
-  assert.match(index, /class="lcars-sidebar-filler"[^>]*>[\s\S]*id="library-sidebar-controls"/);
-  assert.match(app, /renderLibraryView\(viewRoot, store, \{ controlsRoot: librarySidebarControls \}\)/);
-  const grouping = library.indexOf("text: 'Grouping and order'");
-  const status = library.indexOf('statusFieldset,');
+  assert.match(lcarsShell, /class:\s*'lcars-sidebar-filler'\s*},\s*\[librarySidebarControls\]/);
+  assert.match(app, /renderLibraryView\(shell\.viewRoot, store, \{ controlsRoot: shell\.librarySidebarControls \}\)/);
+  // Issue #5 (P2): basic search now renders ahead of every advanced/grouping
+  // filter, wrapped in a collapsible `<details class="atnr-advanced-filters">`.
+  // Issue #5 (P2): basic search now renders ahead of every advanced/grouping
+  // filter, wrapped in a collapsible `<details class="atnr-advanced-filters">`.
+  // Grouping/status/rating markup is *declared* earlier in the module (JS
+  // requires `advancedFilters`'s child controls to exist before the
+  // `<details>` wrapping them is built), so this checks the actual
+  // `form.append(...)` order — where "Text filters" appears, then the
+  // search row, then the `advancedFilters` reference, then Reset — rather
+  // than raw declaration order.
   const text = library.indexOf("text: 'Text filters'");
-  assert.ok(grouping >= 0 && status > grouping && text > status);
+  const searchRow = library.indexOf("class: 'atnr-search-row'");
+  const advancedRef = library.indexOf('\n    advancedFilters,');
+  const reset = library.indexOf("text: 'Reset filters'", advancedRef);
+  assert.ok(text >= 0 && searchRow > text && advancedRef > searchRow && reset > advancedRef);
+  assert.match(library, /details',\s*{\s*class:\s*'atnr-advanced-filters'/);
+  assert.match(library, /text: 'Grouping and order'/);
+  assert.match(library, /statusFieldset,/);
 });

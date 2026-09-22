@@ -91,6 +91,40 @@ implemented appearance follow-up mapped to S034/S035, not a new native feature
 or a retroactive design approval. No WSJF/point re-estimate or full DoD closure
 is inferred; the original 112 points remain the planning baseline.
 
+**Final remediation reconciliation — 2026-09-21:** all three streams are
+reported green and the inspected worktree contains the #1–#14 changes plus
+independent Apple/LCARS shell markup. [12](12-accumulated-implementation.md)
+contains definitive supplied test/capture/live-matrix results, the issue matrix
+and remaining evidence gates. Independent-review fixes include reachable
+pagination, stable person feedback IDs with safe legacy migration, race-free
+theme activation and failed-sync status refresh.
+This does **not** mark the GitHub issues closed or promote any story to DONE.
+
+| Follow-up | Existing story mapping | Integrated disposition / acceptance boundary |
+| --- | --- | --- |
+| #1, #2, #5, #6, #9, #11, #12, #13; independent shells | S034, S035, S037, S038 | Separate shell markup/neutral tokens, exclusive stylesheets and race-free activation; final live matrix passes; physical-device/VoiceOver evidence remains |
+| #3, #4 | S023, S035 | Bounded inert synopsis and consistent series evidence; missing is unknown, not standalone |
+| #8 | S027, S035 | Failed-sync status refresh consumes provider-health evidence, not credential presence; current provider revocation remains untested |
+| #10 | S037, S038, S039 | Hard 50-row pages, reachable row/group/child controls, dirty-draft guard and complete counts; supplied private Next reaches 51–100; no latency claim |
+| #7 | S028, S033, S039 | Visible informed export consent before request/nonce/file, including cancel path |
+| #14 | S039, S042, S043 | Actual both-theme capture verified live DOM, wrote 12 neutral PNGs + manifest, purge verified; undeclared/unpinned driver remains a reproducibility limit |
+
+The remediation plan's relative scores were follow-up sequencing estimates,
+not additional S/F IDs or earned velocity. The 30-story/112-point baseline
+and 22 IMPLEMENTED / 1 OWNER-ACCEPTED DEVIATION / 4 IN_REVIEW / 3 BLOCKED
+accounting stay unchanged pending actual full-DoD acceptance and gate decisions.
+
+**Delayed Data-audit addendum — 2026-09-21:** completion/partial-position and
+closed-provenance presentation map to S021/S035; private Feasibility navigation,
+single Status and actionable Book-detail guidance to S034/S035/S038;
+non-destructive Data inventory and persisted actual-sync counts to S027/S029/
+S035/S039; schema-only filter persistence with legacy migration to S038.
+The last-import sidecar is account/snapshot bound and non-sensitive; actual
+reconciliation survives reload while snapshot parsing remains Unknown / not an
+import. [12](12-accumulated-implementation.md) owns the final 685/684 Node,
+128/126 connector and capture/purge evidence. No point/status or issue-closure
+change is inferred from these fixes.
+
 | Story | Owner | Required reviewers | Dependencies | Status |
 | --- | --- | --- | --- | --- |
 | S014 | Riker | Data, Worf, Geordi, Wesley | Captain scope direction (received); detailed decisions open | IN_REVIEW |

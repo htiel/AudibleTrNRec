@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 
 from atnr_connector.policy import PrivateAlphaPolicy
-from atnr_connector.service import ConnectorService
+from atnr_connector.service import CONNECTION_STATES, ConnectorService
 
 
 class ReversibleProtector:
@@ -249,6 +249,194 @@ class ServiceTests(unittest.TestCase):
             # snapshot route can no longer act as an oracle for private
             # reviews, and vice versa.
             self.service.unseal_local(other)
+
+
+class Unauthorized(Exception):
+    """Stands in for the provider's authorization refusal (401)."""
+
+    status_code = 401
+
+
+class RefusingClient(FakeClient):
+    def get(self, path, **params):
+        raise Unauthorized("refused")
+
+
+class TransientlyFailingClient(FakeClient):
+    def get(self, path, **params):
+        raise TimeoutError("network")
+
+
+class ConnectionStateTests(unittest.TestCase):
+    """Connection state comes from verified interactions, never from custody."""
+
+    def setUp(self) -> None:
+        FakeAuth.deregistrations = 0
+        self.store = MemoryStore()
+        self.service = ConnectorService(
+            policy=PrivateAlphaPolicy(
+                app_name="Audible Track and Recommend",
+                app_abbreviation="ATnR",
+                distribution="private-alpha",
+                maximum_named_testers=10,
+                allowed_marketplaces=("us",),
+                provider_device_display_name="Audible for iPhone",
+                automatic_sync_interval_minutes=15,
+            ),
+            store=self.store,
+            identity_store=MemoryStore(),
+            protector=ReversibleProtector(),
+        )
+        self.audible = types.SimpleNamespace(Authenticator=FakeAuthenticator, Client=FakeClient)
+
+    def connect(self) -> None:
+        with patch.dict(sys.modules, {"audible": self.audible}):
+            self.service.connect(marketplace="us", account_alias="Synthetic account")
+
+    def test_no_envelope_reports_disconnected(self) -> None:
+        status = self.service.status()
+        self.assertEqual(status["connectionState"], "disconnected")
+        self.assertEqual(status["credentialsPresent"], False)
+        self.assertIsNone(status["lastVerifiedAt"])
+
+    def test_registration_is_a_verified_provider_interaction(self) -> None:
+        self.connect()
+        status = self.service.status()
+        self.assertEqual(status["connectionState"], "verified")
+        self.assertEqual(status["lastVerificationBasis"], "device-registration")
+        self.assertIsInstance(status["lastVerifiedAt"], str)
+
+    def test_a_successful_sync_reverifies_the_connection(self) -> None:
+        self.connect()
+        with patch.dict(sys.modules, {"audible": self.audible}):
+            result = self.service.sync_library()
+        self.assertEqual(result["status"]["connectionState"], "verified")
+        self.assertEqual(result["status"]["lastVerificationBasis"], "library-sync")
+        self.assertEqual(
+            result["status"]["lastVerifiedAt"], result["status"]["lastSuccessfulSyncAt"]
+        )
+
+    def test_stale_credential_presence_alone_never_reports_verified(self) -> None:
+        self.connect()
+        envelope = self.store.read()
+        envelope["lastVerifiedAt"] = "2020-01-01T00:00:00.000Z"
+        self.store.write(envelope)
+        status = self.service.status()
+        self.assertEqual(status["connected"], True, "the envelope is still held")
+        self.assertEqual(status["connectionState"], "unverified")
+        self.assertEqual(status["lastVerifiedAt"], "2020-01-01T00:00:00.000Z")
+
+    def test_an_envelope_without_any_verification_evidence_is_unverified(self) -> None:
+        self.connect()
+        envelope = self.store.read()
+        for key in ("lastVerifiedAt", "lastVerificationBasis", "lastAuthorizationFailureAt"):
+            envelope.pop(key, None)
+        self.store.write(envelope)
+        status = self.service.status()
+        self.assertEqual(status["connectionState"], "unverified")
+        self.assertIsNone(status["lastVerifiedAt"])
+
+    def test_a_future_dated_verification_is_not_accepted_as_fresh(self) -> None:
+        self.connect()
+        envelope = self.store.read()
+        envelope["lastVerifiedAt"] = "2099-01-01T00:00:00.000Z"
+        self.store.write(envelope)
+        self.assertEqual(self.service.status()["connectionState"], "unverified")
+
+    def test_a_provider_refusal_moves_the_connection_to_authorization_failed(self) -> None:
+        self.connect()
+        refusing = types.SimpleNamespace(Authenticator=FakeAuthenticator, Client=RefusingClient)
+        with patch.dict(sys.modules, {"audible": refusing}):
+            with self.assertRaisesRegex(RuntimeError, "library-sync-failed"):
+                self.service.sync_library()
+        status = self.service.status()
+        self.assertEqual(status["connectionState"], "authorization-failed")
+        self.assertIsInstance(status["lastAuthorizationFailureAt"], str)
+        self.assertEqual(status["connected"], True, "custody is unchanged by a refusal")
+
+    def test_a_transient_failure_is_not_reported_as_an_authorization_problem(self) -> None:
+        self.connect()
+        flaky = types.SimpleNamespace(Authenticator=FakeAuthenticator, Client=TransientlyFailingClient)
+        with patch.dict(sys.modules, {"audible": flaky}):
+            with self.assertRaisesRegex(RuntimeError, "library-sync-failed"):
+                self.service.sync_library()
+        status = self.service.status()
+        self.assertEqual(status["connectionState"], "verified")
+        self.assertIsNone(status["lastAuthorizationFailureAt"])
+
+    def test_a_later_success_clears_an_earlier_authorization_failure(self) -> None:
+        self.connect()
+        refusing = types.SimpleNamespace(Authenticator=FakeAuthenticator, Client=RefusingClient)
+        with patch.dict(sys.modules, {"audible": refusing}):
+            with self.assertRaises(RuntimeError):
+                self.service.sync_library()
+        self.assertEqual(self.service.status()["connectionState"], "authorization-failed")
+        with patch.dict(sys.modules, {"audible": self.audible}):
+            self.service.sync_library()
+        status = self.service.status()
+        self.assertEqual(status["connectionState"], "verified")
+        self.assertIsNone(status["lastAuthorizationFailureAt"])
+
+    def test_a_refusal_is_reported_even_when_the_evidence_cannot_be_persisted(self) -> None:
+        """An unwritable store must not leave a refused session reading verified."""
+
+        self.connect()
+        self.assertEqual(self.service.status()["connectionState"], "verified")
+
+        original_write = self.store.write
+
+        def refuse_write(_payload: dict[str, object]) -> None:
+            raise OSError("evidence store unavailable")
+
+        self.store.write = refuse_write  # type: ignore[method-assign]
+        refusing = types.SimpleNamespace(Authenticator=FakeAuthenticator, Client=RefusingClient)
+        try:
+            with patch.dict(sys.modules, {"audible": refusing}):
+                with self.assertRaisesRegex(RuntimeError, "library-sync-failed"):
+                    self.service.sync_library()
+            status = self.service.status()
+            # The durable record could not be written, but the refusal was
+            # still observed, so it is still reported.
+            self.assertEqual(status["connectionState"], "authorization-failed")
+            self.assertIsInstance(status["lastAuthorizationFailureAt"], str)
+        finally:
+            self.store.write = original_write  # type: ignore[method-assign]
+
+    def test_a_later_success_clears_an_unpersisted_refusal_too(self) -> None:
+        self.connect()
+        original_write = self.store.write
+        self.store.write = lambda _payload: (_ for _ in ()).throw(OSError("unavailable"))  # type: ignore[method-assign]
+        refusing = types.SimpleNamespace(Authenticator=FakeAuthenticator, Client=RefusingClient)
+        with patch.dict(sys.modules, {"audible": refusing}):
+            with self.assertRaises(RuntimeError):
+                self.service.sync_library()
+        self.store.write = original_write  # type: ignore[method-assign]
+        self.assertEqual(self.service.status()["connectionState"], "authorization-failed")
+
+        with patch.dict(sys.modules, {"audible": self.audible}):
+            self.service.sync_library()
+        self.assertEqual(self.service.status()["connectionState"], "verified")
+
+    def test_disconnect_returns_to_disconnected_with_no_residual_evidence(self) -> None:
+        self.connect()
+        with patch.dict(sys.modules, {"audible": self.audible}):
+            status = self.service.disconnect()
+        self.assertEqual(status["connectionState"], "disconnected")
+        self.assertEqual(status["credentialsPresent"], False)
+        self.assertIsNone(status["lastVerifiedAt"])
+
+    def test_status_never_contacts_the_provider(self) -> None:
+        self.connect()
+        # No `audible` module is patched in for these reads: a status report
+        # that needed the provider would fail here instead of answering.
+        for _ in range(3):
+            self.assertIn(self.service.status()["connectionState"], CONNECTION_STATES)
+
+    def test_every_reported_state_is_in_the_closed_vocabulary(self) -> None:
+        self.assertEqual(
+            CONNECTION_STATES,
+            ("disconnected", "unverified", "verified", "authorization-failed"),
+        )
 
 
 if __name__ == "__main__":

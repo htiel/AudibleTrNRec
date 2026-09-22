@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildLibraryView, sortLibrary, filterLibrary, facetCounts, groupLibrary, SORT_FIELDS, FILTER_FIELDS } from '../src/core/library.js';
-import { Catalog, mergeLibrarySnapshot } from '../src/core/model.js';
+import { buildLibraryView, sortLibrary, filterLibrary, facetCounts, groupLibrary, seriesPresentation, progressPresentation, SORT_FIELDS, FILTER_FIELDS, SERIES_UNKNOWN_LABEL, SERIES_STANDALONE_LABEL } from '../src/core/library.js';
+import { Catalog, mergeLibrarySnapshot, normalizeLibraryEntry } from '../src/core/model.js';
 import { ValidationError } from '../src/core/errors.js';
 import { isUnknown } from '../src/core/validate.js';
 import { SYNTHETIC_NOW } from '../src/version.js';
@@ -18,6 +18,11 @@ const view = () => {
   const { entries } = mergeLibrarySnapshot([], SYNTHETIC_SNAPSHOT, { observedAt: SYNTHETIC_NOW });
   return buildLibraryView(catalog, entries);
 };
+
+const buildCatalog = () => new Catalog(
+  { people: SYNTHETIC_PEOPLE, facets: SYNTHETIC_FACETS, books: SYNTHETIC_BOOKS },
+  { source: 'synthetic-fixture', observedAt: SYNTHETIC_NOW },
+);
 
 test('the inspector view joins catalog records to the imported snapshot', () => {
   const rows = view();
@@ -118,4 +123,114 @@ test('grouping produces deterministic, sorted buckets', () => {
   const groups = groupLibrary(rows, 'status').map((g) => g.value);
   assert.deepEqual(groups, [...groups].sort());
   assert.equal(groupLibrary(rows, 'series').find((g) => g.value === 'The Ring Bearer').items.length, 2);
+});
+
+test('a title with no series metadata is presented as unknown, not as a standalone', () => {
+  const rows = view();
+  const unknownSeries = rows.filter((r) => isUnknown(r.series));
+  assert.ok(unknownSeries.length > 0, 'fixture must contain at least one title without series metadata');
+  for (const row of unknownSeries) {
+    // Issue #4: absence of provider metadata is not evidence of standalone.
+    assert.equal(row.seriesEvidence, 'unknown');
+    assert.equal(row.seriesKnown, false);
+    assert.equal(row.seriesLabel, SERIES_UNKNOWN_LABEL);
+    assert.notEqual(row.seriesLabel, SERIES_STANDALONE_LABEL);
+  }
+});
+
+test('a provider-supplied series is labelled with its own name', () => {
+  const ring = view().find((r) => r.bookId === 'b-ring-1');
+  assert.equal(ring.seriesEvidence, 'provider-supplied');
+  assert.equal(ring.seriesKnown, true);
+  assert.equal(ring.seriesLabel, 'The Ring Bearer');
+});
+
+test('only authoritative evidence may claim a title is a standalone', () => {
+  assert.equal(seriesPresentation({}).label, SERIES_UNKNOWN_LABEL);
+  assert.equal(seriesPresentation({ series: null, seriesEvidence: 'unknown' }).label, SERIES_UNKNOWN_LABEL);
+  // A provider-supplied claim with no series name proves nothing either.
+  assert.equal(seriesPresentation({ series: null, seriesEvidence: 'provider-supplied' }).label, SERIES_UNKNOWN_LABEL);
+
+  const standalone = seriesPresentation({ seriesEvidence: 'confirmed-standalone' });
+  assert.equal(standalone.label, SERIES_STANDALONE_LABEL);
+  assert.equal(standalone.known, true);
+  assert.equal(standalone.positionLabel, null);
+
+  const positioned = seriesPresentation({ series: 'The Ring Bearer', seriesEvidence: 'provider-supplied', seriesPosition: 2 });
+  assert.equal(positioned.positionLabel, 'Book 2');
+});
+
+test('groups report a true total and an honest unknown-series label', () => {
+  const rows = view();
+  for (const group of groupLibrary(rows, 'status')) {
+    assert.equal(group.total, group.items.length);
+    assert.equal(typeof group.key, 'string');
+  }
+  const unknownSeriesGroup = groupLibrary(rows, 'series').find((g) => g.value === 'unknown');
+  assert.equal(unknownSeriesGroup.label, SERIES_UNKNOWN_LABEL);
+  assert.notEqual(unknownSeriesGroup.label, SERIES_STANDALONE_LABEL);
+});
+
+test('a finished status and a partial playback position are two separate facts (B2)', () => {
+  const finishedButPartial = progressPresentation({
+    status: 'completed',
+    percentComplete: 36,
+    source: 'audible-community-private-api',
+  });
+
+  // Both facts survive, individually attributable, neither rewritten.
+  assert.equal(finishedButPartial.status, 'completed');
+  assert.equal(finishedButPartial.percentComplete, 36);
+  assert.equal(finishedButPartial.statusLabel, 'Marked finished by Audible');
+  assert.equal(finishedButPartial.progressLabel, 'playback position 36%');
+  assert.equal(finishedButPartial.statusProgressConflict, true);
+
+  // The contract never hands back one pre-joined sentence.
+  assert.deepEqual(finishedButPartial.parts.map((part) => part.kind), ['status', 'progress']);
+  assert.equal(finishedButPartial.parts.map((part) => part.text).join(' · '),
+    'Marked finished by Audible · playback position 36%');
+
+  // Agreement is not a conflict, and 0% is a real position, not an absence.
+  assert.equal(progressPresentation({ status: 'completed', percentComplete: 100, source: 'audible-community-private-api' }).statusProgressConflict, false);
+  const zero = progressPresentation({ status: 'completed', percentComplete: 0, source: 'audible-community-private-api' });
+  assert.equal(zero.statusProgressConflict, true);
+  assert.equal(zero.progressLabel, 'playback position 0%');
+  assert.equal(zero.progressKnown, true);
+
+  // An unknown position is never printed as 0, and an unknown status never
+  // borrows the provider's voice.
+  const unknownProgress = progressPresentation({ status: 'in-progress', percentComplete: null, source: 'audible-community-private-api' });
+  assert.equal(unknownProgress.progressKnown, false);
+  assert.equal(unknownProgress.progressLabel, 'playback position unknown');
+  const unknownStatus = progressPresentation({ status: 'unknown', percentComplete: 12, source: 'audible-community-private-api' });
+  assert.equal(unknownStatus.statusLabel, 'Listening status unknown');
+  assert.equal(unknownStatus.statusKnown, false);
+  assert.equal(unknownStatus.progressLabel, 'playback position 12%');
+
+  // An unrecognized source does not leak its token into the sentence.
+  const strange = progressPresentation({ status: 'completed', percentComplete: 50, source: 'mystery-importer' });
+  assert.equal(strange.statusLabel, 'Marked finished by an unknown source');
+  assert.equal(strange.statusSourceLabel, 'Unknown provenance');
+});
+
+test('library rows carry the progress presentation without altering source fields (B2)', () => {
+  const catalog = buildCatalog();
+  const entries = [normalizeLibraryEntry({
+    bookId: 'b-ring-1', status: 'completed', percentComplete: 36,
+  }, { source: 'audible-community-private-api', observedAt: '2026-09-17T12:00:00.000Z' })];
+  const [row] = buildLibraryView(catalog, entries);
+
+  assert.equal(row.status, 'completed', 'source status is untouched');
+  assert.equal(row.percentComplete, 36, 'source progress is untouched');
+  assert.equal(row.progress.statusLabel, 'Marked finished by Audible');
+  assert.equal(row.progress.progressLabel, 'playback position 36%');
+  assert.equal(row.progress.statusProgressConflict, true);
+  assert.equal(Object.isFrozen(row.progress), true);
+});
+
+test('a prototype key is not a listening status (B2)', () => {
+  for (const hostile of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+    const resolved = progressPresentation({ status: hostile, percentComplete: 10, source: 'audible-community-private-api' });
+    assert.equal(resolved.statusLabel, 'Listening status unknown', hostile);
+  }
 });

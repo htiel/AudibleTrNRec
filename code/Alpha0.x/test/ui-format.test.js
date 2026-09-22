@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import {
   formatDuration, formatDate, formatPercent, formatStatus,
   formatFacetKind, formatList, formatBoolean, formatProvenance, formatPercentKnown,
+  formatListeningState,
 } from '../ui/js/format.js';
 
 test('formatDuration renders hours and minutes, and an honest unknown', () => {
@@ -45,6 +46,20 @@ test('formatProvenance labels imported vs local/synthetic vs unknown as text, ne
   assert.equal(formatProvenance(null), 'Unknown provenance');
 });
 
+/**
+ * Issue B3: `audible-community-private-api` is a real, closed-vocabulary
+ * provenance source (`PROVENANCE_SOURCES` in `src/core/model.js`) that this
+ * map previously had no label for, so it fell through to the raw internal
+ * token. The vocabulary is closed: any source this map does not name —
+ * whether a real future value or a corrupt/unexpected one — must render as
+ * "Unknown provenance", never leak the token itself to the owner-facing UI.
+ */
+test('formatProvenance gives audible-community-private-api an owner-readable label and never leaks a raw unrecognized token', () => {
+  assert.equal(formatProvenance('audible-community-private-api'), 'Imported (Audible, via the community private API connector)');
+  assert.equal(formatProvenance('derived'), 'Derived');
+  assert.equal(formatProvenance('some-unrecognized-internal-token'), 'Unknown provenance');
+});
+
 test('formatPercentKnown renders a coverage percentage and an honest unknown', () => {
   assert.equal(formatPercentKnown(100), '100%');
   assert.equal(formatPercentKnown(0), '0%');
@@ -57,4 +72,29 @@ test('formatList and formatBoolean', () => {
   assert.equal(formatBoolean(true), 'Yes');
   assert.equal(formatBoolean(false), 'No');
   assert.equal(formatBoolean(null), 'Not set');
+});
+
+/**
+ * Issue B2: `status` and `percentComplete` are independent source-owned
+ * fields, so a completed title's `percentComplete` can be stale or a later
+ * re-listen position. `formatListeningState()` must never present that as
+ * "Completed · 36%", which reads as a completion percentage.
+ */
+test('formatListeningState never pairs "Completed" with a bare, ambiguous percentage', () => {
+  assert.equal(formatListeningState({ status: 'completed', percentComplete: 36 }), 'Completed', 'a completed title with no disambiguating position field must render status alone');
+  assert.equal(formatListeningState({ status: 'completed', percentComplete: null }), 'Completed');
+});
+
+test('formatListeningState labels a forthcoming current-position field explicitly as a position, once supplied', () => {
+  assert.equal(
+    formatListeningState({ status: 'completed', percentComplete: 100, currentPositionPercent: 36 }),
+    'Completed · Currently re-listening at 36%',
+  );
+});
+
+test('formatListeningState keeps status · percent for every non-completed status, which is unambiguous', () => {
+  assert.equal(formatListeningState({ status: 'in-progress', percentComplete: 42 }), 'In progress · 42%');
+  assert.equal(formatListeningState({ status: 'abandoned', percentComplete: 18 }), 'Abandoned · 18%');
+  assert.equal(formatListeningState({ status: 'not-started', percentComplete: null }), 'Not started · Unknown progress');
+  assert.equal(formatListeningState({ status: null, percentComplete: null }), 'Unknown status · Unknown progress');
 });

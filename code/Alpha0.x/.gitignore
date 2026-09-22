@@ -13,6 +13,15 @@ identity.bin
 out/
 artifacts/
 coverage/
+# Visual-capture artifacts (issue #14). Screenshots are an export: they are
+# plaintext pixels that nothing in this application protects. Capture output
+# folders are ignored here, and PNGs are ignored repository-wide, so a capture
+# can never become a tracked file. Use `git add -f` only for a reviewed,
+# demonstrably synthetic image.
+.capture-out/
+capture-out/
+screenshots/
+*.png
 *.log
 *.tmp
 .DS_Store

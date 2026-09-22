@@ -226,3 +226,93 @@ test('exportState is JSON-serializable, schema-tagged, and contains no ratings/a
   assert.equal(typeof roundTrip.annotations, 'undefined');
   assert.equal(typeof roundTrip.preferences, 'undefined');
 });
+
+test('the synthetic demo library is returned as a bounded page, like the real one', () => {
+  const store = new AppStore();
+  store.reset();
+  const result = store.queryLibrary();
+  assert.ok(result.rows.length <= 50);
+  assert.equal(result.total, store.summary().libraryEntryCount);
+  assert.equal(result.matched, result.total);
+  assert.equal(result.pagination.mode, 'ungrouped');
+  assert.equal(result.pagination.rowCeiling, 50);
+  assert.match(result.summary, /synthetic demo titles/);
+
+  const grouped = store.queryLibrary({ group: 'status' });
+  assert.ok(grouped.groups.length <= 5);
+  assert.equal(grouped.rows.length, 0);
+  assert.equal(grouped.pagination.mode, 'grouped');
+  for (const group of grouped.groups) {
+    assert.ok(group.items.length <= 10);
+    assert.equal(group.total >= group.items.length, true);
+  }
+});
+
+test('a synthetic demo session never claims a verified Audible connection', () => {
+  const store = new AppStore();
+  store.reset();
+  // The demo lifecycle status is unchanged for existing controls...
+  assert.equal(store.summary().connectionStatus, 'connected');
+  // ...but there is no Audible account here, and the honest state says so.
+  assert.equal(store.summary().connectionState, 'disconnected');
+  assert.equal(store.connectionState.verified, false);
+});
+
+test('the synthetic store reports the same Data inventory shape (B7)', () => {
+  const store = new AppStore();
+  const inventory = store.inventory();
+  assert.equal(inventory.titles.known, true);
+  assert.equal(inventory.titles.count, store.summary().bookCount);
+  assert.equal(inventory.lastImport.known, true);
+  assert.equal(typeof inventory.lastImport.counts.added, 'number');
+  // There is no feedback store in this runtime, which is not the same claim
+  // as "there are no reviews".
+  assert.equal(inventory.feedback.known, false);
+  assert.equal(inventory.feedback.count, null);
+  assert.equal(inventory.feedback.reason, 'not-applicable');
+
+  store.setConsentAcknowledged(true);
+  assert.equal(store.deleteAll().ok, true);
+  const afterDelete = store.inventory();
+  assert.equal(afterDelete.titles.known, true);
+  assert.equal(afterDelete.titles.count, 0);
+  assert.equal(afterDelete.lastImport.known, false);
+});
+
+test('a parsed retained snapshot is never published as the latest import (B-final)', () => {
+  const store = new AppStore();
+  assert.equal(store.inventory().lastImport.basis, 'synthetic-import-in-session');
+  assert.equal(store.inventory().lastImport.known, true, 'a real in-session synthetic import is an import');
+
+  store.loadPrivateSnapshot({
+    schemaVersion: 1,
+    source: 'audible-community-private-api',
+    marketplace: 'us',
+    observedAt: '2026-09-17T12:00:00.000Z',
+    catalog: {
+      people: [{ personId: 'p-one', displayName: 'One Author', roles: ['author'] }],
+      facets: [],
+      books: Array.from({ length: 12 }, (_, index) => ({
+        bookId: `aud-us-retained-${index + 1}`,
+        workId: `aud-us-retained-${index + 1}-work`,
+        title: `Retained Title ${index + 1}`,
+        authorIds: ['p-one'],
+        narratorIds: [],
+        genreIds: [],
+        themeIds: [],
+        language: 'en',
+        available: true,
+      })),
+    },
+    entries: Array.from({ length: 12 }, (_, index) => ({ bookId: `aud-us-retained-${index + 1}`, status: 'not-started' })),
+  }, { connected: true });
+
+  const inventory = store.inventory();
+  assert.equal(store.lastImportReport.added.length, 12, 'the parse really does mark all 12 added');
+  assert.equal(inventory.titles.count, 12);
+  assert.equal(inventory.lastImport.known, false, 'but that is not a provider import');
+  assert.equal(inventory.lastImport.counts, null);
+  assert.equal(inventory.lastImport.basis, 'snapshot-load');
+  assert.equal(inventory.lastImport.authority, 'local-snapshot-parse');
+  assert.equal(inventory.lastImport.reason, 'snapshot-parse-only');
+});

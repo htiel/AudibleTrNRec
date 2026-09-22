@@ -7,56 +7,33 @@
   <title>Audible Track and Recommend</title>
   <link rel="stylesheet" href="/ui/css/tokens.css">
   <link rel="stylesheet" href="/ui/css/base.css">
-  <link rel="stylesheet" href="/ui/css/layout.css">
   <link rel="stylesheet" href="/ui/css/components.css">
-  <link rel="stylesheet" href="/ui/css/theme-liquid-glass.css">
+  <!--
+    The two theme-scoped stylesheets below are mutually exclusive: only
+    one is ever enabled at a time, toggled by `js/theme-preference.js`'s
+    `syncThemeStylesheets()` via the `.disabled` IDL property, keyed off
+    `data-theme-scope`. LCARS is the default theme, so its sheets start
+    enabled and the Apple/Liquid Glass sheet starts `disabled` in markup
+    to avoid ever painting both themes' rules on first parse.
+  -->
+  <link rel="stylesheet" href="/ui/css/layout.css" data-theme-scope="lcars">
+  <link rel="stylesheet" href="/ui/css/theme-lcars.css" data-theme-scope="lcars">
+  <link rel="stylesheet" href="/ui/css/theme-liquid-glass.css" data-theme-scope="liquid-glass" disabled>
 </head>
 <body>
-  <a class="lcars-skip-link" href="#main-content">Skip to main content</a>
+  <a class="atnr-skip-link" href="#main-content">Skip to main content</a>
 
-  <div class="lcars-frame">
-    <header class="lcars-header" role="banner">
-      <div class="lcars-elbow lcars-elbow-top" aria-hidden="true"></div>
-      <div class="lcars-header-bar">
-        <h1 class="lcars-title">Audible Track and Recommend</h1>
-        <p id="runtime-status" class="lcars-status-pill">Loading the active runtime mode…</p>
-        <a class="lcars-icon-btn" href="#/settings" data-route="settings" aria-label="Settings">
-          <span class="lcars-icon-gear" aria-hidden="true"></span>
-        </a>
-      </div>
-    </header>
-
-    <div class="lcars-body">
-      <aside class="lcars-sidebar" aria-label="Application navigation and library controls">
-        <nav class="lcars-sidebar-group" aria-label="Primary">
-          <ul>
-            <li><a href="#/library" data-route="library">Library</a></li>
-          </ul>
-        </nav>
-        <div class="lcars-sidebar-filler">
-          <div id="library-sidebar-controls"></div>
-        </div>
-        <nav class="lcars-sidebar-group" aria-label="Diagnostics and lifecycle">
-          <ul>
-            <li><a href="#/feasibility" data-route="feasibility">Feasibility &amp; trace</a></li>
-            <li><a href="#/data" data-route="data">Data &amp; lifecycle</a></li>
-            <li><a href="#/settings" data-route="settings">Settings</a></li>
-          </ul>
-        </nav>
-      </aside>
-
-      <main id="main-content" class="lcars-main" tabindex="-1">
-        <div id="view-root"></div>
-      </main>
-    </div>
-
-    <footer class="lcars-footer" role="contentinfo">
-      <div class="lcars-footer-bar">
-        <p id="runtime-footer">Loading the active runtime source…</p>
-      </div>
-      <div class="lcars-elbow lcars-elbow-bottom" aria-hidden="true"></div>
-    </footer>
-  </div>
+  <!--
+    Intentionally empty. Exactly one independent presentation shell is
+    mounted here at runtime by `js/app.js`, chosen by the active theme:
+    `js/shells/lcars-shell.js` (the original LCARS console chrome — elbows,
+    swept sidebar, grey library-controls filler) or `js/shells/apple-shell.js`
+    (a compact iPhone nav bar + bottom tab bar). Neither shell's markup is
+    ever present in this document at the same time as the other's, and
+    neither is built here as static HTML and then hidden with CSS — see
+    `planning/0.0.2/13-independent-theme-ui-spec.md`.
+  -->
+  <div id="shell-root"></div>
 
   <div id="live-polite" class="lcars-sr-only" role="status" aria-live="polite"></div>
   <div id="live-assertive" class="lcars-sr-only" role="alert" aria-live="assertive"></div>

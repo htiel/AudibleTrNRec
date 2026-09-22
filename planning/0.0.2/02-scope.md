@@ -13,6 +13,45 @@ S031 owns the revision-frozen **persisted** schema as well as the domain
 contract. S028/S029/S030 consume that revision before S032 implements storage;
 this removes a design-ownership cycle without changing execution dependencies.
 
+## Final integrated remediation scope — 2026-09-21
+
+GitHub issues #1–#14 and the independent Apple/LCARS shell follow-up are
+implemented in the current owner-only web worktree. [12's issue matrix](12-accumulated-implementation.md#integrated-remediation-issues-114)
+records behavior and acceptance limits; [13](13-independent-theme-ui-spec.md)
+records Geordi's shell work. These follow-ups do not retroactively pass the
+original story DoDs, add earned points or close source/release gates.
+
+Apple mode constructs its own nav/tab/back hierarchy, not hidden LCARS chrome.
+LCARS remains selectable and default. Both share neutral views, `--atnr-*`
+tokens and application state; Apple references no `--lcars-*` tokens and
+disables both LCARS-only sheets. Search-first mobile controls and bounded 50-row pages replace
+the unbounded mobile filter/results stack.
+
+The delivered contracts add safe synopsis normalization, explicit series
+uncertainty, evidence-derived connection health (24-hour freshness), version-2
+filter/page persistence, pre-request plaintext-export consent and verified
+both-theme synthetic capture/purge. Independent-review corrections add reachable
+pagination with a dirty-draft guard, stable person feedback IDs with legacy-alias
+migration, race-free theme activation and failed-sync status refresh.
+Source/storage revisions remain unchanged. Physical-device/VoiceOver, current
+provider revocation and reproducible capture-tool provenance remain evidence
+limits; [12](12-accumulated-implementation.md) records the definitive results.
+
+The delayed Data-audit follow-up is part of this same remediation: distinct
+completion/position evidence, closed provenance labels, context-only private
+Feasibility navigation from Data, non-destructive inventory, schema-only saved
+controls with legacy migration, and single Status/Book-detail feedback guidance.
+Actual sync counts persist in an account/snapshot-bound non-sensitive sidecar;
+snapshot parsing alone remains Unknown / not an import. This does not add a
+database table, change storage revision, authorize a source route or create
+new story estimates.
+
+Apple HIG/API/design resources are normative. Google image search is
+non-normative inspiration only; copying/tracing/bundling/hotlinking third-party
+imagery or UI assets and private-data uploads are prohibited. This is responsive
+web work, not UIKit/SwiftUI equivalence, physical iPhone validation, a new
+Audible-access path or selection of the native client/backend.
+
 ## Themes and epics
 
 | Theme | Outcome | Epic | Features / stories | Points |
@@ -83,8 +122,10 @@ OF-006's iPhone Air Safari work remains web-alpha UX evidence only.
 Read against [implementation README](../../code/Alpha0.x/README.md) and
 [package](../../code/Alpha0.x/package.json):
 
-- Node ESM, zero npm dependencies, no build step, static HTML/CSS/modules and
-  hash-routed UI with default LCARS and opt-in Liquid Glass appearance. The
+- Node ESM, zero declared npm dependencies, no build step, static HTML/CSS/modules and
+  hash-routed UI with independently constructed default LCARS and opt-in
+  Apple-style Liquid Glass shells. Optional rendered tests/capture import an
+  undeclared, unpinned local Playwright; this is not reproducible tooling. The
   private user-facing path is real-encrypted-data-only;
   fixtures are test/demo infrastructure, never a private bootstrap fallback.
 - The optional Windows-local composition is Node loopback service → serialized

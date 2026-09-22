@@ -5,14 +5,38 @@
 **Status:** Owner product direction recorded; architecture and implementation
 unapproved. Planning only, no runtime or connection change.
 
-**Web-alpha clarification — 2026-09-19:** the implemented Settings route offers
-default LCARS and opt-in Liquid Glass with a persistent browser-only theme
-preference. [12's provenance record](12-accumulated-implementation.md#apple-design-resource-provenance-and-native-limits)
+**Final web-alpha clarification — 2026-09-21:** Settings selects independently
+constructed default LCARS or opt-in Apple-style Liquid Glass shell markup,
+with a persistent browser-only theme preference. Apple mode has its own
+navigation bar, Library/Data/Settings tabs and contextual back navigation;
+LCARS chrome is not instantiated then hidden. Shared neutral views/state are
+retained with neutral `--atnr-*` tokens. Apple styling references no `--lcars-*`
+tokens and disables both LCARS-only sheets; activation is generation-guarded
+against stale imports.
+[12's provenance record](12-accumulated-implementation.md#apple-design-resource-provenance-and-native-limits)
 verifies Apple's iOS 27/iPadOS 27 resource listing and Materials guidance.
 This is a semantic HTML/CSS/JS interpretation, not imported Apple artwork,
 native refraction/Dynamic Type, direct OS accessibility integration, or proof of
 iOS support. It does not select SwiftUI/UIKit, change minimum OS support,
 authorize native custody or permit phone access to the private loopback server.
+
+Apple HIG, documented Apple APIs and Design Resources are normative. Google
+image search is permitted only as non-normative inspiration: no copying,
+tracing, bundling or hotlinking third-party imagery/UI assets, and no uploading
+private data or captures. The final #1–#14 remediation, independent-review
+fixes, both-theme synthetic capture/purge and live private page/theme matrix
+are web-prototype evidence, not UIKit/SwiftUI
+equivalence, physical iPhone/Safari/VoiceOver validation or an Apple endorsement.
+Native client/service selection still follows supported-access evidence and
+A2-G3/G4; [12](12-accumulated-implementation.md) records remaining gaps.
+
+The delayed Data-audit fixes (separate completion/position evidence, closed
+provenance, contextual private diagnostics, non-destructive inventory,
+schema-only filter migration and truthful persisted sync counts) refine this
+web evidence only. The account-bound last-import sidecar is not an iOS storage
+design or portable credential mechanism; parsing a snapshot remains Unknown /
+not an import. No physical-device/VoiceOver or current provider-revocation
+evidence is inferred from the updated automated suite.
 
 Authority: [product description](../../APP_DESCRIPTION.md),
 [OF-007](06-owner-feedback.md#of-007--native-iphone-destination-and-future-capturehandoff),

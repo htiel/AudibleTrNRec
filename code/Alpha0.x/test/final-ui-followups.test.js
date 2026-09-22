@@ -142,22 +142,37 @@ test('the fail-closed startup branch in app.js never calls the generic focusMain
   assert.doesNotMatch(failClosedBranch, /focusMain\(\)/, 'the fail-closed branch must not move focus to main content; the refusal heading owns focus instead');
 });
 
-test('focusMain() in app.js suppresses the browser default scroll-into-view on focus', () => {
-  // <main> holds the entire route's content and, at narrow widths, is a plain
-  // in-flow block rather than its own scrollport. Calling .focus() on it
-  // without `preventScroll` lets the browser run its default "scroll the
-  // focused element into view" behavior, which for an element taller than
-  // the viewport centers it instead of aligning its top — jumping the whole
-  // page roughly halfway down on every route render and hiding the header,
-  // nav, and toolbar. `preventScroll: true` keeps the accessible focus move
-  // (so assistive tech announces the new view) without the disruptive jump.
+test('focusMain() in app.js delegates to whichever presentation shell is mounted', () => {
+  // Since a theme switch fully tears down and remounts an independent shell
+  // (LCARS or Apple; see `shells/lcars-shell.js` / `shells/apple-shell.js`),
+  // app.js can no longer hold one literal <main> element reference of its
+  // own; it must ask the currently active shell to focus its own <main>.
   const source = readSource('js/app.js');
   const start = source.indexOf('function focusMain()');
   assert.notEqual(start, -1, 'expected a focusMain() function in app.js');
   const end = source.indexOf('\n}', start);
   const body = source.slice(start, end);
-  assert.match(body, /mainContent\.focus\(\s*\{\s*preventScroll:\s*true\s*\}\s*\)/, 'focusMain() must call mainContent.focus({ preventScroll: true })');
+  assert.match(body, /shell\?\.focusMain\(\)/, "focusMain() must delegate to the active shell's own focusMain()");
 });
+
+for (const shellFile of ['js/shells/lcars-shell.js', 'js/shells/apple-shell.js']) {
+  test(`focusMain() in ${shellFile} suppresses the browser default scroll-into-view on focus`, () => {
+    // <main> holds the entire route's content and, at narrow widths, is a plain
+    // in-flow block rather than its own scrollport. Calling .focus() on it
+    // without `preventScroll` lets the browser run its default "scroll the
+    // focused element into view" behavior, which for an element taller than
+    // the viewport centers it instead of aligning its top — jumping the whole
+    // page roughly halfway down on every route render and hiding the header,
+    // nav, and toolbar. `preventScroll: true` keeps the accessible focus move
+    // (so assistive tech announces the new view) without the disruptive jump.
+    const source = readSource(shellFile);
+    const start = source.indexOf('focusMain()');
+    assert.notEqual(start, -1, `expected a focusMain() method in ${shellFile}`);
+    const end = source.indexOf('\n    }', start);
+    const body = source.slice(start, end);
+    assert.match(body, /mainContent\.focus\(\s*\{\s*preventScroll:\s*true\s*\}\s*\)/, `focusMain() in ${shellFile} must call mainContent.focus({ preventScroll: true })`);
+  });
+}
 
 // --- (2) Reset filters must also clear collapsed-group state ---------------
 
@@ -262,4 +277,132 @@ test('no new Ratings navigation item or book-detail rating editor has been intro
   assert.doesNotMatch(nav, />\s*Ratings\s*</i, 'a dedicated Ratings nav item is explicit future scope, not part of this follow-up');
   const bookDetail = readSource('js/views/book-detail-view.js');
   assert.doesNotMatch(bookDetail, /ratingOptions|feedback-comment-|feedback-tags-/, 'book-detail-view.js must keep pointing listeners back to the Library view instead of gaining its own rating editor');
+});
+
+// --- Late screenshot audit (B2/B8/B9) ---------------------------------------
+
+class FakeAuditElement {
+  constructor(tag) {
+    this.tagName = String(tag).toLowerCase();
+    this.attributes = Object.create(null);
+    this.children = [];
+    this.listeners = [];
+    this.textContent = '';
+    this.focused = false;
+  }
+
+  setAttribute(name, value) { this.attributes[name] = value; }
+
+  removeAttribute(name) { delete this.attributes[name]; }
+
+  get firstChild() { return this.children[0] ?? null; }
+
+  appendChild(child) { this.children.push(child); return child; }
+
+  append(...nodes) { this.children.push(...nodes); }
+
+  removeChild(child) {
+    const index = this.children.indexOf(child);
+    if (index >= 0) this.children.splice(index, 1);
+    return child;
+  }
+
+  addEventListener(type, handler) { this.listeners.push({ type, handler }); }
+
+  querySelector(selector) {
+    const tag = selector.toLowerCase();
+    for (const child of this.children) {
+      if (child?.tagName === tag) return child;
+      if (typeof child?.querySelector === 'function') {
+        const nested = child.querySelector(selector);
+        if (nested) return nested;
+      }
+    }
+    return null;
+  }
+
+  querySelectorAll(selector) {
+    const tag = selector.toLowerCase();
+    const out = [];
+    for (const node of this.walk()) if (node.tagName === tag) out.push(node);
+    return out;
+  }
+
+  focus() { this.focused = true; }
+
+  *walk() {
+    yield this;
+    for (const child of this.children) if (typeof child?.walk === 'function') yield* child.walk();
+  }
+}
+
+async function withAuditDom(run) {
+  globalThis.document = {
+    createElement: (tag) => new FakeAuditElement(tag),
+    createTextNode: (text) => ({ nodeType: 3, textContent: text }),
+  };
+  try {
+    await run();
+  } finally {
+    delete globalThis.document;
+  }
+}
+
+test('(B9) book detail renders exactly one private-feedback statement with an accessible link back to Library, not a duplicated note', async () => {
+  await withAuditDom(async () => {
+    const { renderBookDetailView } = await import('../ui/js/views/book-detail-view.js');
+    const store = new PrivateAppStore({
+      liveSnapshot: liveSnapshot(),
+      connectionApi: connectionApi(),
+      connectionInfo: { connected: true, local: { hasLocalSnapshot: true } },
+    });
+    const root = new FakeAuditElement('div');
+    renderBookDetailView(root, store, 'aud-us-book-one');
+
+    const paragraphs = root.querySelectorAll('p');
+    const guidanceParagraphs = paragraphs.filter((p) => [...p.walk()].some((n) => n.tagName === 'a' && n.attributes.href === '#/library' && /Library/.test(n.textContent || '')));
+    assert.equal(guidanceParagraphs.length, 1, 'expected exactly one paragraph carrying the Library feedback link (no duplicate note)');
+
+    const link = guidanceParagraphs[0].querySelector('a');
+    assert.equal(link.attributes.href, '#/library');
+    const clickListener = link.listeners.find((l) => l.type === 'click');
+    assert.ok(clickListener, 'expected the link to wire an onclick handler (h() registers it via addEventListener)');
+    assert.equal(typeof clickListener.handler, 'function');
+
+    // Only one dl row named "Status" and none named "Private feedback" (that
+    // duplicate row was removed in favor of the single feedbackGuidance() paragraph).
+    const dtNames = root.querySelectorAll('dt').map((dt) => dt.textContent);
+    assert.equal(dtNames.filter((name) => name === 'Status').length, 1);
+    assert.ok(!dtNames.includes('Private feedback'), 'the duplicate "Private feedback" metadata row must be gone; guidance lives in one paragraph only');
+  });
+});
+
+test('(B2) book detail never pairs "Completed" status with a bare, ambiguous percentComplete in the Progress row', async () => {
+  await withAuditDom(async () => {
+    const { renderBookDetailView } = await import('../ui/js/views/book-detail-view.js');
+    const snapshot = liveSnapshot();
+    // book-one is completed with percentComplete: 100 in the fixture; assert
+    // the Progress row does not read like a raw, possibly-stale percentage.
+    const store = new PrivateAppStore({
+      liveSnapshot: snapshot,
+      connectionApi: connectionApi(),
+      connectionInfo: { connected: true, local: { hasLocalSnapshot: true } },
+    });
+    const root = new FakeAuditElement('div');
+    renderBookDetailView(root, store, 'aud-us-book-one');
+
+    const dtNodes = root.querySelectorAll('dt');
+    const progressIndex = dtNodes.findIndex((dt) => dt.textContent === 'Progress');
+    assert.notEqual(progressIndex, -1, 'expected a Progress row');
+    const ddNodes = root.querySelectorAll('dd');
+    const progressValue = ddNodes[progressIndex].textContent;
+    assert.doesNotMatch(progressValue, /^\d+%$/, 'a completed title must not show a bare "100%"-style Progress value with no disambiguating context');
+  });
+});
+
+test('(B8) the library filters panel names its Status fieldset exactly once (no duplicate heading above the legend)', () => {
+  const source = readSource('js/views/library-view.js');
+  const statusHeadingMatches = [...source.matchAll(/h\('h3',\s*\{\s*text:\s*'Status'\s*\}\)/g)];
+  assert.equal(statusHeadingMatches.length, 0, 'library-view.js must not render a redundant h3 "Status" heading; the fieldset legend already names the group');
+  assert.match(source, /legend',\s*\{\s*text:\s*'Status'\s*\}/, 'expected the Status fieldset legend to remain the single visible/audible name for the group');
 });

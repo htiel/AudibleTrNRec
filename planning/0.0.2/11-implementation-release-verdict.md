@@ -13,22 +13,46 @@ convey source or binaries, or proof of listening-history/non-owned catalog
 access. No scope reduction, gate waiver, native architecture approval or
 publication is issued here.
 
-### Accumulated working-tree reconciliation — 2026-09-19
+### Final working-tree reconciliation — 2026-09-21
 
 [12 — accumulated implementation](12-accumulated-implementation.md) is the
 current behavioral/evidence addendum: retained Audible registration and real
-data; keyless loopback limits; blank-page/module-boundary and bulk-feedback
-fixes; separate group feedback; narrator display grouping; sidebar/fixed rail;
-session filters; progressive whole stars; UI/accessibility fixes; and Settings
-with persistent LCARS/Liquid Glass selection. It includes first-party Apple
-iOS 27 resource provenance and explicit web/native limits.
+data; keyless loopback limits; encrypted feedback; integrated issue #1–#14
+remediation; and independent Apple/LCARS shell markup with neutral shared
+views. It records synopsis/series/connection/pagination contracts, informed
+export consent, synthetic capture and the normative Apple/non-normative
+Google-image inspiration boundary.
 
-Freshly executed here: `npm test` **487 total / 486 pass / 0 fail / 1 skip**,
-`npm run connector:test` **98 total / 96 pass / 0 fail / 2 skip**,
+Definitive post-delayed-audit results supplied by the Captain:
+`npm test` **685 total / 684 pass / 0 fail / 1 environment symlink skip**, **87.7 seconds**;
+`npm run connector:test` **128 total / 126 pass / 0 fail / 2 skips**;
 `npm run policy:check` **PASS**, with fresh install still blocked by the two
 unapproved source artifacts. This supersedes earlier “current” totals, not
-historical events. No live-account, migration, rendered-browser, packaging or
-secret-scan run was repeated; no subsequent full-team sign-off is claimed.
+historical events. Actual synthetic `--theme all` capture verified both themes
+in the live DOM, wrote 12 neutral PNGs plus manifest, and purge verified.
+Earlier live private evidence starts Apple with zero LCARS classes, 50 rows and
+`Showing 1–50 of 180 (page 1 of 4)`; Next reaches 51–100. Rapid Apple→LCARS
+ends LCARS with the Apple sheet disabled and both LCARS sheets enabled,
+without errors. This documentation task reconciled but did not rerun those
+operations.
+
+Delayed Data-audit fixes are integrated: distinct completion/partial-position
+claims, closed provenance, context-only private Feasibility navigation,
+non-destructive Data inventory, schema-only filter persistence/legacy migration,
+one Status label and one actionable Book-detail feedback guidance. Actual sync
+counts survive reload through an account-bound non-sensitive last-import
+sidecar; snapshot parsing alone remains Unknown / not an import.
+
+The Captain reports all three streams green; that is not a fresh full-team
+release verdict. The previous token/style/capture discrepancies are resolved:
+Apple references no LCARS tokens, LCARS-only sheets are disabled in Apple,
+and capture truly selects both themes. Independent-review fixes also cover
+reachable pagination, stable person feedback IDs with legacy migration,
+race-free activation and failed-sync status refresh. Playwright remains
+undeclared/unpinned; physical-device/VoiceOver and current provider-revocation
+evidence remain open. No issue closure, UIKit/SwiftUI equivalence or A2-G0–G6
+PASS is inferred. Owner-only conditional evaluation and every audience/
+commercial/platform restriction above remain unchanged.
 
 ### Owner change control — 2026-09-18
 

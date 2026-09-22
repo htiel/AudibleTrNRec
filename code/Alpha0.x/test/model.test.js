@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 
 import {
   Catalog, mergeLibrarySnapshot, normalizeBook, normalizeLibraryEntry,
-  SOURCE_OWNED_FIELDS, LOCAL_OWNED_FIELDS,
+  resolveSeriesEvidence, isSeriesUnknown, provenancePresentation,
+  SERIES_EVIDENCE, SOURCE_OWNED_FIELDS, LOCAL_OWNED_FIELDS, PROVENANCE_PRESENTATION,
 } from '../src/core/model.js';
 import { ValidationError } from '../src/core/errors.js';
 import { isUnknown } from '../src/core/validate.js';
@@ -134,4 +135,75 @@ test('repeated synchronization cannot write, delete, or repoint local sentinel r
   for (const entry of state) {
     for (const field of LOCAL_OWNED_FIELDS) assert.equal(field in entry, false, `${field} leaked into source record`);
   }
+});
+
+test('series evidence is a closed vocabulary that never guesses standalone', () => {
+  assert.deepEqual([...SERIES_EVIDENCE], ['provider-supplied', 'unknown', 'confirmed-standalone']);
+
+  // A known series identifier is provider-supplied evidence.
+  assert.equal(resolveSeriesEvidence(undefined, 'f-ring'), 'provider-supplied');
+  // No identifier and no declaration is unknown, never confirmed-standalone.
+  assert.equal(resolveSeriesEvidence(undefined, null), 'unknown');
+  assert.equal(resolveSeriesEvidence('unknown', null), 'unknown');
+  // Only an explicit authoritative declaration produces confirmed-standalone.
+  assert.equal(resolveSeriesEvidence('confirmed-standalone', null), 'confirmed-standalone');
+  // Anything unrecognized falls back to unknown rather than being believed.
+  for (const claim of ['standalone', '', 'PROVIDER-SUPPLIED', 7, {}, null]) {
+    assert.equal(resolveSeriesEvidence(claim, null), 'unknown', String(claim));
+  }
+});
+
+test('a book with no series identifier records unknown series evidence', () => {
+  const book = normalizeBook({ bookId: 'b-solo', workId: 'w-solo', title: 'Solo' });
+  assert.equal(isUnknown(book.seriesId), true);
+  assert.equal(book.seriesEvidence, 'unknown');
+  assert.equal(isSeriesUnknown(book), true);
+  assert.equal(book.provenance.fields.seriesEvidence, 'derived');
+
+  const inSeries = normalizeBook({ bookId: 'b-ring-1', workId: 'w-ring-1', title: 'Ring', seriesId: 'f-ring', seriesPosition: 1 });
+  assert.equal(inSeries.seriesEvidence, 'provider-supplied');
+  assert.equal(isSeriesUnknown(inSeries), false);
+});
+
+test('a provider may not assert standalone by omitting the series', () => {
+  // The only accepted route to confirmed-standalone is an explicit field.
+  const omitted = normalizeBook({ bookId: 'b-omit', workId: 'w-omit', title: 'Omitted' });
+  assert.notEqual(omitted.seriesEvidence, 'confirmed-standalone');
+
+  // And a claim of standalone alongside an actual series never wins.
+  const contradictory = normalizeBook({
+    bookId: 'b-conflict', workId: 'w-conflict', title: 'Conflict',
+    seriesId: 'f-ring', seriesEvidence: 'confirmed-standalone',
+  });
+  assert.equal(contradictory.seriesEvidence, 'provider-supplied');
+});
+
+test('provenance presentation is a closed vocabulary with no machine tokens leaking (B3)', () => {
+  // The live provider source must have a human label; it is the one an owner
+  // is most likely to see, and the one most likely to be a raw token.
+  const audible = provenancePresentation('audible-community-private-api');
+  assert.equal(audible.known, true);
+  assert.equal(audible.live, true);
+  assert.equal(audible.label, 'Imported from Audible');
+  assert.equal(audible.agent, 'Audible');
+
+  // Every declared source has a label, and no label is its own key.
+  for (const [key, entry] of Object.entries(PROVENANCE_PRESENTATION)) {
+    assert.equal(entry.source, key);
+    assert.equal(typeof entry.label, 'string');
+    assert.notEqual(entry.label, key, `${key} must not print its machine token`);
+    assert.equal(entry.label.includes('-'), false, `${key} label looks like a token`);
+  }
+
+  // Anything outside the vocabulary is an admission, never a pass-through.
+  for (const unknown of ['audible-scrape-v2', 'totally-new-source', '', null, undefined, 0, {}, []]) {
+    const resolved = provenancePresentation(unknown);
+    assert.equal(resolved.label, 'Unknown provenance', JSON.stringify(unknown));
+    assert.equal(resolved.known, false, JSON.stringify(unknown));
+    assert.equal(resolved.live, false, JSON.stringify(unknown));
+  }
+
+  // A prototype key is not a provenance source.
+  assert.equal(provenancePresentation('constructor').label, 'Unknown provenance');
+  assert.equal(provenancePresentation('toString').label, 'Unknown provenance');
 });

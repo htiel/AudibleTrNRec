@@ -22,10 +22,10 @@ test('the feedback editor uses five whole-star radio choices instead of a dropdo
 
 test('circle styling progressively fills every choice through the selected rating', async () => {
   const css = await readFile(path.resolve(here, '../ui/css/components.css'), 'utf8');
-  assert.match(css, /\.lcars-rating-fieldset\[data-rating="3"\] \.lcars-rating-choice:is\(\[data-value="1"\], \[data-value="2"\], \[data-value="3"\]\)/);
-  assert.match(css, /\.lcars-rating-fieldset\[data-rating="5"\] \.lcars-rating-choice\s*{/);
-  assert.match(css, /\.lcars-rating-choice\s*{[^}]*border-radius:\s*50%/s);
-  assert.match(css, /\.lcars-rating-input\s*{[^}]*clip:\s*rect\(0, 0, 0, 0\)/s);
+  assert.match(css, /\.atnr-rating-fieldset\[data-rating="3"\] \.atnr-rating-choice:is\(\[data-value="1"\], \[data-value="2"\], \[data-value="3"\]\)/);
+  assert.match(css, /\.atnr-rating-fieldset\[data-rating="5"\] \.atnr-rating-choice\s*{/);
+  assert.match(css, /\.atnr-rating-choice\s*{[^}]*border-radius:\s*50%/s);
+  assert.match(css, /\.atnr-rating-input\s*{[^}]*clip:\s*rect\(0, 0, 0, 0\)/s);
 });
 
 test('whole-star summaries omit a trailing decimal while legacy halves remain truthful', async () => {

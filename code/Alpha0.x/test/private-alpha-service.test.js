@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { PrivateAlphaService, PrivateAlphaServiceError } from '../src/sync/private-alpha-service.js';
+import { PrivateAlphaService, PrivateAlphaServiceError, CONNECTION_STATES } from '../src/sync/private-alpha-service.js';
+import { CONNECTION_STATES as UI_CONNECTION_STATES } from '../ui/js/bootstrap-state.js';
 
 const ACCOUNT = 'a'.repeat(64);
 const OTHER_ACCOUNT = 'b'.repeat(64);
@@ -570,4 +571,250 @@ test('a matching connected account may sync and delete as before', async () => {
   // A fresh join from the sync above backs the synchronous local-API form.
   const status = service.deleteLocalSnapshot();
   assert.equal(status.hasLocalSnapshot, false);
+});
+
+test('the runtime copies the connector connection state and never infers one', async () => {
+  const connector = fakeConnector();
+  connector.status = async () => ({
+    connected: true,
+    accountKey: ACCOUNT,
+    marketplace: 'us',
+    connectionState: 'verified',
+    lastVerifiedAt: '2026-09-17T12:00:00.000Z',
+  });
+  const service = new PrivateAlphaService({ connector, snapshotStore: fakeStore() });
+
+  // Before any status read, nothing has been proven.
+  assert.equal(service.startupContract().connectionState, 'unverified');
+  assert.equal(service.lastVerifiedAt, null);
+
+  await service.status();
+  assert.equal(service.startupContract().connectionState, 'verified');
+  assert.equal(service.lastVerifiedAt, '2026-09-17T12:00:00.000Z');
+});
+
+test('a held credential with no connector verdict is reported as unverified, never connected', async () => {
+  const connector = fakeConnector();
+  // The connector reports custody only: an envelope exists.
+  connector.status = async () => ({ connected: true, accountKey: ACCOUNT, marketplace: 'us' });
+  const service = new PrivateAlphaService({ connector, snapshotStore: fakeStore() });
+  await service.status();
+  assert.equal(service.startupContract().connectionState, 'unverified');
+});
+
+test('an unrecognized connection state claim is not believed', async () => {
+  for (const claim of ['healthy', 'CONNECTED', '', 3, null, {}]) {
+    const connector = fakeConnector();
+    connector.status = async () => ({ connected: true, accountKey: ACCOUNT, marketplace: 'us', connectionState: claim });
+    const service = new PrivateAlphaService({ connector, snapshotStore: fakeStore() });
+    await service.status();
+    assert.equal(service.startupContract().connectionState, 'unverified', JSON.stringify(claim));
+  }
+});
+
+test('a reported authorization failure is carried into startup evidence', async () => {
+  const connector = fakeConnector();
+  connector.status = async () => ({
+    connected: true, accountKey: ACCOUNT, marketplace: 'us', connectionState: 'authorization-failed',
+  });
+  const service = new PrivateAlphaService({ connector, snapshotStore: fakeStore() });
+  await service.status();
+  const contract = service.startupContract();
+  assert.equal(contract.connectionState, 'authorization-failed');
+  // Startup evidence stays redacted: closed enums and booleans only.
+  assert.equal(CONNECTION_STATES.includes(contract.connectionState), true);
+  assert.equal(Object.values(contract).some((v) => typeof v === 'string' && v.includes(ACCOUNT)), false);
+});
+
+test('the connection-state vocabulary is identical on both sides of the UI boundary', () => {
+  assert.deepEqual([...CONNECTION_STATES], [...UI_CONNECTION_STATES]);
+  assert.deepEqual([...CONNECTION_STATES], ['disconnected', 'unverified', 'verified', 'authorization-failed']);
+});
+
+test('a sync that the provider refuses leaves the cached state authorization-failed', async () => {
+  const connector = fakeConnector();
+  let refused = false;
+  connector.status = async () => ({
+    connected: true,
+    accountKey: ACCOUNT,
+    marketplace: 'us',
+    connectionState: refused ? 'authorization-failed' : 'verified',
+    lastVerifiedAt: '2026-09-17T12:00:00.000Z',
+    lastAuthorizationFailureAt: refused ? '2026-09-18T09:00:00.000Z' : null,
+  });
+  connector.syncLibrary = async () => {
+    refused = true;
+    // The connector records the refusal locally and reports the generic,
+    // allow-listed code; nothing distinguishes it here.
+    const error = new PrivateAlphaServiceError('library-sync-failed');
+    throw error;
+  };
+  const store = fakeStore();
+  const service = new PrivateAlphaService({ connector, snapshotStore: store });
+
+  await service.status();
+  assert.equal(service.connectionEvidence().connectionState, 'verified');
+
+  let thrown = null;
+  try {
+    await service.sync();
+  } catch (error) {
+    thrown = error;
+  }
+  assert.ok(thrown instanceof PrivateAlphaServiceError);
+  assert.equal(thrown.code, 'library-sync-failed', 'the public error code is unchanged');
+  assert.equal(store.state.lastErrorCode, 'library-sync-failed');
+  // The evidence recorded during that same requested sync is read back, so
+  // the runtime does not keep reporting a connection that no longer works.
+  assert.equal(thrown.connectionState, 'authorization-failed');
+  assert.equal(service.connectionEvidence().connectionState, 'authorization-failed');
+  assert.equal(service.startupContract().connectionState, 'authorization-failed');
+});
+
+test('a transient sync failure does not become an authorization failure', async () => {
+  const connector = fakeConnector();
+  connector.status = async () => ({
+    connected: true, accountKey: ACCOUNT, marketplace: 'us',
+    connectionState: 'verified', lastVerifiedAt: '2026-09-17T12:00:00.000Z',
+  });
+  connector.syncLibrary = async () => { throw new Error('provider unreachable'); };
+  const service = new PrivateAlphaService({ connector, snapshotStore: fakeStore() });
+
+  await assert.rejects(() => service.sync());
+  assert.equal(service.connectionEvidence().connectionState, 'verified');
+});
+
+test('a connector that cannot be asked after a failure never changes the failure', async () => {
+  const connector = fakeConnector();
+  let statusCalls = 0;
+  connector.status = async () => {
+    statusCalls += 1;
+    if (statusCalls > 1) throw new Error('connector gone');
+    return { connected: true, accountKey: ACCOUNT, marketplace: 'us', connectionState: 'verified', lastVerifiedAt: '2026-09-17T12:00:00.000Z' };
+  };
+  connector.syncLibrary = async () => { throw new PrivateAlphaServiceError('library-sync-failed'); };
+  const service = new PrivateAlphaService({ connector, snapshotStore: fakeStore() });
+
+  await service.status();
+  await assert.rejects(() => service.sync(), (error) => error.code === 'library-sync-failed');
+  // Evidence gathering is best-effort and must never rewrite the outcome.
+  assert.equal(service.connectionEvidence().connectionState, 'verified');
+});
+
+// --- persisted latest-import evidence (continuity across reload) -----------
+
+import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
+const IMPORT_FILE = 'last-import-counts.json';
+
+/** A fake store that also has a custody root, so the record has somewhere to live. */
+function rootedStore(t) {
+  const root = mkdtempSync(path.join(tmpdir(), 'atnr-import-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const store = fakeStore();
+  store.path = path.join(root, 'library.sqlite3');
+  store.root = root;
+  store.purgeAllLocalData = () => {
+    store.state.snapshot = null;
+    return { contentPurgeComplete: true, retainedReviewRows: 0 };
+  };
+  store.localDataSuppressed = () => false;
+  return store;
+}
+
+function recordFile(store) {
+  return path.join(store.root, IMPORT_FILE);
+}
+
+function readRecord(store) {
+  return JSON.parse(readFileSync(recordFile(store), 'utf8'));
+}
+
+test('a requested sync persists its reconciliation counts as non-sensitive integers', async (t) => {
+  const store = rootedStore(t);
+  const service = new PrivateAlphaService({ connector: fakeConnector(), snapshotStore: store });
+
+  await service.sync();
+
+  const raw = readRecord(store);
+  assert.equal(raw.version, 1);
+  assert.equal(raw.basis, 'sync-reconciliation');
+  assert.equal(raw.authority, 'requested-sync');
+  assert.deepEqual(raw.counts, { added: 1, updated: 0, reappeared: 0, missingFromSource: 0 });
+  assert.equal(raw.snapshotGeneration, store.state.generation);
+
+  const text = readFileSync(recordFile(store), 'utf8');
+  assert.equal(text.includes(ACCOUNT), false, 'the account key must never be written outside the container');
+  assert.equal(text.includes('Synthetic'), false, 'no title may be written');
+  assert.equal(text.includes('aud-us-book-synthetic'), false, 'no identifier may be written');
+});
+
+test('measured counts survive a reload: a new service over the same state reports them', async (t) => {
+  const store = rootedStore(t);
+  const service = new PrivateAlphaService({ connector: fakeConnector(), snapshotStore: store });
+  await service.sync();
+
+  const reloaded = new PrivateAlphaService({ connector: fakeConnector(), snapshotStore: store });
+  const status = await reloaded.status();
+  assert.equal(status.local.lastImport.basis, 'sync-reconciliation');
+  assert.equal(status.local.lastImport.authority, 'requested-sync');
+  assert.deepEqual(status.local.lastImport.counts, {
+    added: 1, updated: 0, reappeared: 0, missingFromSource: 0, unchanged: null, rejected: null,
+  });
+});
+
+test('a record bound to another account is never adopted', async (t) => {
+  const store = rootedStore(t);
+  const service = new PrivateAlphaService({ connector: fakeConnector(), snapshotStore: store });
+  await service.sync();
+  const raw = readRecord(store);
+  writeFileSync(recordFile(store), JSON.stringify({ ...raw, accountBinding: 'f'.repeat(64) }), 'utf8');
+
+  const status = await service.status();
+  assert.equal(status.local.lastImport, null);
+});
+
+test('superseded, older, or malformed records read as unknown', async (t) => {
+  const store = rootedStore(t);
+  const service = new PrivateAlphaService({ connector: fakeConnector(), snapshotStore: store });
+  await service.sync();
+  const raw = readRecord(store);
+
+  writeFileSync(recordFile(store), JSON.stringify({ ...raw, snapshotGeneration: raw.snapshotGeneration + 1 }), 'utf8');
+  assert.equal((await service.status()).local.lastImport, null, 'a generation that is not the stored one is unknown');
+
+  writeFileSync(recordFile(store), JSON.stringify({ ...raw, version: 0 }), 'utf8');
+  assert.equal((await service.status()).local.lastImport, null, 'an older schema is unknown');
+
+  writeFileSync(recordFile(store), JSON.stringify({ ...raw, counts: { added: -1, updated: 0, reappeared: 0, missingFromSource: 0 } }), 'utf8');
+  assert.equal((await service.status()).local.lastImport, null, 'a negative count is unknown');
+
+  writeFileSync(recordFile(store), '{ not json', 'utf8');
+  assert.equal((await service.status()).local.lastImport, null, 'an unreadable record is unknown');
+});
+
+test('deleting or purging local data removes the derived import record', async (t) => {
+  const store = rootedStore(t);
+  const service = new PrivateAlphaService({ connector: fakeConnector(), snapshotStore: store });
+  await service.sync();
+  assert.equal(existsSync(recordFile(store)), true);
+
+  await service.deleteLocalSnapshotVerified();
+  assert.equal(existsSync(recordFile(store)), false, 'derived evidence must not outlive the snapshot');
+
+  await service.sync();
+  assert.equal(existsSync(recordFile(store)), true);
+  await service.purgeAllLocalData();
+  assert.equal(existsSync(recordFile(store)), false, 'a purge removes the derived record too');
+});
+
+test('a store without a custody root persists nothing and reports unknown', async () => {
+  const store = fakeStore();
+  const service = new PrivateAlphaService({ connector: fakeConnector(), snapshotStore: store });
+  const result = await service.sync();
+  assert.equal(result.ok, true, 'a sync must not fail because evidence could not be persisted');
+  const status = await service.status();
+  assert.equal(status.local.lastImport, null);
 });
